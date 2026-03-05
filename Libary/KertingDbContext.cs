@@ -11,6 +11,7 @@ namespace Libary
     public class KertingDbContext : DbContext
     {
         public DbSet<Login> Login { get; set; }
+        public DbSet<Role> Role { get; set; }
         public KertingDbContext(DbContextOptions options) : base(options)
         {
         }
