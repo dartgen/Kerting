@@ -1,0 +1,7 @@
+vue
+vue-router
+pinia
+linter
+
+primevue primeicons
+tailwindcss @tailwindcss/vite
