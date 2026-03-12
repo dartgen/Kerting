@@ -202,7 +202,7 @@ const toggleLogin = () => {
       <AnimatePresence>
         <motion.div
           v-if="isLoggedIn && mobileMenuOpen"
-          class="dropdown-menu relative z-20 lg:hidden"
+          class="dropdown-menu lg:hidden"
           :initial="{ opacity: 0, scaleY: 0.8 }"
           :animate="{ opacity: 1, scaleY: 1 }"
           :exit="{ opacity: 0, scaleY: 0.8 }"
