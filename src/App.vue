@@ -9,9 +9,9 @@ import bgImage from './assets/background.jpg'
     :style="{ backgroundImage: `url(${bgImage})` }"
   >
     <div class="absolute top-0 left-0 w-full h-full bg-black opacity-50"></div>
-    <div class="relative z-10 flex flex-col flex-grow">
+    <div class="relative z-10 flex flex-col grow">
       <HeaderComponent />
-      <main class="flex-grow">
+      <main class="grow">
         <RouterView />
       </main>
       <footer></footer>

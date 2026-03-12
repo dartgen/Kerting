@@ -3,18 +3,26 @@ import { ref, computed } from 'vue'
 import { motion, AnimatePresence } from 'motion-v'
 import { RouterLink } from 'vue-router'
 
+interface NavLink {
+  key: string
+  label: string
+  to: string
+  delay?: number
+  bold?: boolean
+}
+
 const isLoggedIn = ref(false)
 const mobileMenuOpen = ref(false)
 
-const navLinks = [
+const navLinks: NavLink[] = [
   { key: 'forum', label: 'Fórum', to: '/forum', delay: 0.05 },
   { key: 'works', label: 'Munkák', to: '/works', delay: 0.1 },
   { key: 'gallery', label: 'Galléria', to: '/gallery', delay: 0.15 },
 ]
 
-const aboutLink = { key: 'about', label: 'Rólunk', to: '/about', bold: true }
+const aboutLink: NavLink = { key: 'about', label: 'Rólunk', to: '/about', bold: true }
 
-const displayedLinks = computed(() => {
+const displayedLinks = computed<NavLink[]>(() => {
   if (isLoggedIn.value) {
     return [
       ...navLinks,
@@ -30,6 +38,9 @@ const toggleLogin = () => {
     mobileMenuOpen.value = false
   }
 }
+
+// Helper for IDE to recognize usage
+const MotionDiv = motion.div
 </script>
 
 <template>
@@ -42,7 +53,7 @@ const toggleLogin = () => {
             <!-- Gép Navbar -->
             <nav class="hidden lg:flex items-center gap-4 xl:gap-6">
               <AnimatePresence>
-                <motion.div
+                <MotionDiv
                   v-for="link in displayedLinks"
                   :key="link.key"
                   :initial="{ opacity: 0, x: -20 }"
@@ -56,7 +67,7 @@ const toggleLogin = () => {
                   >
                     {{ link.label }}
                   </RouterLink>
-                </motion.div>
+                </MotionDiv>
               </AnimatePresence>
             </nav>
 
@@ -64,7 +75,7 @@ const toggleLogin = () => {
             <!-- Telefonos Navbar -->
             <div class="lg:hidden flex items-center">
               <template v-if="!isLoggedIn">
-                <RouterLink :to="aboutLink.to" class="nav-link-bold !text-base !tracking-normal"> {{ aboutLink.label }} </RouterLink>
+                <RouterLink :to="aboutLink.to" class="nav-link-bold text-base! tracking-normal!"> {{ aboutLink.label }} </RouterLink>
               </template>
               <template v-else>
                 <!-- Hamburger menü -->
@@ -118,7 +129,7 @@ const toggleLogin = () => {
           <div class="flex items-center gap-3 sm:gap-5">
             <!-- Nagy keresômezô -->
             <div class="relative hidden lg:block group">
-              <input type="text" placeholder="Search..." class="search-input" />
+              <input type="text" placeholder="Keresés..." class="search-input" />
               <svg
                 class="w-4 h-4 text-white absolute right-3 top-1/2 transform -translate-y-1/2 transition-colors duration-300"
                 fill="none"
@@ -163,7 +174,7 @@ const toggleLogin = () => {
               aria-label="Log in"
               class="btn-primary"
             >
-              Login
+              Bejelentkezés
             </button>
 
             <button
@@ -200,7 +211,7 @@ const toggleLogin = () => {
 
       <!-- Telefonos dropdown menü -->
       <AnimatePresence>
-        <motion.div
+        <MotionDiv
           v-if="isLoggedIn && mobileMenuOpen"
           class="dropdown-menu lg:hidden"
           :initial="{ opacity: 0, scaleY: 0.8 }"
@@ -218,9 +229,9 @@ const toggleLogin = () => {
               {{ link.label }}
             </RouterLink>
             <hr class="border-earth-700" />
-            <RouterLink :to="aboutLink.to" class="nav-link-bold !text-lg text-center"> {{ aboutLink.label }}</RouterLink>
+            <RouterLink :to="aboutLink.to" class="nav-link-bold text-lg! text-center"> {{ aboutLink.label }}</RouterLink>
           </div>
-        </motion.div>
+        </MotionDiv>
       </AnimatePresence>
     </header>
   </div>
