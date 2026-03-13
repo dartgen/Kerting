@@ -12,7 +12,7 @@ namespace Kerting_Api.Controller
     //TODO
     //Megcsinálni tökenek rendes használatát pl ha interactol valamit akkor frisül mondjuk a token, ne lehesen egy falhasználónak több tokenje!
 
-    [Route("api/[controller]")] // Ez határozza meg az URL-t. Mivel az osztály neve LoginController, a cím: .../api/Login
+    [Route("api")] // Ez határozza meg az URL-t. Mivel az osztály neve LoginController, a cím: .../api/Login
     [ApiController] // Ez jelzi a .NET-nek, hogy ez nem weboldal, hanem API (automatikusan ellenőrzi a bejövő adatokat).
     public class LoginController : ControllerBase
     {
@@ -32,7 +32,7 @@ namespace Kerting_Api.Controller
         [HttpPost("Login")] // Ez mondja meg, hogy ez egy POST kérés lesz, a címe: api/Login/Authenticate
         // A "Task<IActionResult>" azt jelenti, hogy aszinkron (nem fagyasztja le a szervert várakozás közben).
         // A "[FromBody] Login loginAdatok" azt jelenti: vedd a JSON-t a kérés testéből, és alakítsd át Login objektummá.
-        public async Task<IActionResult> Login([FromBody] Login loginAdatok)
+        public async Task<IActionResult> Login([FromBody] DummyLogin loginAdatok)
         {
             // 1. ADATBÁZIS LEKÉRDEZÉS
             // A "_context.Logins" a Logins táblát jelenti.
@@ -109,7 +109,7 @@ namespace Kerting_Api.Controller
                 // ITT VÁLTOZIK:
                 // A Role objektum Name mezőjét vesszük ki (pl. "Admin")
                 // Fontos: ellenőrizni kell, hogy a user.Role nem null-e!
-                new Claim(ClaimTypes.Role, user.Role?.Name ?? "User")
+                new Claim(ClaimTypes.Role, user.Role?.Name)
             };
 
             // TOKEN LEÍRÓ (A tervrajz):

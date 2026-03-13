@@ -52,7 +52,16 @@ namespace Kerting_Api
             });
 
 
-
+            // Engedélyezzük, hogy a Vue (vagy bármilyen más frontend) hívhassa az API-t
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("VueCorsPolicy", policy =>
+                {
+                    policy.AllowAnyOrigin()    // Bármilyen címről jöhet a kérés (pl. localhost:5173)
+                          .AllowAnyHeader()    // Bármilyen fejlécet küldhet (pl. Authorization, Content-Type)
+                          .AllowAnyMethod();   // Bármilyen metódust használhat (GET, POST, PUT, DELETE)
+                });
+            });
 
             builder.Services.AddDbContext<Libary.KertingDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
@@ -93,6 +102,9 @@ namespace Kerting_Api
             }
 
             app.UseHttpsRedirection();
+
+            app.UseCors("VueCorsPolicy");
+
 
             app.UseAuthorization();
             app.UseAuthentication();
