@@ -62,7 +62,7 @@ namespace Kerting_Api.Controller
         }
 
         [HttpPost("Register")]
-        public async Task<IActionResult> Register([FromBody] Login loginAdatok)
+        public async Task<IActionResult> Register([FromBody] DummyLogin loginAdatok)
         {
             // 1. JELSZÓ HASH-ELÉSE
             // Ez a sor csinálja a varázslatot. A sima szövegből (loginAdatok.Password)
@@ -75,6 +75,7 @@ namespace Kerting_Api.Controller
                 Username = loginAdatok.Username,
                 Password = passwordHash, // FONTOS: A hash-t mentjük, nem az eredetit!
                                          // Egyéb mezők...
+                RoleId = 2
             };
 
             _context.Login.Add(newUser);
