@@ -84,7 +84,15 @@ namespace Kerting_Api.Controller
             return Ok("Sikeres regisztráció!" + $"\n{newUser.Username}\n{newUser.Password}");
         }
 
+        [HttpGet("CheckUsername")]
+        public async Task<IActionResult> CheckUsername([FromQuery] string username)
+        {
+            // Megnézzük az adatbázisban, hogy van-e már ilyen Username
+            bool foglalt = await _context.Login.AnyAsync(u => u.Username.ToLower() == username.ToLower());
 
+            // Visszaküldünk egy JSON objektumot, amit a Vue vár (isTaken: true/false)
+            return Ok(new { isTaken = foglalt });
+        }
         private string GenerateJwtToken(Login user)
         {
             // Beolvassuk a beállításokat a "JwtSettings" szekcióból az appsettings.json-ből.
