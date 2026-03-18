@@ -58,7 +58,11 @@ namespace Kerting_Api.Controller
 
             // 4. VÁLASZ
             // A 200 OK kódot küldjük vissza, benne egy JSON objektummal: { "token": "eyBgf..." }
-            return Ok("Sikeres login. " + user.Role.Name + " Token: " + token);
+            return Ok(new
+            {
+                token = token,
+                message = "Sikeres bejelentkezés"
+            });
         }
 
         [HttpPost("Register")]
