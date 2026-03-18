@@ -2,9 +2,17 @@
 </script>
 
 <template>
-  <div class="p-8 text-earth-100">
-    <h1 class="text-3xl font-bold mb-4">Rólunk</h1>
-    <p>Tudj meg többet</p>
-    <p>|-~-[]-~-[ WIP ]-~-[]-~-|</p>
+  <div class="container mx-auto px-4 py-8">
+    <div class="page-card max-w-3xl mx-auto">
+      <h1 class="text-3xl md:text-4xl font-serif text-earth-50 mb-6 border-b border-earth-100/10 pb-4">
+        Rólunk
+      </h1>
+      <div class="text-earth-200/90 space-y-4 text-lg">
+        <p>Tudj meg többet közösségünkről és céljainkról.</p>
+        <div class="bg-earth-800/30 p-4 rounded-xl border border-earth-100/5 text-center italic mt-8">
+          |-~-[]-~-[ WIP - Fejlesztés alatt ]-~-[]-~-|
+        </div>
+      </div>
+    </div>
   </div>
 </template>

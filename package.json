@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.1",
+    "axios": "^1.13.6",
     "motion-v": "^2.0.0",
     "pinia": "^3.0.4",
     "primeicons": "^7.0.0",

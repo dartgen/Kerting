@@ -2,6 +2,8 @@
 import { ref, computed } from 'vue'
 import { motion, AnimatePresence } from 'motion-v'
 import { RouterLink } from 'vue-router'
+import { useRouter } from 'vue-router'
+import {useAuthStore} from "@/stores/authStore.ts"
 
 interface NavLink {
   key: string
@@ -11,7 +13,9 @@ interface NavLink {
   bold?: boolean
 }
 
-const isLoggedIn = ref(false)
+const authStore = useAuthStore();
+const router = useRouter();
+
 const mobileMenuOpen = ref(false)
 
 const navLinks: NavLink[] = [
@@ -23,7 +27,7 @@ const navLinks: NavLink[] = [
 const aboutLink: NavLink = { key: 'about', label: 'Rólunk', to: '/about', bold: true }
 
 const displayedLinks = computed<NavLink[]>(() => {
-  if (isLoggedIn.value) {
+  if (authStore.isAuthenticated) {
     return [
       ...navLinks,
       { ...aboutLink, delay: 0.2 },
@@ -31,13 +35,6 @@ const displayedLinks = computed<NavLink[]>(() => {
   }
   return [{ ...aboutLink, delay: 0 }]
 })
-
-const toggleLogin = () => {
-  isLoggedIn.value = !isLoggedIn.value
-  if (!isLoggedIn.value) {
-    mobileMenuOpen.value = false
-  }
-}
 
 // Helper for IDE to recognize usage
 const MotionDiv = motion.div
@@ -74,7 +71,7 @@ const MotionDiv = motion.div
 
             <!-- Telefonos Navbar -->
             <div class="lg:hidden flex items-center">
-              <template v-if="!isLoggedIn">
+              <template v-if="!authStore.isAuthenticated">
                 <RouterLink :to="aboutLink.to" class="nav-link-bold text-base! tracking-normal!"> {{ aboutLink.label }} </RouterLink>
               </template>
               <template v-else>
@@ -169,8 +166,8 @@ const MotionDiv = motion.div
 
             <!-- Bejelentkezés / Profil gomb -->
             <button
-              v-if="!isLoggedIn"
-              @click="toggleLogin"
+              v-if="!authStore.isAuthenticated"
+              @click="router.push('/login')"
               aria-label="Log in"
               class="btn-primary"
             >
@@ -179,7 +176,7 @@ const MotionDiv = motion.div
 
             <button
               v-else
-              @click="toggleLogin"
+              @click="authStore.kijelentkezes()"
               aria-label="Profile — click to log out"
               class="btn-profile"
             >
@@ -212,7 +209,7 @@ const MotionDiv = motion.div
       <!-- Telefonos dropdown menü -->
       <AnimatePresence>
         <MotionDiv
-          v-if="isLoggedIn && mobileMenuOpen"
+          v-if="authStore.isAuthenticated && mobileMenuOpen"
           class="dropdown-menu lg:hidden"
           :initial="{ opacity: 0, scaleY: 0.8 }"
           :animate="{ opacity: 1, scaleY: 1 }"
@@ -228,7 +225,7 @@ const MotionDiv = motion.div
             >
               {{ link.label }}
             </RouterLink>
-            <hr class="border-earth-700" />
+            <hr class="border-earth-100/10" />
             <RouterLink :to="aboutLink.to" class="nav-link-bold text-lg! text-center"> {{ aboutLink.label }}</RouterLink>
           </div>
         </MotionDiv>

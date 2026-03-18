@@ -44,6 +44,14 @@ const router = createRouter({
         title: `${pre} Rólunk`
       }
     },
+    {
+      path: '/login',
+      name: 'login',
+      component: () => import('../pages/LoginView.vue'),
+      meta: {
+        title: `${pre} Bejelentkezés`
+      }
+    }
   ],
 })
 
