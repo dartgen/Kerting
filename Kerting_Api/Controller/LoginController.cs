@@ -61,7 +61,6 @@ namespace Kerting_Api.Controller
             return Ok(new
             {
                 token = token,
-                role = user.Role,
                 message = "Sikeres bejelentkezés"
             });
         }
