@@ -15,8 +15,19 @@
       >
 
         <!-- Front: Bejelentkezés -->
-        <div class="absolute inset-0 w-full h-full backface-hidden">
-          <div class="h-full flex flex-col justify-center px-8 py-10 bg-earth-900/70 backdrop-blur-xl border border-earth-100/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+        <div class="absolute inset-0 w-full h-full backface-hidden face-front">
+          <div class="relative h-full flex flex-col justify-center px-8 py-10 bg-earth-900/70 backdrop-blur-xl border border-earth-100/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+
+            <!-- Back Arrow -->
+            <button
+              @click="router.push('/')"
+              class="absolute top-4 left-4 text-earth-50 hover:text-earth-200 transition-colors p-2 z-20"
+              aria-label="Vissza a főoldalra"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+              </svg>
+            </button>
 
             <h1 class="text-3xl font-bold text-center text-earth-50 mb-8 tracking-wide drop-shadow-md">Bejelentkezés</h1>
 
@@ -79,8 +90,19 @@
         </div>
 
         <!-- Back: Regisztráció -->
-        <div class="absolute inset-0 w-full h-full backface-hidden rotate-y-180">
-          <div class="h-full flex flex-col justify-center px-8 py-8 bg-earth-800/80 backdrop-blur-xl border border-earth-100/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+        <div class="absolute inset-0 w-full h-full backface-hidden face-back">
+          <div class="relative h-full flex flex-col justify-center px-8 py-8 bg-earth-900/70 backdrop-blur-xl border border-earth-100/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+
+            <!-- Back Arrow -->
+             <button
+              @click="router.push('/')"
+              class="absolute top-4 left-4 text-earth-50 hover:text-earth-200 transition-colors p-2 z-20"
+              aria-label="Vissza a főoldalra"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+              </svg>
+            </button>
 
             <h1 class="text-3xl font-bold text-center text-earth-50 mb-6 tracking-wide drop-shadow-md">Regisztráció</h1>
 
@@ -170,9 +192,11 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
 import bgImage from '@/assets/background.jpg';
 
+const router = useRouter();
 const authStore = useAuthStore();
 
 // Új állapotok az ellenőrzéshez
@@ -259,4 +283,29 @@ const felhasznaloNevEllenorzes = async () => {
 };
 </script>
 
+<style scoped>
+.perspective-1000 {
+  perspective: 1000px;
+}
 
+.transform-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+.face-front {
+  transform: rotateY(0deg) translateZ(1px);
+}
+
+.face-back {
+  transform: rotateY(180deg) translateZ(1px);
+}
+</style>
