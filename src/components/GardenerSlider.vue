@@ -80,7 +80,7 @@ onUnmounted(() => {
         <div class="text-yellow-500 mb-1 md:mb-2 text-xs md:text-lg">★★★★★</div>
         <p class="text-[10px] md:text-sm text-gray-600 text-left line-clamp-3 md:line-clamp-4 leading-snug md:leading-relaxed mb-auto w-full px-1 md:px-2">{{ pro.desc }}</p>
 
-        <button class="mt-2 md:mt-4 w-full py-1.5 md:py-2 uppercase text-[10px] md:text-sm font-bold tracking-wide bg-gradient-to-r from-earth-600 to-earth-700 text-white rounded hover:from-earth-500 hover:to-earth-600 transition-all shadow-md">
+        <button class="mt-2 md:mt-4 w-full py-1.5 md:py-2 uppercase text-[10px] md:text-sm font-bold tracking-wide bg-gradient-to-r from-earth-500 to-earth-700 text-white rounded hover:from-earth-500 hover:to-earth-600 transition-all shadow-md">
           Profil megtekintése
         </button>
       </MotionDiv>
