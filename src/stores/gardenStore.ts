@@ -49,13 +49,13 @@ export const useGardenStore = defineStore('garden', () => {
       id: 1,
       title: 'Tavaszi Kertrendezés',
       desc: 'Teljes körű tavaszi metszés és gyepszellőztetés Budán.',
-      highlight: '',
+      highlight: '', // pl. highlight
     },
     {
       id: 2,
       title: 'Modern Előkert',
       desc: 'Minimalista előkert kialakítása kavicsággyal és örökzöldekkel.',
-      highlight: 'highlight', // Example class usage from previous code
+      highlight: '',
     },
     {
       id: 3,
