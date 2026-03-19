@@ -80,10 +80,10 @@
             <div class="text-center">
               <button
                 type="button"
-                class="text-sm font-semibold text-earth-200 hover:text-white transition-colors underline-offset-4 hover:underline"
+                class="w-full mt-4 bg-linear-to-r from-earth-700 to-earth-500 hover:from-earth-800 hover:to-earth-600 text-earth-50 font-bold py-3.5 rounded-xl shadow-lg transform hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
                 @click.prevent="isFlipped = true"
               >
-                Nincs még fiókod? <span class="text-earth-400">Regisztráció</span>
+                Regisztráció
               </button>
             </div>
           </div>
@@ -176,10 +176,10 @@
             <div class="text-center">
               <button
                 type="button"
-                class="text-sm font-semibold text-earth-200 hover:text-white transition-colors underline-offset-4 hover:underline"
+                class="w-full mt-4 bg-linear-to-r from-earth-700 to-earth-500 hover:from-earth-800 hover:to-earth-600 text-earth-50 font-bold py-3.5 rounded-xl shadow-lg transform hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
                 @click.prevent="isFlipped = false"
               >
-                Már van fiókod? <span class="text-earth-400">Bejelentkezés</span>
+                Bejelentkezés
               </button>
             </div>
           </div>
