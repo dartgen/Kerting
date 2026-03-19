@@ -61,7 +61,7 @@ export const useAuthStore = defineStore('auth', () => {
     authService.kijelentkezes();
     token.value = null;
     felhasznalo.value = null;
-    router.push('/login');
+    router.push('/');
   };
 
   return {
