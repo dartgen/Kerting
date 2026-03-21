@@ -1,12 +1,23 @@
 <template>
-  <div class="flex-1 flex items-center justify-center w-full h-full min-h-0">
+  <div class="flex-1 flex items-center justify-center w-full h-full min-h-0 px-4 sm:px-6">
     <div class="relative w-full max-w-md p-4 perspective-[1000px]">
       <div
         class="relative w-full h-[550px] transition-transform duration-700 transform-3d"
         :class="{ 'rotate-y-180': isFlipped }"
       >
+
         <div class="absolute inset-0 w-full h-full backface-hidden">
           <div class="h-full flex flex-col justify-center px-8 py-10 bg-earth-900/70 border border-earth-100/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+            <button
+              type="button"
+              class="absolute top-4 left-4 z-30 p-1 text-white transition-colors hover:text-earth-200 focus:outline-none"
+              @click="visszaAFooldalra"
+              aria-label="Vissza a főoldalra"
+            >
+              <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M15 6L9 12L15 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
             <h1 class="text-3xl font-bold text-center text-earth-50 mb-10 tracking-wide drop-shadow-md">Bejelentkezés</h1>
             <form @submit.prevent="bejelentkezes" class="space-y-8">
 
@@ -51,6 +62,16 @@
         </div>
 
         <div class="absolute inset-0 w-full h-full backface-hidden rotate-y-180">
+          <button
+            type="button"
+            class="absolute top-4 left-4 z-30 p-1 text-white transition-colors hover:text-earth-200 focus:outline-none"
+            @click="visszaAFooldalra"
+            aria-label="Vissza a főoldalra"
+          >
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M15 6L9 12L15 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
           <div class="h-full flex flex-col justify-center px-8 py-8 bg-earth-900/70 border border-earth-100/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
 
             <div v-if="hatlapTipus === 'regisztracio'">
@@ -130,8 +151,10 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
 
+const router = useRouter();
 const authStore = useAuthStore();
 const isFlipped = ref(false);
 const hatlapTipus = ref<'regisztracio' | 'elfelejtett'>('regisztracio');
@@ -202,6 +225,10 @@ const elfelejtettJelszoKeres = () => {
   alert(`Jelszó emlékeztető e-mail elküldve a megadott címre: ${resetAzonosito.value}`);
   isFlipped.value = false;
   resetAzonosito.value = '';
+};
+
+const visszaAFooldalra = () => {
+  router.push('/');
 };
 
 </script>

@@ -49,7 +49,9 @@ const router = createRouter({
       name: 'login',
       component: () => import('../pages/LoginView.vue'),
       meta: {
-        title: `${pre} Bejelentkezés`
+        title: `${pre} Bejelentkezés`,
+        hideHeader: true,
+        fullPage: true,
       }
     }
   ],
