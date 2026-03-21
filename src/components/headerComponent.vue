@@ -71,49 +71,44 @@ const MotionDiv = motion.div
 
             <!-- Telefonos Navbar -->
             <div class="lg:hidden flex items-center">
-              <template v-if="!authStore.isAuthenticated">
-                <RouterLink :to="aboutLink.to" class="nav-link-bold text-base! tracking-normal!"> {{ aboutLink.label }} </RouterLink>
-              </template>
-              <template v-else>
-                <!-- Hamburger menü -->
-                <button
-                  @click="mobileMenuOpen = !mobileMenuOpen"
-                  :aria-expanded="mobileMenuOpen"
-                  aria-label="Toggle mobile menu"
-                  class="text-earth-100 hover:text-earth-200 focus:outline-none p-1 transition-colors"
+              <!-- Hamburger menü -->
+              <button
+                @click="mobileMenuOpen = !mobileMenuOpen"
+                :aria-expanded="mobileMenuOpen"
+                aria-label="Toggle mobile menu"
+                class="text-earth-100 hover:text-earth-200 focus:outline-none p-1 transition-colors"
+              >
+                <svg
+                  v-if="!mobileMenuOpen"
+                  class="w-7 h-7"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
                 >
-                  <svg
-                    v-if="!mobileMenuOpen"
-                    class="w-7 h-7"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M4 6h16M4 12h16M4 18h16"
-                    />
-                  </svg>
-                  <svg
-                    v-else
-                    class="w-7 h-7"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </template>
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                </svg>
+                <svg
+                  v-else
+                  class="w-7 h-7"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
             </div>
           </div>
 
@@ -125,7 +120,7 @@ const MotionDiv = motion.div
           <!-- Jobb oldal: Keresés és Login/Profile -->
           <div class="flex items-center gap-3 sm:gap-5">
             <!-- Nagy keresômezô -->
-            <div class="relative hidden lg:block group">
+            <div v-if="authStore.isAuthenticated" class="relative hidden lg:block group">
               <input type="text" placeholder="Keresés..." class="search-input" />
               <svg
                 class="w-4 h-4 text-white absolute right-3 top-1/2 transform -translate-y-1/2 transition-colors duration-300"
@@ -145,6 +140,7 @@ const MotionDiv = motion.div
 
             <!-- Telefon csak keresô gomb -->
             <button
+              v-if="authStore.isAuthenticated"
               class="lg:hidden text-earth-100/90 hover:text-earth-400 transition-colors p-1"
               aria-label="Search"
             >
@@ -169,7 +165,7 @@ const MotionDiv = motion.div
               v-if="!authStore.isAuthenticated"
               @click="router.push('/login')"
               aria-label="Log in"
-              class="btn-primary"
+              class="btn-primary hidden lg:block"
             >
               Bejelentkezés
             </button>
@@ -209,7 +205,7 @@ const MotionDiv = motion.div
       <!-- Telefonos dropdown menü -->
       <AnimatePresence>
         <MotionDiv
-          v-if="authStore.isAuthenticated && mobileMenuOpen"
+          v-if="mobileMenuOpen"
           class="dropdown-menu lg:hidden"
           :initial="{ opacity: 0, scaleY: 0.8 }"
           :animate="{ opacity: 1, scaleY: 1 }"
@@ -217,16 +213,22 @@ const MotionDiv = motion.div
           :transition="{ duration: 0.2, ease: 'easeOut' }"
         >
           <div class="px-4 py-4 flex flex-col space-y-4">
-            <RouterLink
-              v-for="link in navLinks"
-              :key="link.key"
-              :to="link.to"
-              class="nav-link text-center"
-            >
-              {{ link.label }}
-            </RouterLink>
-            <hr class="border-earth-100/10" />
+            <template v-if="authStore.isAuthenticated">
+              <RouterLink
+                v-for="link in navLinks"
+                :key="link.key"
+                :to="link.to"
+                class="nav-link text-center"
+              >
+                {{ link.label }}
+              </RouterLink>
+              <hr class="border-earth-100/10" />
+            </template>
             <RouterLink :to="aboutLink.to" class="nav-link-bold text-lg! text-center"> {{ aboutLink.label }}</RouterLink>
+            <template v-if="!authStore.isAuthenticated">
+               <hr class="border-earth-100/10" />
+               <button @click="router.push('/login'); mobileMenuOpen = false" class="nav-link-bold text-lg! text-center w-full">Bejelentkezés</button>
+            </template>
           </div>
         </MotionDiv>
       </AnimatePresence>
