@@ -103,7 +103,7 @@
             </div>
 
             <div v-else-if="hatlapTipus === 'elfelejtett'">
-              <h1 class="text-3xl font-bold text-center text-earth-50 mb-4 tracking-wide">Új jelszó</h1>
+              <h1 class="text-3xl font-bold text-center text-earth-50 mb-4 tracking-wide">Új jelszó igénylés</h1>
               <p class="text-center text-earth-200/80 text-sm mb-10">Add meg az e-mail címedet!</p>
               <form @submit.prevent="elfelejtettJelszoKeres" class="space-y-8">
                 <div class="relative group">
