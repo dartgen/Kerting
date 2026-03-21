@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { motion, AnimatePresence } from 'motion-v'
 
 interface GalleryItem {
@@ -21,6 +21,7 @@ interface GalleryItem {
 const MotionDiv = motion.div
 const previewCardId = ref<number | null>(null)
 const expandedCardId = ref<number | null>(null)
+const isDesktopInteraction = ref(false)
 
 const expandedCard = computed(() => galleryItems.find((item) => item.id === expandedCardId.value) ?? null)
 
@@ -28,6 +29,11 @@ const isCardPreviewed = (id: number) => previewCardId.value === id
 
 const handleCardClick = (id: number) => {
   if (expandedCardId.value) return
+
+  if (isDesktopInteraction.value) {
+    expandedCardId.value = id
+    return
+  }
 
   if (previewCardId.value === id) {
     expandedCardId.value = id
@@ -41,6 +47,28 @@ const closeExpandedCard = () => {
   expandedCardId.value = null
   previewCardId.value = null
 }
+
+const desktopQuery = '(hover: hover) and (pointer: fine)'
+let mediaQuery: MediaQueryList | null = null
+
+const syncInteractionMode = () => {
+  isDesktopInteraction.value = Boolean(mediaQuery?.matches)
+}
+
+onMounted(() => {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+  mediaQuery = window.matchMedia(desktopQuery)
+  syncInteractionMode()
+  mediaQuery.addEventListener('change', syncInteractionMode)
+})
+
+onUnmounted(() => {
+  mediaQuery?.removeEventListener('change', syncInteractionMode)
+})
+
+watch(isDesktopInteraction, (isDesktop) => {
+  if (isDesktop) previewCardId.value = null
+})
 
 const galleryItems: GalleryItem[] = [
   {
@@ -181,7 +209,8 @@ const galleryItems: GalleryItem[] = [
           Inspirálódj más kertekből és munkafolyamatokból.
         </p>
         <p class="mt-1 text-[11px] sm:text-xs text-earth-200/70">
-          Első érintés: részletek. Második ugyanazon képen: nagy nézet.
+          <span v-if="isDesktopInteraction">Asztali nézetben: hover után kattintással azonnal nyílik a nagy nézet.</span>
+          <span v-else>Első érintés: részletek. Második ugyanazon képen: nagy nézet.</span>
         </p>
       </div>
 
@@ -308,6 +337,16 @@ const galleryItems: GalleryItem[] = [
               :class="isCardPreviewed(item.id) ? 'bg-black/28 backdrop-blur-[1.5px]' : ''"
             >
               <div
+                class="absolute inset-0 flex items-center justify-center px-4 text-center opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-250"
+                :class="isCardPreviewed(item.id) ? 'opacity-100' : ''"
+              >
+                <span class="rounded-full border border-earth-100/30 bg-black/45 px-3 py-1.5 text-[11px] sm:text-xs font-semibold tracking-wide text-earth-50 shadow-md">
+                  <span v-if="isDesktopInteraction">Kattints középre a nagy nézet megnyitásához</span>
+                  <span v-else>Koppints középre a nagy nézet megnyitásához</span>
+                </span>
+              </div>
+
+              <div
                 class="absolute inset-0 flex items-end p-3 sm:p-4 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-250"
                 :class="isCardPreviewed(item.id) ? 'opacity-100' : ''"
               >
@@ -320,7 +359,8 @@ const galleryItems: GalleryItem[] = [
                       {{ item.uploaderName }}
                     </p>
                     <p class="mt-1 text-earth-200/75 text-[10px] sm:text-[11px]">
-                      Koppints még egyszer a nagy nézethez
+                      <span v-if="isDesktopInteraction">Kattints a nagy nézet megnyitásához</span>
+                      <span v-else>Koppints még egyszer a nagy nézethez</span>
                     </p>
                   </div>
                   <p class="shrink-0 text-earth-100/85 text-[10px] sm:text-xs md:text-[0.78rem] self-end">
