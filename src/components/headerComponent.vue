@@ -113,8 +113,8 @@ const MotionDiv = motion.div
           </div>
 
           <!-- Középsô logó -->
-          <div class="absolute left-1/2 transform -translate-x-1/2">
-            <RouterLink to="/" class="logo-text"> KERTING </RouterLink>
+          <div class="absolute left-1/2 transform -translate-x-1/2 w-[56%] sm:w-auto px-2">
+            <RouterLink to="/" class="logo-text block text-center truncate"> KERTING </RouterLink>
           </div>
 
           <!-- Jobb oldal: Keresés és Login/Profile -->

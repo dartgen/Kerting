@@ -29,7 +29,7 @@
   }
 
   .logo-text {
-    @apply text-2xl sm:text-3xl lg:text-4xl font-serif tracking-widest text-earth-50 hover:text-earth-100 transition-all duration-300 pb-1 border-b-2 border-transparent hover:border-earth-200/50 drop-shadow-lg;
+    @apply text-xl sm:text-3xl lg:text-4xl font-serif tracking-widest text-earth-50 hover:text-earth-100 transition-all duration-300 pb-1 border-b-2 border-transparent hover:border-earth-200/50 drop-shadow-lg;
   }
 
   .search-input {

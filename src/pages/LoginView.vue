@@ -1,13 +1,13 @@
 <template>
-  <div class="flex-1 flex items-center justify-center w-full h-full min-h-0 px-4 sm:px-6">
+  <div class="flex-1 flex items-start sm:items-center justify-center w-full h-full min-h-0 px-4 sm:px-6 py-3 sm:py-0 overflow-y-auto">
     <div class="relative w-full max-w-md p-4 perspective-[1000px]">
       <div
-        class="relative w-full h-[550px] transition-transform duration-700 transform-3d"
+        class="relative w-full h-[min(550px,calc(100dvh-2rem))] sm:h-[550px] transition-transform duration-700 transform-3d"
         :class="{ 'rotate-y-180': isFlipped }"
       >
 
         <div class="absolute inset-0 w-full h-full backface-hidden">
-          <div class="h-full flex flex-col justify-center px-8 py-10 bg-earth-900/70 border border-earth-100/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+          <div class="h-full flex flex-col justify-center px-5 sm:px-8 py-6 sm:py-10 bg-earth-900/70 border border-earth-100/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-y-auto overscroll-contain">
             <button
               type="button"
               class="absolute top-4 left-4 z-30 p-1 text-white transition-colors hover:text-earth-200 focus:outline-none"
@@ -72,7 +72,7 @@
               <path d="M15 6L9 12L15 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </button>
-          <div class="h-full flex flex-col justify-center px-8 py-8 bg-earth-900/70 border border-earth-100/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+          <div class="h-full flex flex-col justify-center px-5 sm:px-8 py-6 sm:py-8 bg-earth-900/70 border border-earth-100/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-y-auto overscroll-contain">
 
             <div v-if="hatlapTipus === 'regisztracio'">
               <h1 class="text-3xl font-bold text-center text-earth-50 mb-8 tracking-wide">Regisztráció</h1>

@@ -7,7 +7,7 @@ const MotionDiv = motion.div;
 </script>
 
 <template>
-  <div class="flex-1 flex flex-col items-center justify-between w-full h-full min-h-0 overflow-hidden py-1 md:py-2 gap-2">
+  <div class="flex-1 flex flex-col items-center justify-between w-full h-full min-h-0 overflow-y-auto overflow-x-hidden py-1 md:py-2 gap-2">
 
     <!-- Fő szövegblokk -->
     <MotionDiv
