@@ -1,17 +1,12 @@
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center overflow-hidden font-sans text-earth-100">
-    <div class="absolute inset-0 z-0">
-      <img :src="bgImage" alt="Background" class="w-full h-full object-cover" />
-      <div class="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
-    </div>
-
-    <div class="relative z-10 w-full max-w-md p-4 perspective-[1000px]">
+  <div class="flex-1 flex items-center justify-center w-full h-full min-h-0">
+    <div class="relative w-full max-w-md p-4 perspective-[1000px]">
       <div
         class="relative w-full h-[550px] transition-transform duration-700 transform-3d"
         :class="{ 'rotate-y-180': isFlipped }"
       >
         <div class="absolute inset-0 w-full h-full backface-hidden">
-          <div class="h-full flex flex-col justify-center px-8 py-10 bg-earth-900/70 backdrop-blur-xl border border-earth-100/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+          <div class="h-full flex flex-col justify-center px-8 py-10 bg-earth-900/70 border border-earth-100/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
             <h1 class="text-3xl font-bold text-center text-earth-50 mb-10 tracking-wide drop-shadow-md">Bejelentkezés</h1>
             <form @submit.prevent="bejelentkezes" class="space-y-8">
 
@@ -56,7 +51,7 @@
         </div>
 
         <div class="absolute inset-0 w-full h-full backface-hidden rotate-y-180">
-          <div class="h-full flex flex-col justify-center px-8 py-8 bg-earth-800/80 backdrop-blur-xl border border-earth-100/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+          <div class="h-full flex flex-col justify-center px-8 py-8 bg-earth-900/70 border border-earth-100/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
 
             <div v-if="hatlapTipus === 'regisztracio'">
               <h1 class="text-3xl font-bold text-center text-earth-50 mb-8 tracking-wide">Regisztráció</h1>
@@ -136,7 +131,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useAuthStore } from '@/stores/authStore';
-import bgImage from '@/assets/background.jpg';
 
 const authStore = useAuthStore();
 const isFlipped = ref(false);
@@ -203,5 +197,35 @@ const regisztracio = async () => {
   }
 };
 
+const elfelejtettJelszoKeres = () => {
+  // Password reset logic placeholder
+  alert(`Jelszó emlékeztető e-mail elküldve a megadott címre: ${resetAzonosito.value}`);
+  isFlipped.value = false;
+  resetAzonosito.value = '';
+};
+
 </script>
 
+<style scoped>
+/* 3D Flip Card Styles */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.transform-3d {
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.backface-hidden {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  /* Firefox specific fix attempt using translateZ hack */
+  transform: translateZ(0);
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+</style>
