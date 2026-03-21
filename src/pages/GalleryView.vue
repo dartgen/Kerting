@@ -172,9 +172,10 @@ const galleryItems: GalleryItem[] = [
       :initial="{ opacity: 0, y: 14 }"
       :animate="{ opacity: 1, y: 0 }"
       :transition="{ duration: 0.45, ease: 'easeOut' }"
-      class="w-full h-full min-h-0 bg-earth-900/70 backdrop-blur-lg border border-earth-100/20 rounded-2xl sm:rounded-3xl px-3 py-4 sm:px-5 sm:py-6 lg:px-6 shadow-[0_20px_50px_rgba(0,0,0,0.35)] overflow-y-auto overscroll-contain"
+      class="w-full h-full min-h-0 bg-earth-900/70 backdrop-blur-lg border border-earth-100/20 rounded-2xl sm:rounded-3xl px-3 py-4 sm:px-5 sm:py-6 lg:px-6 shadow-[0_20px_50px_rgba(0,0,0,0.35)] overscroll-contain"
+      :class="expandedCard ? 'overflow-hidden' : 'overflow-y-auto'"
     >
-      <div class="mb-5 sm:mb-6 pb-3 sm:pb-4 border-b border-earth-100/15">
+      <div v-if="!expandedCard" class="mb-5 sm:mb-6 pb-3 sm:pb-4 border-b border-earth-100/15">
         <h1 class="text-2xl sm:text-3xl md:text-4xl font-serif text-earth-50">Galéria</h1>
         <p class="mt-2 text-sm sm:text-base text-earth-200/90">
           Inspirálódj más kertekből és munkafolyamatokból.
@@ -192,7 +193,7 @@ const galleryItems: GalleryItem[] = [
           :animate="{ opacity: 1, y: 0 }"
           :exit="{ opacity: 0, y: 10 }"
           :transition="{ duration: 0.28, ease: 'easeOut' }"
-          class="relative min-h-[420px] lg:min-h-[560px]"
+          class="relative h-full min-h-[420px] lg:min-h-[560px]"
         >
           <button
             type="button"
@@ -224,7 +225,7 @@ const galleryItems: GalleryItem[] = [
               :initial="{ opacity: 0, x: 16 }"
               :animate="{ opacity: 1, x: 0 }"
               :transition="{ duration: 0.3, ease: 'easeOut' }"
-              class="rounded-2xl border border-earth-100/20 bg-earth-950/45 p-4 sm:p-5 overflow-y-auto"
+              class="rounded-2xl border border-earth-100/20 bg-earth-950/45 p-4 sm:p-5 overflow-hidden flex flex-col min-h-0"
             >
               <div class="flex items-center gap-3 pb-3 border-b border-earth-100/10">
                 <img
@@ -243,9 +244,9 @@ const galleryItems: GalleryItem[] = [
                 <p class="mt-2 text-earth-200/90 text-sm leading-relaxed">{{ expandedCard.description }}</p>
               </div>
 
-              <div class="pt-5">
+              <div class="pt-5 flex-1 min-h-0">
                 <h3 class="text-earth-50 font-semibold text-sm sm:text-base">Kommentek</h3>
-                <div class="mt-3 space-y-3">
+                <div class="mt-3 space-y-3 overflow-y-auto max-h-[260px] sm:max-h-[320px] lg:max-h-[420px] pr-1">
                   <div
                     v-for="comment in expandedCard.comments"
                     :key="comment.id"
