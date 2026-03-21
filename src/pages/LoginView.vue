@@ -206,7 +206,7 @@ const regisztracio = async () => {
       await authStore.regisztracio(regFelhasznaloNev.value, regJelszo.value);
 
       alert("Sikeres regisztráció! Most jelentkezz be.");
-      isFlipped.value = false; // Visszafordítjuk a login oldalra
+      isFlipped.value = false; // Visszafordítjuk a bejelentkezési oldalra
 
       // Mezők ürítése
       regFelhasznaloNev.value = '';
@@ -221,7 +221,7 @@ const regisztracio = async () => {
 };
 
 const elfelejtettJelszoKeres = () => {
-  // Password reset logic placeholder
+  // Jelszó-visszaállítás helyőrző logika
   alert(`Jelszó emlékeztető e-mail elküldve a megadott címre: ${resetAzonosito.value}`);
   isFlipped.value = false;
   resetAzonosito.value = '';
@@ -234,10 +234,7 @@ const visszaAFooldalra = () => {
 </script>
 
 <style scoped>
-/* 3D Flip Card Styles */
-.perspective-1000 {
-  perspective: 1000px;
-}
+/* 3D flipkártya stílusok */
 
 .transform-3d {
   transform-style: preserve-3d;
@@ -248,7 +245,7 @@ const visszaAFooldalra = () => {
 .backface-hidden {
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
-  /* Firefox specific fix attempt using translateZ hack */
+  /* Firefox-specifikus javítás translateZ trükkel */
   transform: translateZ(0);
 }
 

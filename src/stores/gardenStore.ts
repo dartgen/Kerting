@@ -5,7 +5,7 @@ export interface Professional {
   id: number
   name: string
   desc: string
-  image?: string // Potential future field
+  image?: string // Lehetséges jövőbeli mező
 }
 
 export interface Work {
@@ -49,7 +49,7 @@ export const useGardenStore = defineStore('garden', () => {
       id: 1,
       title: 'Tavaszi Kertrendezés',
       desc: 'Teljes körű tavaszi metszés és gyepszellőztetés Budán.',
-      highlight: '', // pl. highlight
+      highlight: '', // kiemeléshez
     },
     {
       id: 2,

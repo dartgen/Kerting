@@ -9,7 +9,7 @@ const MotionDiv = motion.div;
 <template>
   <div class="flex-1 flex flex-col items-center justify-between w-full h-full min-h-0 overflow-hidden py-1 md:py-2 gap-2">
 
-    <!-- Hero Text -->
+    <!-- Fő szövegblokk -->
     <MotionDiv
       :initial="{ opacity: 0, y: -20 }"
       :animate="{ opacity: 1, y: 0 }"
@@ -26,12 +26,12 @@ const MotionDiv = motion.div;
       </p>
     </MotionDiv>
 
-    <!-- Slider Section -->
+    <!-- Kártyacsúszka szekció -->
     <div class="w-full max-w-7xl flex-1 flex flex-col justify-center min-h-0">
        <GardenerSlider />
     </div>
 
-    <!-- Latest Works -->
+    <!-- Legfrissebb munkák -->
     <div class="w-full max-w-[1400px] shrink-0">
         <LatestWorks />
     </div>

@@ -22,7 +22,7 @@ export const useAuthStore = defineStore('auth', () => {
       // Itt esetleg lekérhetjük a felhasználó adatait is, ha a backend támogatja
       // felhasznalo.value = response.data.user;
 
-      router.push('/');
+      await router.push('/');
     } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       authError.value = "Hibás felhasználónév vagy jelszó.";
       console.error("Bejelentkezési hiba:", error);

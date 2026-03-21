@@ -36,7 +36,7 @@ const displayedLinks = computed<NavLink[]>(() => {
   return [{ ...aboutLink, delay: 0 }]
 })
 
-// Helper for IDE to recognize usage
+// Segédváltozó, hogy az IDE felismerje a komponens használatát
 const MotionDiv = motion.div
 </script>
 
@@ -193,7 +193,7 @@ const MotionDiv = motion.div
         </div>
       </div>
 
-      <!-- Overlay para cerrar el menú al hacer clic fuera -->
+      <!-- Átfedő réteg: kattintásra bezárja a mobilmenüt -->
       <Transition name="fade">
         <div
           v-if="mobileMenuOpen"
@@ -202,7 +202,7 @@ const MotionDiv = motion.div
           @click="mobileMenuOpen = false"
         /></Transition>
 
-      <!-- Telefonos dropdown menü -->
+      <!-- Mobil lenyíló menü -->
       <AnimatePresence>
         <MotionDiv
           v-if="mobileMenuOpen"
@@ -237,12 +237,12 @@ const MotionDiv = motion.div
 </template>
 
 <style scoped>
-.fade-enter-active,
-.fade-leave-active {
+:deep(.fade-enter-active),
+:deep(.fade-leave-active) {
   transition: opacity 0.2s ease;
 }
-.fade-enter-from,
-.fade-leave-to {
+:deep(.fade-enter-from),
+:deep(.fade-leave-to) {
   opacity: 0;
 }
 </style>

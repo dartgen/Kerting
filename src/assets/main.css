@@ -48,8 +48,20 @@
     @apply lg:hidden absolute top-full left-0 w-full mt-2 bg-earth-900/90 backdrop-blur-xl border border-earth-100/10 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.4)] overflow-hidden z-40 origin-top;
   }
 
-  /* New utility for page content containers */
+  /* Belső oldalak közös kártya konténere */
   .page-card {
-    @apply bg-earth-900/40 backdrop-blur-lg border border-earth-100/10 rounded-3xl p-6 sm:p-8 shadow-[0_8px_32px_rgba(0,0,0,0.2)] text-earth-50;
+    @apply w-full h-full min-h-0 bg-earth-900/40 backdrop-blur-lg border border-earth-100/10 rounded-3xl p-6 sm:p-8 shadow-[0_8px_32px_rgba(0,0,0,0.2)] text-earth-50 overflow-y-auto overscroll-contain;
+  }
+
+  .inner-page-shell {
+    @apply w-full h-full min-h-0 py-2 sm:py-3;
+  }
+
+  .inner-page-card {
+    @apply max-w-6xl mx-auto;
+  }
+
+  .page-title {
+    @apply text-3xl md:text-4xl font-serif text-earth-50 mb-6 border-b border-earth-100/10 pb-4;
   }
 }

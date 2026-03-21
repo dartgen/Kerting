@@ -13,7 +13,7 @@ let intervalId: number | null = null;
 
 const getCardStyle = (index: number) => {
   const totalCards = cards.value.length;
-  // Handle empty array
+  // Üres lista kezelése
   if (totalCards === 0) return {};
 
   let distance = index - currentIndex.value;
@@ -21,7 +21,7 @@ const getCardStyle = (index: number) => {
   if (distance > totalCards / 2) distance -= totalCards;
   if (distance < -totalCards / 2) distance += totalCards;
 
-  // Visual states
+  // Vizuális állapotok
   if (distance === 0) {
     return { scale: 1.1, opacity: 1, zIndex: 10, filter: 'blur(0px)' };
   }
@@ -57,7 +57,7 @@ onUnmounted(() => {
 
 <template>
   <div class="w-full flex flex-col justify-center relative py-2 lg:py-0 h-full">
-    <!-- Desktop & Mobile Unified Carousel -->
+    <!-- Egységes kártyacsúszka asztali és mobil nézetre -->
     <div class="flex justify-center items-center gap-2 md:gap-6 h-full relative w-full perspective-1000 min-h-[280px]">
       <MotionDiv
         v-for="(pro, index) in cards"
