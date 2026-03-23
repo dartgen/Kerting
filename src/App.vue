@@ -4,6 +4,10 @@ import { useRoute } from 'vue-router'
 import HeaderComponent from './components/headerComponent.vue'
 import bgImage from './assets/background.jpg'
 
+// 1. LÉPÉS: Importáld be a Toast Konténert!
+// Kérlek, ellenőrizd, hogy jó-e az elérési út a te mappaszerkezeted szerint!
+import ToastContainer from './components/ToastContainer.vue'
+
 const route = useRoute()
 const hideHeader = computed(() => Boolean(route.meta.hideHeader))
 const isFullPage = computed(() => Boolean(route.meta.fullPage))
@@ -25,12 +29,15 @@ const isFullPage = computed(() => Boolean(route.meta.fullPage))
       >
         <RouterView v-slot="{ Component }">
           <transition name="fade" mode="out-in">
-             <component :is="Component" />
+            <component :is="Component" />
           </transition>
         </RouterView>
       </main>
-      </div>
+
+      <ToastContainer />
+
     </div>
+  </div>
 </template>
 
 <style scoped>

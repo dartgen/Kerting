@@ -153,7 +153,9 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
+import { useToastStore } from '@/stores/toast'
 
+const toastStore = useToastStore()
 const router = useRouter();
 const authStore = useAuthStore();
 const isFlipped = ref(false);
@@ -188,7 +190,7 @@ const bejelentkezes = async () => {
   try {
     await authStore.bejelentkezes(felhasznaloNev.value, jelszo.value);
   } catch {
-    alert("Hiba történt! Hibás felhasználónév vagy jelszó.");
+    toastStore.addToast(' Hibás felhasználónév vagy jelszó!', 4000, 'error')
   } finally {
     isLoading.value = false;
   }
@@ -196,16 +198,9 @@ const bejelentkezes = async () => {
 
 const regisztracio = async () => {
   isRegLoading.value = true;
-  if (regJelszos.value != regJelszo.value) {
-    alert("A jelszavak nem egyeznek!");
-    isRegLoading.value = false;
-    regJelszo.value = '';
-    regJelszos.value = '';
-  } else {
     try {
       await authStore.regisztracio(regFelhasznaloNev.value, regJelszo.value);
-
-      alert("Sikeres regisztráció! Most jelentkezz be.");
+      toastStore.addToast('Sikeres regisztráció, most jelentkezz be!', 4000, 'success')
       isFlipped.value = false; // Visszafordítjuk a bejelentkezési oldalra
 
       // Mezők ürítése
@@ -213,16 +208,15 @@ const regisztracio = async () => {
       regJelszo.value = '';
       regJelszos.value = '';
     } catch {
-      alert("Hiba történt a regisztráció során (lehet hogy foglalt a név).");
+      toastStore.addToast('Hiba történt a regisztráció során!', 4000, 'error')
     } finally {
       isRegLoading.value = false;
     }
-  }
 };
 
 const elfelejtettJelszoKeres = () => {
   // Jelszó-visszaállítás helyőrző logika
-  alert(`Jelszó emlékeztető e-mail elküldve a megadott címre: ${resetAzonosito.value}`);
+  toastStore.addToast('A jelszó visszaálitás igényelve!', 4000, 'success')
   isFlipped.value = false;
   resetAzonosito.value = '';
 };
