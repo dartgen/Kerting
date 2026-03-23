@@ -19,17 +19,21 @@ interface GalleryItem {
 }
 
 const MotionDiv = motion.div
+// A kártyák interakciós állapota: előnézet (touch) és nagyított nézet.
 const previewCardId = ref<number | null>(null)
 const expandedCardId = ref<number | null>(null)
 const isDesktopInteraction = ref(false)
 
+// Az aktuálisan nagyított elem teljes adatait adja vissza.
 const expandedCard = computed(() => galleryItems.find((item) => item.id === expandedCardId.value) ?? null)
 
 const isCardPreviewed = (id: number) => previewCardId.value === id
 
 const handleCardClick = (id: number) => {
+  // Ha már nyitva van nagy nézet, új kattintást nem kezelünk.
   if (expandedCardId.value) return
 
+  // Desktopon azonnal nyitunk; érintőn először előnézet, második érintésre nagy nézet.
   if (isDesktopInteraction.value) {
     expandedCardId.value = id
     return
@@ -44,6 +48,7 @@ const handleCardClick = (id: number) => {
 }
 
 const closeExpandedCard = () => {
+  // Bezáráskor minden kiválasztási állapotot nullázunk.
   expandedCardId.value = null
   previewCardId.value = null
 }
@@ -52,6 +57,7 @@ const desktopQuery = '(hover: hover) and (pointer: fine)'
 let mediaQuery: MediaQueryList | null = null
 
 const syncInteractionMode = () => {
+  // A media query alapján eldöntjük, hogy egér/alapú (desktop) interakció legyen-e.
   isDesktopInteraction.value = Boolean(mediaQuery?.matches)
 }
 
@@ -67,9 +73,11 @@ onUnmounted(() => {
 })
 
 watch(isDesktopInteraction, (isDesktop) => {
+  // Desktop váltásnál töröljük az érintős előnézeti állapotot.
   if (isDesktop) previewCardId.value = null
 })
 
+// Minta galéria adatok a nézet megjelenítéséhez.
 const galleryItems: GalleryItem[] = [
   {
     id: 1,
@@ -196,25 +204,23 @@ const galleryItems: GalleryItem[] = [
 
 <template>
   <div class="w-full h-full min-h-0 py-2 sm:py-3">
+    <!-- Fő galéria konténer animációval; nagy nézetben fix, egyébként görgethető. -->
     <MotionDiv
       :initial="{ opacity: 0, y: 14 }"
       :animate="{ opacity: 1, y: 0 }"
       :transition="{ duration: 0.45, ease: 'easeOut' }"
       class="w-full h-full min-h-0 bg-earth-900/70 backdrop-blur-lg border border-earth-100/20 rounded-2xl sm:rounded-3xl px-3 py-4 sm:px-5 sm:py-6 lg:px-6 shadow-[0_20px_50px_rgba(0,0,0,0.35)] overscroll-contain"
-      :class="expandedCard ? 'overflow-hidden' : 'overflow-y-auto'"
+      :class="expandedCard ? 'overflow-y-auto lg:overflow-hidden' : 'overflow-y-auto'"
     >
-      <div v-if="!expandedCard" class="mb-5 sm:mb-6 pb-3 sm:pb-4 border-b border-earth-100/15">
+      <div v-if="!expandedCard" class="mb-5 sm:mb-6 pb-3 sm:pb-4 border-b border-earth-100/15 text-center">
         <h1 class="text-2xl sm:text-3xl md:text-4xl font-serif text-earth-50">Galéria</h1>
         <p class="mt-2 text-sm sm:text-base text-earth-200/90">
           Inspirálódj más kertekből és munkafolyamatokból.
         </p>
-        <p class="mt-1 text-[11px] sm:text-xs text-earth-200/70">
-          <span v-if="isDesktopInteraction">Asztali nézetben: hover után kattintással azonnal nyílik a nagy nézet.</span>
-          <span v-else>Első érintés: részletek. Második ugyanazon képen: nagy nézet.</span>
-        </p>
       </div>
 
       <AnimatePresence>
+        <!-- Kiválasztott kép részletes, nagyított nézete. -->
         <MotionDiv
           v-if="expandedCard"
           key="expanded-view"
@@ -222,7 +228,7 @@ const galleryItems: GalleryItem[] = [
           :animate="{ opacity: 1, y: 0 }"
           :exit="{ opacity: 0, y: 10 }"
           :transition="{ duration: 0.28, ease: 'easeOut' }"
-          class="relative h-full min-h-[420px] lg:min-h-[560px]"
+          class="relative min-h-[420px] lg:h-full lg:min-h-[560px]"
         >
           <button
             type="button"
@@ -233,17 +239,17 @@ const galleryItems: GalleryItem[] = [
             ✕
           </button>
 
-          <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.75fr)] gap-3 sm:gap-4 h-full min-h-[420px] lg:min-h-[560px]">
+          <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.75fr)] gap-3 sm:gap-4 min-h-[420px] lg:h-full lg:min-h-[560px]">
             <MotionDiv
               :initial="{ opacity: 0.6, scale: 0.985 }"
               :animate="{ opacity: 1, scale: 1 }"
               :transition="{ duration: 0.25, ease: 'easeOut' }"
-              class="relative rounded-2xl overflow-hidden border border-earth-100/20 bg-earth-950/50"
+              class="relative flex items-center justify-center rounded-2xl overflow-hidden border border-earth-100/20 bg-earth-950/50"
             >
               <img
                 :src="expandedCard.imageUrl"
                 :alt="expandedCard.description"
-                class="w-full h-full min-h-[280px] lg:min-h-full object-cover"
+                class="w-full h-full min-h-[280px] lg:min-h-full object-contain"
               />
               <div class="absolute bottom-3 right-3 px-2 py-1 rounded-md bg-black/45 text-earth-100 text-xs border border-earth-100/15">
                 {{ expandedCard.uploadedAt }}
@@ -275,7 +281,7 @@ const galleryItems: GalleryItem[] = [
 
               <div class="pt-5 flex-1 min-h-0">
                 <h3 class="text-earth-50 font-semibold text-sm sm:text-base">Kommentek</h3>
-                <div class="mt-3 space-y-3 overflow-y-auto max-h-[260px] sm:max-h-[320px] lg:max-h-[420px] pr-1">
+                <div class="mt-3 space-y-3 overflow-y-auto max-h-[45vh] sm:max-h-[320px] lg:max-h-[420px] pr-1">
                   <div
                     v-for="comment in expandedCard.comments"
                     :key="comment.id"
@@ -309,6 +315,7 @@ const galleryItems: GalleryItem[] = [
           :transition="{ duration: 0.2, ease: 'easeOut' }"
           class="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 [column-gap:0.55rem] sm:[column-gap:0.7rem] lg:[column-gap:0.8rem]"
         >
+          <!-- Alapértelmezett mozaiknézet: képkártyák előnézettel és megnyitási interakcióval. -->
           <MotionDiv
             v-for="(item, index) in galleryItems"
             :key="item.id"
