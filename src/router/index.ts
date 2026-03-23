@@ -53,6 +53,14 @@ const router = createRouter({
         hideHeader: true,
         fullPage: true,
       }
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: () => import('../pages/ProfileManagementView.vue'),
+      meta: {
+        title: `${pre} Profil`
+      }
     }
   ],
 })
