@@ -1,2 +1,2 @@
 --- Képek ---
-Frontend háttérkép: https://unsplash.com/es/fotos/camino-marron-entre-plantas-verdes-1_yycyoMT6g
+Frontend háttérkép: https://unsplash.com/photos/brown-pathway-between-green-plants-1_yycyoMT6g
