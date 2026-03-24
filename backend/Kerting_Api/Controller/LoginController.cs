@@ -78,15 +78,14 @@ namespace Kerting_Api.Controller
             {
                 Username = loginAdatok.Username,
                 Password = passwordHash, // FONTOS: A hash-t mentjük, nem az eredetit!
-                                         // Egyéb mezők...
-                RoleId = 2
             };
 
             _context.Login.Add(newUser);
             await _context.SaveChangesAsync();
             _context.User.Add(new Libary.Model.User.User
             {
-                Id = newUser.Id
+                Id = newUser.Id,
+                RoleId = 2
             });
             await _context.SaveChangesAsync();
             return Ok("Sikeres regisztráció!" + $"\n{newUser.Username}\n{newUser.Password}");

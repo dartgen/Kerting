@@ -10,7 +10,6 @@ namespace Libary.Model.Auth
         public string Username { get; set; }
         public string Password { get; set; }
         // 1. A "Kulcs" (ennek egyeznie kell az SQL oszlop nevével!)
-        public int RoleId { get; set; }
         public bool FirstLogin { get; set; } = true;
     }
 }

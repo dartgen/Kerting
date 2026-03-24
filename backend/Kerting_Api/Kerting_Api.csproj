@@ -23,4 +23,9 @@
     <ProjectReference Include="..\Libary\Libary.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Resources\Gallery\" />
+    <Folder Include="Resources\Profiles\" />
+  </ItemGroup>
+
 </Project>

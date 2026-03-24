@@ -97,6 +97,15 @@ namespace Kerting_Api
 
             var app = builder.Build();
 
+            // A teljes "Resources" mappát elérhetővé tesszük
+            // így könyedén eléri a frontend.
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(
+                    Path.Combine(builder.Environment.ContentRootPath, "Resources")),
+                RequestPath = "/resources"
+            });
+
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
