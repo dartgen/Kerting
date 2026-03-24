@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { motion, AnimatePresence } from 'motion-v'
+import api from '@/services/axios'
 
 interface GalleryItem {
   id: number
@@ -18,6 +19,8 @@ interface GalleryItem {
   }[]
 }
 
+const galleryItems = ref<GalleryItem[]>([])
+
 const MotionDiv = motion.div
 // A kártyák interakciós állapota: előnézet (touch) és nagyított nézet.
 const previewCardId = ref<number | null>(null)
@@ -25,22 +28,52 @@ const expandedCardId = ref<number | null>(null)
 const isDesktopInteraction = ref(false)
 
 // Az aktuálisan nagyított elem teljes adatait adja vissza.
-const expandedCard = computed(() => galleryItems.find((item) => item.id === expandedCardId.value) ?? null)
+const expandedCard = computed(() => galleryItems.value.find((item) => item.id === expandedCardId.value) ?? null)
 
 const isCardPreviewed = (id: number) => previewCardId.value === id
 
-const handleCardClick = (id: number) => {
+const openExpandedCard = async (id: number) => {
+  try {
+    const { data } = await api.get(`/Gallery/${id}`)
+    const itemIndex = galleryItems.value.findIndex(i => i.id === id)
+    if (itemIndex !== -1) {
+      const existingItem = galleryItems.value[itemIndex]
+      if (existingItem) {
+        galleryItems.value[itemIndex] = {
+          id: existingItem.id,
+          imageUrl: existingItem.imageUrl,
+          description: existingItem.description,
+          uploaderName: existingItem.uploaderName,
+          uploaderAvatarUrl: existingItem.uploaderAvatarUrl,
+          uploadedAt: existingItem.uploadedAt,
+          comments: data.comments?.map((c: any) => ({
+            id: c.id,
+            userName: c.userName,
+            avatarUrl: `https://i.pravatar.cc/72?u=${c.userId}`,
+            message: c.message,
+            createdAt: new Date(c.createdAtUtc).toLocaleDateString()
+          })) || []
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Hiba a részletek lekérésekor", err)
+  }
+  expandedCardId.value = id
+}
+
+const handleCardClick = async (id: number) => {
   // Ha már nyitva van nagy nézet, új kattintást nem kezelünk.
   if (expandedCardId.value) return
 
   // Desktopon azonnal nyitunk; érintőn először előnézet, második érintésre nagy nézet.
   if (isDesktopInteraction.value) {
-    expandedCardId.value = id
+    await openExpandedCard(id)
     return
   }
 
   if (previewCardId.value === id) {
-    expandedCardId.value = id
+    await openExpandedCard(id)
     return
   }
 
@@ -61,11 +94,37 @@ const syncInteractionMode = () => {
   isDesktopInteraction.value = Boolean(mediaQuery?.matches)
 }
 
+const getFullImageUrl = (url: string) => {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  const baseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:5224'
+  return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
+}
+
+const fetchFeed = async () => {
+  try {
+    const { data } = await api.get('/Gallery/feed')
+    galleryItems.value = data.map((item: any) => ({
+      id: item.id,
+      imageUrl: getFullImageUrl(item.imageUrl),
+      description: item.description || item.title || '',
+      uploaderName: item.uploaderName,
+      uploaderAvatarUrl: `https://i.pravatar.cc/96?u=${item.uploaderId}`,
+      uploadedAt: new Date(item.createdAtUtc).toLocaleDateString(),
+      comments: []
+    }))
+  } catch (err) {
+    console.error("Hiba a galéria betöltésekor", err)
+  }
+}
+
 onMounted(() => {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
   mediaQuery = window.matchMedia(desktopQuery)
   syncInteractionMode()
   mediaQuery.addEventListener('change', syncInteractionMode)
+
+  fetchFeed()
 })
 
 onUnmounted(() => {
@@ -76,130 +135,6 @@ watch(isDesktopInteraction, (isDesktop) => {
   // Desktop váltásnál töröljük az érintős előnézeti állapotot.
   if (isDesktop) previewCardId.value = null
 })
-
-// Minta galéria adatok a nézet megjelenítéséhez.
-const galleryItems: GalleryItem[] = [
-  {
-    id: 1,
-    imageUrl: 'https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?auto=format&fit=crop&w=900&q=80',
-    description: 'Reggeli harmat a levendulasor mellett.',
-    uploaderName: 'Kiss Nóra',
-    uploaderAvatarUrl: 'https://i.pravatar.cc/96?img=32',
-    uploadedAt: '2026.03.02',
-    comments: [
-      { id: 101, userName: 'Papp Lili', avatarUrl: 'https://i.pravatar.cc/72?img=47', message: 'Nagyon hangulatos a színvilág!', createdAt: '2026.03.03' },
-      { id: 102, userName: 'Sánta Áron', avatarUrl: 'https://i.pravatar.cc/72?img=12', message: 'A levendulaágyás tényleg csodás lett.', createdAt: '2026.03.04' },
-    ],
-  },
-  {
-    id: 2,
-    imageUrl: 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=700&q=80',
-    description: 'Új virágágyás frissen mulcsozva.',
-    uploaderName: 'Szabó Márk',
-    uploaderAvatarUrl: 'https://i.pravatar.cc/96?img=14',
-    uploadedAt: '2026.02.27',
-    comments: [
-      { id: 201, userName: 'Németh Dóra', avatarUrl: 'https://i.pravatar.cc/72?img=5', message: 'Szuper rendezett munka, gratulálok!', createdAt: '2026.02.28' },
-      { id: 202, userName: 'Gulyás Máté', avatarUrl: 'https://i.pravatar.cc/72?img=23', message: 'A mulcs textúrája nagyon jól mutat.', createdAt: '2026.03.01' },
-    ],
-  },
-  {
-    id: 3,
-    imageUrl: 'https://images.unsplash.com/photo-1459156212016-c812468e2115?auto=format&fit=crop&w=1200&q=80',
-    description: 'Kerti pihenő árnyékban, késő délután.',
-    uploaderName: 'Tóth Emese',
-    uploaderAvatarUrl: 'https://i.pravatar.cc/96?img=45',
-    uploadedAt: '2026.02.25',
-    comments: [
-      { id: 301, userName: 'Károlyi Zsófi', avatarUrl: 'https://i.pravatar.cc/72?img=49', message: 'Ide tényleg ki lehet ülni órákra.', createdAt: '2026.02.25' },
-      { id: 302, userName: 'Kovács Levente', avatarUrl: 'https://i.pravatar.cc/72?img=18', message: 'A fények nagyon szépen dolgoznak.', createdAt: '2026.02.26' },
-    ],
-  },
-  {
-    id: 4,
-    imageUrl: 'https://images.unsplash.com/photo-1598902108854-10e335adac99?auto=format&fit=crop&w=800&q=80',
-    description: 'Paradicsomok az emelt ágyásban.',
-    uploaderName: 'Farkas Levente',
-    uploaderAvatarUrl: 'https://i.pravatar.cc/96?img=13',
-    uploadedAt: '2026.02.21',
-    comments: [
-      { id: 401, userName: 'Balla Nóri', avatarUrl: 'https://i.pravatar.cc/72?img=40', message: 'Ez már profi konyhakert szint.', createdAt: '2026.02.22' },
-      { id: 402, userName: 'Bodnár Péter', avatarUrl: 'https://i.pravatar.cc/72?img=29', message: 'Nagyon tetszik az emelt ágyás aránya.', createdAt: '2026.02.22' },
-    ],
-  },
-  {
-    id: 5,
-    imageUrl: 'https://images.unsplash.com/photo-1515150144380-bca9f1650ed9?auto=format&fit=crop&w=1100&q=80',
-    description: 'Kőburkolat és díszfű harmonikus összhangban.',
-    uploaderName: 'Nagy Petra',
-    uploaderAvatarUrl: 'https://i.pravatar.cc/96?img=9',
-    uploadedAt: '2026.02.18',
-    comments: [
-      { id: 501, userName: 'Fodor Luca', avatarUrl: 'https://i.pravatar.cc/72?img=28', message: 'Modern, mégis nagyon barátságos.', createdAt: '2026.02.18' },
-      { id: 502, userName: 'Sipos Bence', avatarUrl: 'https://i.pravatar.cc/72?img=11', message: 'A burkolat és a zöldek együtt tökéletesek.', createdAt: '2026.02.19' },
-    ],
-  },
-  {
-    id: 6,
-    imageUrl: 'https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&w=750&q=80',
-    description: 'Sziklakert tavasszal, friss zöld színekkel.',
-    uploaderName: 'Varga Ádám',
-    uploaderAvatarUrl: 'https://i.pravatar.cc/96?img=15',
-    uploadedAt: '2026.02.14',
-    comments: [
-      { id: 601, userName: 'Mészáros Anna', avatarUrl: 'https://i.pravatar.cc/72?img=20', message: 'Gyönyörű rétegzés, nagyon tetszik!', createdAt: '2026.02.15' },
-      { id: 602, userName: 'Kis Roland', avatarUrl: 'https://i.pravatar.cc/72?img=36', message: 'A sziklakert textúrája nagyon ütős.', createdAt: '2026.02.16' },
-    ],
-  },
-  {
-    id: 7,
-    imageUrl: 'https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=1000&q=80',
-    description: 'Vadrizsa és virágok természetes kompozícióban.',
-    uploaderName: 'Molnár Hanna',
-    uploaderAvatarUrl: 'https://i.pravatar.cc/96?img=52',
-    uploadedAt: '2026.02.10',
-    comments: [
-      { id: 701, userName: 'Gerencsér Panni', avatarUrl: 'https://i.pravatar.cc/72?img=34', message: 'Annyira természetes és élő a kép.', createdAt: '2026.02.11' },
-      { id: 702, userName: 'Oláh Marci', avatarUrl: 'https://i.pravatar.cc/72?img=10', message: 'A színátmenetek nagyon szépek.', createdAt: '2026.02.12' },
-    ],
-  },
-  {
-    id: 8,
-    imageUrl: 'https://images.unsplash.com/photo-1534710961216-75c88202f43e?auto=format&fit=crop&w=850&q=80',
-    description: 'Kora esti fények a gyümölcsfák között.',
-    uploaderName: 'Bíró Dániel',
-    uploaderAvatarUrl: 'https://i.pravatar.cc/96?img=24',
-    uploadedAt: '2026.02.06',
-    comments: [
-      { id: 801, userName: 'Tari Kitti', avatarUrl: 'https://i.pravatar.cc/72?img=56', message: 'Mesebeli ez a fény!', createdAt: '2026.02.07' },
-      { id: 802, userName: 'Balázs Noé', avatarUrl: 'https://i.pravatar.cc/72?img=26', message: 'A gyümölcsfák között nagyon jó a perspektíva.', createdAt: '2026.02.08' },
-    ],
-  },
-  {
-    id: 9,
-    imageUrl: 'https://images.unsplash.com/photo-1438109382753-8368e7e1e7cf?auto=format&fit=crop&w=650&q=80',
-    description: 'Friss füves sávok kerti nyomvonalakkal.',
-    uploaderName: 'Lakatos Anna',
-    uploaderAvatarUrl: 'https://i.pravatar.cc/96?img=37',
-    uploadedAt: '2026.02.02',
-    comments: [
-      { id: 901, userName: 'Berkes Misi', avatarUrl: 'https://i.pravatar.cc/72?img=7', message: 'Nagyon rendezett és tiszta összkép.', createdAt: '2026.02.03' },
-      { id: 902, userName: 'Végh Orsi', avatarUrl: 'https://i.pravatar.cc/72?img=35', message: 'A nyomvonalak ritmusa nagyon jó.', createdAt: '2026.02.04' },
-    ],
-  },
-  {
-    id: 10,
-    imageUrl: 'https://images.unsplash.com/photo-1473448912268-2022ce9509d8?auto=format&fit=crop&w=980&q=80',
-    description: 'Árnyéktűrő növények egy modern terasz mellett.',
-    uploaderName: 'Horváth Gergő',
-    uploaderAvatarUrl: 'https://i.pravatar.cc/96?img=16',
-    uploadedAt: '2026.01.29',
-    comments: [
-      { id: 1001, userName: 'Cseri Dalma', avatarUrl: 'https://i.pravatar.cc/72?img=41', message: 'Nagyon elegáns lett ez a rész.', createdAt: '2026.01.30' },
-      { id: 1002, userName: 'Péterfy Ákos', avatarUrl: 'https://i.pravatar.cc/72?img=19', message: 'A terasz mellett tökéletes növényválasztás.', createdAt: '2026.01.31' },
-    ],
-  },
-]
 </script>
 
 <template>
