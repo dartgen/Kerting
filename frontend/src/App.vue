@@ -4,8 +4,6 @@ import { useRoute } from 'vue-router'
 import HeaderComponent from './components/headerComponent.vue'
 import bgImage from './assets/background.jpg'
 
-// 1. LÉPÉS: Importáld be a Toast Konténert!
-// Kérlek, ellenőrizd, hogy jó-e az elérési út a te mappaszerkezeted szerint!
 import ToastContainer from './components/ToastContainer.vue'
 
 const route = useRoute()

@@ -39,7 +39,32 @@ const router = createRouter({
         title: `${pre} Bejelentkezés`,
         hideHeader: true,
         fullPage: true,
-        requiresGuest: true // <-- 1. EZT ADJUK HOZZÁ A LOGIN OLDALHOZ
+        requiresGuest: true
+      }
+    },
+    {
+      path: '/works',
+      name: 'works',
+      component: () => import('../pages/WorksView.vue'),
+      meta: {
+        title: `${pre} Munkák`
+      }
+    },
+    {
+      path: '/about',
+      name: 'about',
+      component: () => import('../pages/AboutView.vue'),
+      meta: {
+        title: `${pre} Rólunk`
+      }
+    },
+    {
+      path: '/forum',
+      name: 'forum',
+      component: () => import('../pages/ForumView.vue'),
+      meta: {
+        title: `${pre} Fórum`,
+        requiresAuth: true
       }
     }
   ],

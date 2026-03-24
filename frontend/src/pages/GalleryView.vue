@@ -6,6 +6,7 @@ import api from '@/services/axios'
 interface GalleryItem {
   id: number
   imageUrl: string
+  title: string
   description: string
   uploaderName: string
   uploaderAvatarUrl: string
@@ -42,6 +43,7 @@ const openExpandedCard = async (id: number) => {
         galleryItems.value[itemIndex] = {
           id: existingItem.id,
           imageUrl: existingItem.imageUrl,
+          title: existingItem.title,
           description: existingItem.description,
           uploaderName: existingItem.uploaderName,
           uploaderAvatarUrl: existingItem.uploaderAvatarUrl,
@@ -107,6 +109,7 @@ const fetchFeed = async () => {
     galleryItems.value = data.map((item: any) => ({
       id: item.id,
       imageUrl: getFullImageUrl(item.imageUrl),
+      title: item.title || item.description || '',
       description: item.description || item.title || '',
       uploaderName: item.uploaderName,
       uploaderAvatarUrl: `https://i.pravatar.cc/96?u=${item.uploaderId}`,
@@ -210,11 +213,15 @@ watch(isDesktopInteraction, (isDesktop) => {
               </div>
 
               <div class="pt-4">
-                <h2 class="text-earth-50 font-semibold text-sm sm:text-base">Leírás</h2>
+                <h2 class="text-earth-50 font-semibold text-base sm:text-lg">{{ expandedCard.title }}</h2>
+              </div>
+
+              <div class="pt-3">
                 <p class="mt-2 text-earth-200/90 text-sm leading-relaxed">{{ expandedCard.description }}</p>
               </div>
 
-              <div class="pt-5 flex-1 min-h-0">
+              <div class="pt-4 flex-1 min-h-0">
+                <div class="h-px w-full bg-gradient-to-r from-transparent via-earth-100/20 to-transparent mb-5"></div>
                 <h3 class="text-earth-50 font-semibold text-sm sm:text-base">Kommentek</h3>
                 <div class="mt-3 space-y-3 overflow-y-auto max-h-[45vh] sm:max-h-[320px] lg:max-h-[420px] pr-1">
                   <div
@@ -295,7 +302,7 @@ watch(isDesktopInteraction, (isDesktop) => {
                 <div class="w-full flex items-end justify-between gap-3">
                   <div>
                     <p class="text-earth-50 text-xs sm:text-sm md:text-[0.92rem] leading-snug drop-shadow-lg">
-                      {{ item.description }}
+                      {{ item.title }}
                     </p>
                     <p class="mt-1 text-earth-200/90 text-[11px] sm:text-xs md:text-[0.82rem] font-semibold">
                       {{ item.uploaderName }}
