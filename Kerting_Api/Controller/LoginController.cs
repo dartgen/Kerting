@@ -1,11 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc; // Ez kell ahhoz, hogy ez egy API Controller lehessen (kezeli a HTTP kéréseket).
+﻿using Libary; // Hivatkozás a másik projektre, ahol a DbContext van.
+using Libary.Model.Auth; // Hivatkozás a Login adatmodellre.
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc; // Ez kell ahhoz, hogy ez egy API Controller lehessen (kezeli a HTTP kéréseket).
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens; // Ez tartalmazza a kriptográfiai kulcsokat és algoritmusokat (a titkosításhoz).
 using System.IdentityModel.Tokens.Jwt; // Ez a konkrét eszköz a JWT tokenek gyártásához és olvasásához.
 using System.Security.Claims; // A "Claim" egy adatmorzsa a felhasználóról (pl. neve, ID-ja), amit a tokenbe írunk.
 using System.Text; // Ez kell a szöveg átalakításához bájtokká (Encoding.UTF8).
-using Libary; // Hivatkozás a másik projektre, ahol a DbContext van.
-using Libary.Model.Auth; // Hivatkozás a Login adatmodellre.
-using Microsoft.EntityFrameworkCore;
 
 namespace Kerting_Api.Controller
 {   
@@ -39,7 +40,6 @@ namespace Kerting_Api.Controller
             // A "FirstOrDefaultAsync" egy SQL lekérdezést futtat le:
             // "SELECT * FROM Logins WHERE Username = '...' AND Password = '...' LIMIT 1"
             var user = await _context.Login
-                .Include(x => x.Role)
                 .FirstOrDefaultAsync(u => u.Username == loginAdatok.Username);
 
             // 2. ELLENŐRZÉS
@@ -84,8 +84,17 @@ namespace Kerting_Api.Controller
 
             _context.Login.Add(newUser);
             await _context.SaveChangesAsync();
-
             return Ok("Sikeres regisztráció!" + $"\n{newUser.Username}\n{newUser.Password}");
+        }
+
+        [Authorize]
+        [HttpGet("{id}/first-login")]
+        public async Task<IActionResult> CheckFirstLogin(int id)
+        {
+            // 1. Kikeresjük a felhasználót az adatbázisból az ID alapján
+            var user = await _context.Login.FindAsync(id);
+            // 2. Visszaadjuk a FirstLogin értékét egy JSON objektumban
+            return Ok(new { isFirstLogin = user.FirstLogin });
         }
 
         [HttpGet("CheckUsername")]
@@ -118,12 +127,6 @@ namespace Kerting_Api.Controller
                 
                 // Egyedi adat: Az adatbázisbeli ID-t is eltároljuk, hátha később kell a frontendnek.
                 new Claim("Id", user.Id.ToString()),
-
-                // ITT VÁLTOZIK:
-                // A Role objektum Name mezőjét vesszük ki (pl. "Admin")
-                // Fontos: ellenőrizni kell, hogy a user.Role nem null-e!
-                new Claim(ClaimTypes.Role, user.Role?.Name)
-
             };
 
             // TOKEN LEÍRÓ (A tervrajz):

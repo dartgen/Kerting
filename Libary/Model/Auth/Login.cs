@@ -11,10 +11,6 @@ namespace Libary.Model.Auth
         public string Password { get; set; }
         // 1. A "Kulcs" (ennek egyeznie kell az SQL oszlop nevével!)
         public int RoleId { get; set; }
-
-        // 2. A "Kapcsolat" (ez csak a kódnak kell, az SQL nem látja)
-        // A [ForeignKey] attribútummal "biztosra megyünk", megmondjuk neki, melyik mező a kulcs.
-        [ForeignKey("RoleId")]
-        public Role Role { get; set; }
+        public bool FirstLogin { get; set; } = true;
     }
 }
