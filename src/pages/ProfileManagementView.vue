@@ -17,7 +17,7 @@
         </button>
 
         <div class="px-5 pt-8 pb-4 border-b border-earth-200/20">
-          <h1 class="text-3xl font-bold text-center text-earth-50 tracking-wide drop-shadow-md">Profil</h1>
+          <h1 class="text-3xl font-bold text-center text-earth-50 tracking-wide drop-shadow-md">{{authStore.felhasznalo?.felhasznaloNev}}</h1>
         </div>
 
         <div class="px-5 sm:px-8 py-6">
@@ -168,7 +168,9 @@
 import { ref, reactive, computed} from 'vue';
 import { useRouter } from 'vue-router';
 import ProfileUploader from '@/components/ProfileUploader.vue';
+import {useAuthStore} from '@/stores/authStore.ts';
 
+const authStore = useAuthStore();
 const router = useRouter();
 
 const isLoading = ref(false);
