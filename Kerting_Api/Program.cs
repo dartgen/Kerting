@@ -105,9 +105,9 @@ namespace Kerting_Api
 
             app.UseCors("VueCorsPolicy");
 
-
-            app.UseAuthorization();
             app.UseAuthentication();
+            app.UseAuthorization();
+            
 
             app.MapControllers();
 
