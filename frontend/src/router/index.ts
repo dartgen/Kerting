@@ -10,7 +10,8 @@ const router = createRouter({
       name: 'home',
       component: () => import('../pages/HomeView.vue'),
       meta: {
-        title: `${pre} Kerting`
+        title: `${pre} Kerting`,
+        requiresGuest: true
       },
     },
     {
