@@ -123,6 +123,7 @@ namespace Kerting_Api.Controller
                 // A Role objektum Name mezőjét vesszük ki (pl. "Admin")
                 // Fontos: ellenőrizni kell, hogy a user.Role nem null-e!
                 new Claim(ClaimTypes.Role, user.Role?.Name)
+
             };
 
             // TOKEN LEÍRÓ (A tervrajz):
