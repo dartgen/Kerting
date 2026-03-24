@@ -77,15 +77,7 @@
                   <input type="text" v-model="profilAdatok.keresztNev" placeholder="Pl.: Géza" required
                          class="w-full bg-earth-50/10 border border-earth-200/30 rounded-lg py-3 px-4 text-earth-50 focus:outline-none focus:ring-2 focus:ring-green-400 transition-all shadow-inner placeholder-earth-200/50">
                 </div>
-
-                <div class="relative shrink-0 mt-4 mr-2">
-                  <div class="w-20 h-20 rounded-full bg-green-500 flex items-center justify-center border-4 border-earth-900/60 shadow-lg overflow-hidden">
-                    <i class="fa-regular fa-user text-3xl text-white"></i>
-                  </div>
-                  <button type="button" class="absolute bottom-0 right-0 bg-earth-600 rounded-full w-6 h-6 flex items-center justify-center border border-earth-300 shadow hover:bg-earth-500 transition-colors">
-                    <i class="fa-solid fa-pen text-[10px] text-white"></i>
-                  </button>
-                </div>
+                <ProfileUploader/>
               </div>
 
               <div class="flex flex-col flex-1 gap-4">
@@ -173,8 +165,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed} from 'vue';
 import { useRouter } from 'vue-router';
+import ProfileUploader from '@/components/ProfileUploader.vue';
 
 const router = useRouter();
 
@@ -192,7 +185,7 @@ const profilAdatok = reactive({
 
 const cimkeInput = ref<HTMLInputElement | null>(null);
 const ujCimke = ref('');
-const cimkek = ref<string[]>(['Öntözés', 'Trágyázás', 'Ültetés']);
+const cimkek = ref<string[]>([]);
 
 const eloreDefinialtCimkek = [
   'Locsolás', 'Metszés', 'Permetezés', 'Fűnyírás',
@@ -239,16 +232,6 @@ const getCimkeStyle = (index: number) => {
   ];
   return styles[index % styles.length];
 };
-
-onMounted(() => {
-  profilAdatok.vezetekNev = 'Nagy';
-  profilAdatok.keresztNev = 'Géza';
-  profilAdatok.email = 'example@email.com';
-  profilAdatok.telefon = '+36301234567';
-  profilAdatok.telepules = 'Kecskemét';
-  profilAdatok.szerepkor = 'Kertes';
-  profilAdatok.rolam = '';
-});
 
 const adatokMentese = async () => {
   isLoading.value = true;
