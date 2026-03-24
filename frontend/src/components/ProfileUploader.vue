@@ -31,35 +31,40 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useToastStore } from '@/stores/toast'
+// 1. Definiáljuk az emitet (v-model használatához a neve: 'update:modelValue')
+const emit = defineEmits(['update:modelValue'])
 
 const toastStore = useToastStore()
-
-// Rejtett file input referenciája
 const fileInput = ref<HTMLInputElement | null>(null)
-// A feltöltött kép előnézeti URL-je
 const imageUrl = ref<string | null>(null)
 
-// Rákattint a rejtett inputra
 const triggerFileInput = () => {
   fileInput.value?.click()
 }
 
-// Fájl kiválasztásának kezelése
-const handleFileUpload = (event: Event) => {
+const handleFileUpload = async (event: Event) => {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
 
   if (file) {
-    // Csak a böngészőben hozunk létre egy ideiglenes linket a kép előnézetéhez
     imageUrl.value = URL.createObjectURL(file)
 
-    // Használjuk az általad megírt store-t a sikerélményhez!
-    toastStore.addToast('Profilkép sikeresen kiválasztva!', 3000, 'success')
+    // --- BACKEND FELTÖLTÉS HELYE ---
+    // Itt elküldöd a fájlt a backendnek, ami visszaad egy ID-t
+    try {
+      // Példa (ha lenne service-ed):
+      // const response = await uploadService.uploadImage(file);
+      // const ujId = response.data.id;
 
-    // INFO: Ide jöhet majd az Axios/Fetch kérés, amivel elküldöd a fájlt a backendnek
-    // const formData = new FormData()
-    // formData.append('avatar', file)
-    // api.post('/upload-avatar', formData)
+      const mockId = Math.floor(Math.random() * 1000); // Most csak szimuláljuk az ID-t
+
+      // 2. Küldjük vissza az ID-t a szülőnek!
+      emit('update:modelValue', mockId)
+
+      toastStore.addToast('Profilkép kiválasztva!', 3000, 'success')
+    } catch (e) {
+      toastStore.addToast('Hiba a feltöltésnél!', 3000, 'error')
+    }
   }
 }
 </script>

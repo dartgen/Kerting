@@ -1,4 +1,16 @@
 import apiClient from './axios';
+
+export interface ProfilAdatokDTO {
+  vezetekNev: string;
+  keresztNev: string;
+  email: string;
+  telepules: string;
+  rolam: string;
+  roleId: number;
+  telefon: string;
+  profileIMGId: number;
+}
+
 export const authService = {
   bejelentkezes(felhasznaloNev: string, jelszo: string) {
     return apiClient.post('/Login', {
@@ -20,12 +32,26 @@ export const authService = {
   },
   isAuthenticated() {
     return !!localStorage.getItem('userToken');
+  },getRoles() {
+    return apiClient.get('/GetRoles');
   },
-
   checkUsername(username: string) {
     return apiClient.get(`/CheckUsername?username=${username}`);
   }, isFirstLogin(id: string) {
     console.log(apiClient.get(`/${id}/first-login`))
     return apiClient.get(`/${id}/first-login`);
-  }
+  }, updateProfile(profilAdatok: ProfilAdatokDTO) {
+    return apiClient.put('/UpdateMyProfile', {
+      vezetekNev: profilAdatok.vezetekNev,
+      keresztNev: profilAdatok.keresztNev,
+      telefon: profilAdatok.telefon,
+      email: profilAdatok.email,
+      telepules: profilAdatok.telepules,
+      rolam: profilAdatok.rolam,
+      roleId: profilAdatok.roleId,
+      profileIMGId: profilAdatok.profileIMGId || 0,
+    });
+  }, getProfile() {
+    return apiClient.get('/GetMyProfile');
+  },
 };
