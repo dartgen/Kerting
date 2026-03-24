@@ -2,15 +2,49 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { authService } from '@/services/authService';
 import router from '@/router';
+import { jwtDecode } from 'jwt-decode';
+
+// 1. Definiáljuk a tokenünk felépítését
+interface MyTokenPayload {
+  sub: string;
+  Id: string;
+  exp?: number;
+  jti?: string;
+}
 
 export const useAuthStore = defineStore('auth', () => {
-  const felhasznalo = ref(null);
+  // --- ÁLLAPOT (State) ---
+  const felhasznalo = ref<{ id: string; felhasznaloNev: string } | null>(null);
   const token = ref<string | null>(authService.getToken());
   const isLoading = ref(false);
   const authError = ref<string | null>(null);
 
+  // --- SZÁMÍTOTT ADATOK (Getters) ---
   const isAuthenticated = computed(() => !!token.value);
 
+  // --- SEGÉDFÜGGVÉNYEK ---
+  const decodeUserFromToken = (t: string) => {
+    try {
+      // Itt adjuk át a saját típusunkat a jwtDecode-nak
+      const decoded = jwtDecode<MyTokenPayload>(t);
+
+      felhasznalo.value = {
+        felhasznaloNev: decoded.sub,
+        id: decoded.Id
+      };
+    } catch (error) {
+      console.error("Hiba a token dekódolásakor:", error);
+      kijelentkezes(); // Ha érvénytelen a token, kidobjuk a usert
+    }
+  };
+
+  // --- INICIALIZÁLÁS ---
+  // Ha oldalfrissítéskor van már tokenünk, rögtön dekódoljuk
+  if (token.value) {
+    decodeUserFromToken(token.value);
+  }
+
+  // --- MŰVELETEK (Actions) ---
   const bejelentkezes = async (felhasznaloNev: string, jelszo: string) => {
     isLoading.value = true;
     authError.value = null;
@@ -19,11 +53,14 @@ export const useAuthStore = defineStore('auth', () => {
       token.value = response.data.token;
       localStorage.setItem('userToken', token.value!);
 
-      // Itt esetleg lekérhetjük a felhasználó adatait is, ha a backend támogatja
-      // felhasznalo.value = response.data.user;
-
-      await router.push('/');
-    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      // Dekódoljuk a friss tokent, így beállítódik a 'felhasznalo' változó is
+      decodeUserFromToken(token.value!);
+      if (await (await authService.isFirstLogin(felhasznalo.value!.id)).data.isFirstLogin) {
+        await router.push('/profile');
+      } else {
+        await router.push('/');
+      }
+    } catch (error) {
       authError.value = "Hibás felhasználónév vagy jelszó.";
       console.error("Bejelentkezési hiba:", error);
       throw error;
@@ -38,7 +75,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       await authService.regisztracio(felhasznaloNev, jelszo);
       return true;
-    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+    } catch (error) {
       authError.value = "Hiba történt a regisztráció során.";
       console.error("Regisztrációs hiba:", error);
       throw error;
@@ -64,6 +101,7 @@ export const useAuthStore = defineStore('auth', () => {
     router.push('/');
   };
 
+  // --- VISSZATÉRÉS (Exportálás a komponensek felé) ---
   return {
     token,
     felhasznalo,
@@ -76,4 +114,3 @@ export const useAuthStore = defineStore('auth', () => {
     kijelentkezes
   };
 });
-

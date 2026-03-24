@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/authStore'
 
 const pre = "🌱|";
 const router = createRouter({
@@ -13,35 +14,21 @@ const router = createRouter({
       },
     },
     {
-      path: '/forum',
-      name: 'forum',
-      component: () => import('../pages/ForumView.vue'),
-      meta: {
-        title: `${pre} Fórum`
-      },
-    },
-    {
-      path: '/works',
-      name: 'works',
-      component: () => import('../pages/WorksView.vue'),
-      meta: {
-        title: `${pre} Munkák`
-      }
-    },
-    {
       path: '/gallery',
       name: 'gallery',
       component: () => import('../pages/GalleryView.vue'),
       meta: {
-        title: `${pre} Galléria`
+        title: `${pre} Galléria`,
+        requiresAuth: true
       }
     },
     {
-      path: '/about',
-      name: 'about',
-      component: () => import('../pages/AboutView.vue'),
+      path: '/profile',
+      name: 'profile',
+      component: () => import('../pages/ProfileManagementView.vue'),
       meta: {
-        title: `${pre} Rólunk`
+        title: `${pre} Profil`,
+        requiresAuth: true
       }
     },
     {
@@ -52,14 +39,7 @@ const router = createRouter({
         title: `${pre} Bejelentkezés`,
         hideHeader: true,
         fullPage: true,
-      }
-    },
-    {
-      path: '/profile',
-      name: 'profile',
-      component: () => import('../pages/ProfileManagementView.vue'),
-      meta: {
-        title: `${pre} Profil`
+        requiresGuest: true // <-- 1. EZT ADJUK HOZZÁ A LOGIN OLDALHOZ
       }
     }
   ],
@@ -67,7 +47,20 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   document.title = to.meta.title as string;
-  next();
+
+  const authStore = useAuthStore();
+
+  // 2. KIBŐVÍTETT LOGIKA AZ ÚTVONAL ŐRBEN
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    // Védett oldal, de NINCS bejelentkezve -> irány a login
+    next({ name: 'login' });
+  } else if (to.meta.requiresGuest && authStore.isAuthenticated) {
+    // Vendég oldal (pl. login, regisztráció), de MÁR be van jelentkezve -> irány a főoldal (vagy profil)
+    next({ name: 'home' });
+  } else {
+    // Minden más esetben mehet a dolgára
+    next();
+  }
 });
 
-export default router
+export default router;
