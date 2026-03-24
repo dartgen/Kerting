@@ -19,7 +19,7 @@ namespace Kerting_Api.Controller
     {
         // Két privát változó, amiket később használunk:
         private readonly KertingDbContext _context; // Ez a kapcsolat az adatbázissal.
-        private readonly IConfiguration _configuration; // Ez a kapcsolat az appsettings.json fájllal.
+        private readonly IConfiguration configuration;
 
         // KONSTRUKTOR (Dependency Injection)
         // Amikor a szerver elindítja ezt a Controllert, automatikusan beadja neki (injektálja)
@@ -27,7 +27,7 @@ namespace Kerting_Api.Controller
         public LoginController(KertingDbContext context, IConfiguration configuration)
         {
             _context = context;
-            _configuration = configuration;
+            this.configuration = configuration;
         }
 
         [HttpPost("Login")] // Ez mondja meg, hogy ez egy POST kérés lesz, a címe: api/Login/Authenticate
@@ -84,6 +84,11 @@ namespace Kerting_Api.Controller
 
             _context.Login.Add(newUser);
             await _context.SaveChangesAsync();
+            _context.User.Add(new Libary.Model.User.User
+            {
+                Id = newUser.Id
+            });
+            await _context.SaveChangesAsync();
             return Ok("Sikeres regisztráció!" + $"\n{newUser.Username}\n{newUser.Password}");
         }
 
@@ -109,7 +114,7 @@ namespace Kerting_Api.Controller
         private string GenerateJwtToken(Login user)
         {
             // Beolvassuk a beállításokat a "JwtSettings" szekcióból az appsettings.json-ből.
-            var jwtSettings = _configuration.GetSection("JwtSettings");
+            var jwtSettings = configuration.GetSection("JwtSettings");
 
             // A titkos szöveges kulcsot (amit az előbb javítottál ki hosszabbra) átalakítjuk bájtokká.
             // A számítógép kriptográfiai műveletekhez csak bájtokat ért, stringet nem.

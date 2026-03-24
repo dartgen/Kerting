@@ -32,7 +32,12 @@ namespace Libary
 
             modelBuilder.Entity<Model.Gallery.GalleryItem>(entity =>
             {
-                entity.ToTable("GalleryItem", "dbo");
+                entity.ToTable("GalleryItem", "dbo", t =>
+                {
+                    t.HasCheckConstraint(
+                        "CK_GalleryItem_FileExtension",
+                        "LOWER([FileExtension]) IN (N'.jpg', N'.jpeg', N'.png', N'.webp', N'.gif', N'.bmp', N'.avif')");
+                });
                 entity.HasKey(x => x.Id);
 
                 entity.Property(x => x.Title).HasMaxLength(150).IsRequired();
@@ -45,10 +50,6 @@ namespace Libary
                     .HasForeignKey(x => x.UserId)
                     .HasConstraintName("FK_GalleryItem_Login_UserId")
                     .OnDelete(DeleteBehavior.NoAction);
-
-                entity.HasCheckConstraint(
-                    "CK_GalleryItem_FileExtension",
-                    "LOWER([FileExtension]) IN (N'.jpg', N'.jpeg', N'.png', N'.webp', N'.gif', N'.bmp', N'.avif')");
 
                 entity.HasIndex(x => new { x.UserId, x.CreatedAtUtc })
                     .HasDatabaseName("IX_GalleryItem_UserId_CreatedAtUtc");
