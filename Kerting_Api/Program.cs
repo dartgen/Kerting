@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using System.IO;
+using Microsoft.Extensions.FileProviders;
 
 namespace Kerting_Api
 {
@@ -66,6 +68,7 @@ namespace Kerting_Api
             builder.Services.AddDbContext<Libary.KertingDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
             builder.Services.AddScoped(typeof(Interface.GenericInterface<>), typeof(Service.GenericService<>));
+            builder.Services.AddScoped<Interface.IGalleryService, Service.GalleryService>();
 
             // 2. JWT KONFIGURÁCIÓ
             var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -102,6 +105,19 @@ namespace Kerting_Api
             }
 
             app.UseHttpsRedirection();
+
+            // Create and Serve the new Images folder dynamically
+            var imagesPath = Path.Combine(builder.Environment.ContentRootPath, "Images");
+            if (!Directory.Exists(imagesPath))
+            {
+                Directory.CreateDirectory(imagesPath);
+            }
+
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(imagesPath),
+                RequestPath = "/Images"
+            });
 
             app.UseCors("VueCorsPolicy");
 
