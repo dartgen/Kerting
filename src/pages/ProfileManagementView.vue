@@ -26,7 +26,7 @@
             <div class="space-y-6">
               <div class="flex flex-col">
                 <label class="text-sm font-semibold text-earth-100 mb-1 ml-1">Vezetéknév</label>
-                <input type="text" v-model="profilAdatok.vezetekNev" placeholder="Pl.: Nagy" required
+                <input type="text" v-model="profilAdatok.vezetekNev" placeholder="Pl.: Nagy"
                        class="w-full bg-earth-50/10 border border-earth-200/30 rounded-lg py-3 px-4 text-earth-50 focus:outline-none focus:ring-2 focus:ring-green-400 transition-all shadow-inner placeholder-earth-200/50">
               </div>
 
@@ -34,7 +34,7 @@
                 <label class="text-sm font-semibold text-earth-100 mb-1 ml-1">E-mail cím</label>
                 <div class="relative">
                   <i class="fa-regular fa-envelope absolute left-4 top-1/2 -translate-y-1/2 text-earth-200/70 pointer-events-none"></i>
-                  <input type="email" v-model="profilAdatok.email" placeholder="example@email.com" required
+                  <input type="email" v-model="profilAdatok.email" placeholder="example@email.com"
                          class="w-full bg-earth-50/10 border border-earth-200/30 rounded-lg py-3 pl-11 pr-4 text-earth-50 focus:outline-none focus:ring-2 focus:ring-green-400 transition-all shadow-inner placeholder-earth-200/50">
                 </div>
               </div>
@@ -63,7 +63,7 @@
                         class="w-full bg-earth-50/10 border border-earth-200/30 rounded-lg py-3 px-4 text-earth-50 focus:outline-none focus:ring-2 focus:ring-green-400 transition-all shadow-inner appearance-none cursor-pointer">
                   <option value="Kertes" class="bg-earth-800 text-earth-50">Kertes</option>
                   <option value="Kertesz" class="bg-earth-800 text-earth-50">Kertész</option>
-                  <option value="Hobbi Kertesz" class="bg-earth-800 text-earth-50">Hobbi kertész</option>
+                  <option value="Hobbi_Kertesz" class="bg-earth-800 text-earth-50">Hobbi kertész</option>
                   <option value="Latogato" class="bg-earth-800 text-earth-50">Látogató</option>
                 </select>
               </div>
@@ -74,7 +74,7 @@
               <div class="flex items-start justify-between gap-4 mb-6">
                 <div class="flex flex-col flex-1">
                   <label class="text-sm font-semibold text-earth-100 mb-1 ml-1">Keresztnév</label>
-                  <input type="text" v-model="profilAdatok.keresztNev" placeholder="Pl.: Géza" required
+                  <input type="text" v-model="profilAdatok.keresztNev" placeholder="Pl.: Géza"
                          class="w-full bg-earth-50/10 border border-earth-200/30 rounded-lg py-3 px-4 text-earth-50 focus:outline-none focus:ring-2 focus:ring-green-400 transition-all shadow-inner placeholder-earth-200/50">
                 </div>
                 <ProfileUploader/>
@@ -82,15 +82,15 @@
 
               <div class="flex flex-col flex-1 gap-4">
 
-                <div class="flex flex-col transition-all duration-300" :class="profilAdatok.szerepkor === 'Kertesz' ? 'flex-none' : 'flex-1'">
+                <div class="flex flex-col transition-all duration-300" :class="['Kertesz', 'Hobbi_Kertesz'].includes(profilAdatok.szerepkor) ? 'flex-none' : 'flex-1'">
                   <label class="text-sm font-semibold text-earth-100 mb-1 ml-1">Rólam</label>
                   <textarea v-model="profilAdatok.rolam" placeholder="Én..."
-                            :rows="profilAdatok.szerepkor === 'Kertesz' ? 3 : 5"
+                            :rows="['Kertesz', 'Hobbi_Kertesz'].includes(profilAdatok.szerepkor) ? 3 : 5"
                             class="w-full bg-earth-50/10 border border-earth-200/30 rounded-lg py-3 px-4 text-earth-50 focus:outline-none focus:ring-2 focus:ring-green-400 transition-all shadow-inner resize-y placeholder-earth-200/50"
-                            :class="profilAdatok.szerepkor === 'Kertesz' ? 'min-h-[80px]' : 'h-full min-h-[120px]'"></textarea>
+                            :class="['Kertesz', 'Hobbi_Kertesz'].includes(profilAdatok.szerepkor) ? 'min-h-[80px]' : 'h-full min-h-[120px]'"></textarea>
                 </div>
 
-                <div v-if="profilAdatok.szerepkor === 'Kertesz'"
+                <div v-if="['Kertesz', 'Hobbi_Kertesz'].includes(profilAdatok.szerepkor)"
                      class="relative flex flex-col flex-1 border border-green-500/80 rounded-lg bg-earth-50/5 focus-within:ring-2 focus-within:ring-green-400 transition-all z-20">
 
                   <div class="p-2.5">
