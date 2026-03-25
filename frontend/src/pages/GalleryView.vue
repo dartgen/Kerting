@@ -262,7 +262,10 @@ watch(isDesktopInteraction, (isDesktop) => {
               <img
                 :src="expandedCard.imageUrl"
                 :alt="expandedCard.description"
-                class="w-full h-full min-h-[280px] lg:min-h-full object-contain"
+                class="w-full h-full min-h-[280px] lg:min-h-full object-contain gallery-protected-image"
+                draggable="false"
+                @dragstart.prevent
+                @contextmenu.prevent
               />
               <div class="absolute bottom-3 right-3 px-2 py-1 rounded-md bg-black/45 text-earth-100 text-xs border border-earth-100/15">
                 {{ expandedCard.uploadedAt }}
@@ -291,26 +294,34 @@ watch(isDesktopInteraction, (isDesktop) => {
                 <div class="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
-                    class="h-9 sm:h-10 rounded-full border px-3 sm:px-3.5 text-xs sm:text-sm font-semibold transition-colors"
+                    class="h-9 sm:h-10 rounded-full border px-3 sm:px-3.5 text-xs sm:text-sm font-semibold transition-colors inline-flex items-center gap-1.5"
                     :class="expandedCard.myReaction === true
                       ? 'border-earth-100/40 bg-earth-100/20 text-white'
                       : 'border-earth-100/25 bg-earth-900/65 text-white hover:bg-earth-800'"
                     :disabled="!authStore.isAuthenticated"
                     @click="toggleReaction(true)"
                   >
-                    👍 {{ expandedCard.likesCount }}
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect x="3" y="9" width="4" height="12" rx="1.25" />
+                      <path d="M14.5 9.5V5.9c0-1-.52-1.92-1.37-2.41l-3.4 5.92a2.2 2.2 0 0 0-.3 1.1V19a2 2 0 0 0 2 2h5.84a2 2 0 0 0 1.97-1.65l1.02-6a2 2 0 0 0-1.97-2.35H14.5Z" />
+                    </svg>
+                    <span>{{ expandedCard.likesCount }}</span>
                   </button>
 
                   <button
                     type="button"
-                    class="h-9 sm:h-10 rounded-full border px-3 sm:px-3.5 text-xs sm:text-sm font-semibold transition-colors"
+                    class="h-9 sm:h-10 rounded-full border px-3 sm:px-3.5 text-xs sm:text-sm font-semibold transition-colors inline-flex items-center gap-1.5"
                     :class="expandedCard.myReaction === false
                       ? 'border-earth-100/40 bg-earth-100/20 text-white'
                       : 'border-earth-100/25 bg-earth-900/65 text-white hover:bg-earth-800'"
                     :disabled="!authStore.isAuthenticated"
                     @click="toggleReaction(false)"
                   >
-                    👎 {{ expandedCard.dislikesCount }}
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect x="3" y="3" width="4" height="12" rx="1.25" />
+                      <path d="M14.5 14.5v3.6c0 1-.52 1.92-1.37 2.41l-3.4-5.92a2.2 2.2 0 0 1-.3-1.1V5a2 2 0 0 1 2-2h5.84a2 2 0 0 1 1.97 1.65l1.02 6a2 2 0 0 1-1.97 2.35H14.5Z" />
+                    </svg>
+                    <span>{{ expandedCard.dislikesCount }}</span>
                   </button>
 
                   <button
@@ -419,8 +430,11 @@ watch(isDesktopInteraction, (isDesktop) => {
             <img
               :src="item.imageUrl"
               :alt="item.description"
-              class="block w-full h-auto object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+              class="block w-full h-auto object-cover transition-transform duration-300 group-hover:scale-[1.02] gallery-protected-image"
               loading="lazy"
+              draggable="false"
+              @dragstart.prevent
+              @contextmenu.prevent
             />
 
             <div
@@ -466,3 +480,12 @@ watch(isDesktopInteraction, (isDesktop) => {
     </MotionDiv>
   </div>
 </template>
+
+<style scoped>
+.gallery-protected-image {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+}
+</style>
