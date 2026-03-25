@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { motion, AnimatePresence } from 'motion-v'
 import api from '@/services/axios'
+import { useAuthStore } from '@/stores/authStore'
 
 interface GalleryItem {
   id: number
@@ -11,6 +12,9 @@ interface GalleryItem {
   uploaderName: string
   uploaderAvatarUrl: string
   uploadedAt: string
+  likesCount: number
+  dislikesCount: number
+  myReaction: boolean | null
   comments: {
     id: number
     userName: string
@@ -28,6 +32,8 @@ interface GalleryFeedItemDto {
   uploaderName: string
   profileImageUrl?: string | null
   createdAtUtc: string
+  likesCount?: number
+  dislikesCount?: number
 }
 
 interface GalleryDetailCommentDto {
@@ -41,6 +47,9 @@ interface GalleryDetailCommentDto {
 interface GalleryDetailDto {
   id: number
   profileImageUrl?: string | null
+  likesCount?: number
+  dislikesCount?: number
+  myReaction?: boolean | null
   comments?: GalleryDetailCommentDto[]
 }
 
@@ -50,6 +59,7 @@ const isSubmittingComment = ref(false)
 const commentSubmitError = ref('')
 
 const MotionDiv = motion.div
+const authStore = useAuthStore()
 // A kártyák interakciós állapota: előnézet (touch) és nagyított nézet.
 const previewCardId = ref<number | null>(null)
 const expandedCardId = ref<number | null>(null)
@@ -78,6 +88,9 @@ const openExpandedCard = async (id: number) => {
             ? getFullImageUrl(data.profileImageUrl)
             : existingItem.uploaderAvatarUrl,
           uploadedAt: existingItem.uploadedAt,
+          likesCount: data.likesCount ?? existingItem.likesCount,
+          dislikesCount: data.dislikesCount ?? existingItem.dislikesCount,
+          myReaction: data.myReaction ?? null,
           comments: data.comments?.map((c) => ({
             id: c.id,
             userName: c.userName,
@@ -143,6 +156,17 @@ const submitComment = async () => {
   }
 }
 
+const toggleReaction = async (isLike: boolean) => {
+  if (!expandedCardId.value || !authStore.isAuthenticated) return
+
+  try {
+    await api.post(`/Gallery/${expandedCardId.value}/react`, null, { params: { isLike } })
+    await openExpandedCard(expandedCardId.value)
+  } catch (err) {
+    console.error('Hiba reakció küldésekor', err)
+  }
+}
+
 const desktopQuery = '(hover: hover) and (pointer: fine)'
 let mediaQuery: MediaQueryList | null = null
 
@@ -171,6 +195,9 @@ const fetchFeed = async () => {
         ? getFullImageUrl(item.profileImageUrl)
         : `https://i.pravatar.cc/96?u=${item.id}`,
       uploadedAt: new Date(item.createdAtUtc).toLocaleDateString(),
+      likesCount: item.likesCount ?? 0,
+      dislikesCount: item.dislikesCount ?? 0,
+      myReaction: null,
       comments: []
     }))
   } catch (err) {
@@ -225,15 +252,6 @@ watch(isDesktopInteraction, (isDesktop) => {
           :transition="{ duration: 0.28, ease: 'easeOut' }"
           class="relative min-h-[420px] lg:h-full lg:min-h-[560px]"
         >
-          <button
-            type="button"
-            class="absolute right-2 top-2 sm:right-3 sm:top-3 z-20 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-earth-900/85 border border-earth-100/20 text-earth-50 hover:bg-earth-800 transition-colors"
-            aria-label="Nagy nézet bezárása"
-            @click="closeExpandedCard"
-          >
-            ✕
-          </button>
-
           <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.75fr)] gap-3 sm:gap-4 min-h-[420px] lg:h-full lg:min-h-[560px]">
             <MotionDiv
               :initial="{ opacity: 0.6, scale: 0.985 }"
@@ -257,15 +275,52 @@ watch(isDesktopInteraction, (isDesktop) => {
               :transition="{ duration: 0.3, ease: 'easeOut' }"
               class="rounded-2xl border border-earth-100/20 bg-earth-950/45 p-4 sm:p-5 overflow-hidden flex flex-col min-h-0"
             >
-              <div class="flex items-center gap-3 pb-3 border-b border-earth-100/10">
-                <img
-                  :src="expandedCard.uploaderAvatarUrl"
-                  :alt="`${expandedCard.uploaderName} profilképe`"
-                  class="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border border-earth-100/25"
-                />
-                <div>
-                  <p class="text-earth-100 font-semibold text-sm sm:text-base">{{ expandedCard.uploaderName }}</p>
-                  <p class="text-earth-200/70 text-xs">Feltöltő</p>
+              <div class="flex items-center justify-between gap-3 pb-3 border-b border-earth-100/10">
+                <div class="flex items-center gap-3">
+                  <img
+                    :src="expandedCard.uploaderAvatarUrl"
+                    :alt="`${expandedCard.uploaderName} profilképe`"
+                    class="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border border-earth-100/25"
+                  />
+                  <div>
+                    <p class="text-earth-100 font-semibold text-sm sm:text-base">{{ expandedCard.uploaderName }}</p>
+                    <p class="text-earth-200/70 text-xs">Feltöltő</p>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    class="h-9 sm:h-10 rounded-full border px-3 sm:px-3.5 text-xs sm:text-sm font-semibold transition-colors"
+                    :class="expandedCard.myReaction === true
+                      ? 'border-earth-100/40 bg-earth-100/20 text-white'
+                      : 'border-earth-100/25 bg-earth-900/65 text-white hover:bg-earth-800'"
+                    :disabled="!authStore.isAuthenticated"
+                    @click="toggleReaction(true)"
+                  >
+                    👍 {{ expandedCard.likesCount }}
+                  </button>
+
+                  <button
+                    type="button"
+                    class="h-9 sm:h-10 rounded-full border px-3 sm:px-3.5 text-xs sm:text-sm font-semibold transition-colors"
+                    :class="expandedCard.myReaction === false
+                      ? 'border-earth-100/40 bg-earth-100/20 text-white'
+                      : 'border-earth-100/25 bg-earth-900/65 text-white hover:bg-earth-800'"
+                    :disabled="!authStore.isAuthenticated"
+                    @click="toggleReaction(false)"
+                  >
+                    👎 {{ expandedCard.dislikesCount }}
+                  </button>
+
+                  <button
+                    type="button"
+                    class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-earth-900/85 border border-earth-100/20 text-earth-50 hover:bg-earth-800 transition-colors"
+                    aria-label="Nagy nézet bezárása"
+                    @click="closeExpandedCard"
+                  >
+                    ✕
+                  </button>
                 </div>
               </div>
 

@@ -145,12 +145,13 @@ namespace Kerting_Api.Service
                             : $"/resources/profiles/{u.IMGString}",
                         i.CreatedAtUtc,
                         LikesCount = i.Reactions.Count(r => r.IsLike),
+                        DislikesCount = i.Reactions.Count(r => !r.IsLike),
                         CommentsCount = i.Comments.Count()
                     })
                 .ToListAsync<object>();
         }
 
-        public async Task<object?> GetGalleryItemByIdAsync(int itemId)
+        public async Task<object?> GetGalleryItemByIdAsync(int itemId, int? currentUserId = null)
         {
             var item = await _context.GalleryItem
                 .Include(i => i.Login)
@@ -183,6 +184,21 @@ namespace Kerting_Api.Service
                 .OrderByDescending(c => c.CreatedAtUtc)
                 .ToListAsync();
 
+            var likesCount = await _context.GalleryReaction
+                .CountAsync(r => r.GalleryItemId == itemId && r.IsLike);
+
+            var dislikesCount = await _context.GalleryReaction
+                .CountAsync(r => r.GalleryItemId == itemId && !r.IsLike);
+
+            bool? myReaction = null;
+            if (currentUserId.HasValue)
+            {
+                myReaction = await _context.GalleryReaction
+                    .Where(r => r.GalleryItemId == itemId && r.UserId == currentUserId.Value)
+                    .Select(r => (bool?)r.IsLike)
+                    .FirstOrDefaultAsync();
+            }
+
             return new
             {
                 item.Item.Id,
@@ -193,6 +209,9 @@ namespace Kerting_Api.Service
                 ProfileImageUrl = string.IsNullOrWhiteSpace(item.User.IMGString)
                     ? null
                     : $"/resources/profiles/{item.User.IMGString}",
+                LikesCount = likesCount,
+                DislikesCount = dislikesCount,
+                MyReaction = myReaction,
                 Comments = comments
             };
         }
@@ -217,8 +236,25 @@ namespace Kerting_Api.Service
         public async Task<bool> ToggleReactionAsync(int itemId, int userId, bool isLike)
         {
             var reaction = await _context.GalleryReaction.FirstOrDefaultAsync(r => r.GalleryItemId == itemId && r.UserId == userId);
-            if (reaction != null) _context.GalleryReaction.Remove(reaction);
-            else _context.GalleryReaction.Add(new GalleryReaction { GalleryItemId = itemId, UserId = userId, IsLike = isLike, CreatedAtUtc = DateTime.UtcNow });
+            if (reaction == null)
+            {
+                _context.GalleryReaction.Add(new GalleryReaction
+                {
+                    GalleryItemId = itemId,
+                    UserId = userId,
+                    IsLike = isLike,
+                    CreatedAtUtc = DateTime.UtcNow
+                });
+            }
+            else if (reaction.IsLike == isLike)
+            {
+                _context.GalleryReaction.Remove(reaction);
+            }
+            else
+            {
+                reaction.IsLike = isLike;
+                reaction.CreatedAtUtc = DateTime.UtcNow;
+            }
 
             await _context.SaveChangesAsync();
             return true;
