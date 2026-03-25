@@ -15,7 +15,7 @@ namespace Libary.Model.User
         public string? Email { get; set; }
         public string? Telepules { get; set; }
         public int RoleId { get; set; }
-        public int ProfileIMGId { get; set; }
+        public string? IMGString { get; set; }
         public string? Rolam { get; set; }
     }
 }

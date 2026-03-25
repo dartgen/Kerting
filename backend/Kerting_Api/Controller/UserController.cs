@@ -44,7 +44,6 @@ namespace Kerting_Api.Controller
             existingUser.Telefon = updatedUser.Telefon;
             existingUser.Email = updatedUser.Email;
             existingUser.Telepules = updatedUser.Telepules;
-            existingUser.ProfileIMGId = updatedUser.ProfileIMGId;
             existingUser.Rolam = updatedUser.Rolam;
 
             await _context.SaveChangesAsync();

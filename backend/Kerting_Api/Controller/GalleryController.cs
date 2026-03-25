@@ -1,11 +1,12 @@
+using Kerting_Api.Interface;
+using Libary.Model.User;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Authorization;
-using Kerting_Api.Interface;
 
 namespace Kerting_Api.Controller
 {
@@ -33,24 +34,37 @@ namespace Kerting_Api.Controller
             return Ok(await _galleryService.GetGalleryFeedAsync(page, pageSize));
         }
 
-        // --- PROFILKÉP KEZELÉS ---
-
+        // --- PROFILKÉP FELTÖLTÉS(userId-t Form-ból kapja) ---
         [HttpPost("profile-image")]
         public async Task<IActionResult> UploadProfileImage(IFormFile file)
         {
             try
             {
-                var url = await _galleryService.UploadProfileImageAsync(GetCurrentUserId(), file, _env.ContentRootPath);
+                // A userId-t most már közvetlenül a paraméterből kapjuk meg
+                var url = await _galleryService.UploadProfileImageAsync(GetCurrentUserId(), file, _env.ContentRootPath ?? _env.WebRootPath ?? ".");
                 return Ok(new { url });
             }
-            catch (Exception ex) { return BadRequest(ex.Message); }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
+        // --- PROFILKÉP TÖRLÉS (userId-t az URL-ből vagy Query-ből kapja) ---
         [HttpDelete("profile-image")]
         public async Task<IActionResult> DeleteProfileImage()
         {
-            await _galleryService.DeleteProfileImageAsync(GetCurrentUserId(), _env.ContentRootPath);
-            return Ok();
+            try
+            {
+                var success = await _galleryService.DeleteProfileImageAsync(GetCurrentUserId(), _env.ContentRootPath ?? _env.WebRootPath ?? ".");
+                if (!success) return NotFound("Nem található törölhető profilkép.");
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         // --- GALÉRIA KEZELÉS ---

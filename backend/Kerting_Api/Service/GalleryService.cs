@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Libary;
 using Libary.Model.Gallery;
 using Kerting_Api.Interface;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Kerting_Api.Service
 {
@@ -64,23 +65,26 @@ namespace Kerting_Api.Service
         {
             var extension = ValidateFile(file);
 
-            // Megkeressük a felhasználót, hogy frissítsük a kép azonosítót (vagy elérési utat)
-            var user = await _context.Login.FindAsync(userId);
-            if (user == null) throw new Exception("Felhasználó nem található.");
-
             string folder = Path.Combine(contentRootPath, "Resources", "Profiles");
             // A fájlnév profile_{userId}, így ha újat tölt fel, a régi felülíródik
-            string fileName = $"profile_{userId}{extension}";
+            string fileName = $"{userId}{extension}";
 
             await SaveFileAsync(file, folder, fileName);
 
-            string publicUrl = $"/resources/profiles/{fileName}";
+            // 1. LÉPÉS: Lekérjük a felhasználót az adatbázisból (helyes async módon)
+            var user = await _context.User.FindAsync(userId);
 
-            // Itt frissítheted a User tábládat, ha van benne profilkép mező:
-            // user.ProfileImgPath = publicUrl; 
-            // await _context.SaveChangesAsync();
+            // 2. LÉPÉS: Ellenőrizzük, hogy létezik-e (ne fagyjon le a kód, ha hibás az ID)
+            if (user != null)
+            {
+                // 3. LÉPÉS: Frissítjük a memóriában lévő objektumot
+                user.IMGString = fileName;
 
-            return publicUrl;
+                // 4. LÉPÉS: Kimentjük a változást az adatbázisba (EZ HIÁNYZOTT!)
+                await _context.SaveChangesAsync();
+            }
+
+            return (fileName);
         }
 
         public async Task<bool> DeleteProfileImageAsync(int userId, string contentRootPath)
