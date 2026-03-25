@@ -15,6 +15,7 @@ interface MyTokenPayload {
 export const useAuthStore = defineStore('auth', () => {
   // --- ÁLLAPOT (State) ---
   const felhasznalo = ref<{ id: string; felhasznaloNev: string } | null>(null);
+  const profilAdatok = ref<any | null>(null);
   const token = ref<string | null>(authService.getToken());
   const isLoading = ref(false);
   const authError = ref<string | null>(null);
@@ -22,26 +23,35 @@ export const useAuthStore = defineStore('auth', () => {
   // --- SZÁMÍTOTT ADATOK (Getters) ---
   const isAuthenticated = computed(() => !!token.value);
 
+  // Kinyerjük a profilkép fájlnevét a profil adatokból
+  const profileImageName = computed(() => profilAdatok.value?.imgString || null);
   // --- SEGÉDFÜGGVÉNYEK ---
   const decodeUserFromToken = (t: string) => {
     try {
-      // Itt adjuk át a saját típusunkat a jwtDecode-nak
       const decoded = jwtDecode<MyTokenPayload>(t);
-
       felhasznalo.value = {
         felhasznaloNev: decoded.sub,
         id: decoded.Id
       };
     } catch (error) {
       console.error("Hiba a token dekódolásakor:", error);
-      kijelentkezes(); // Ha érvénytelen a token, kidobjuk a usert
+      kijelentkezes();
+    }
+  };
+
+  const fetchUserProfile = async () => {
+    try {
+      const response = await authService.getProfile();
+      profilAdatok.value = response.data;
+    } catch (error) {
+      console.error("Nem sikerült lekérni a profiladatokat:", error);
     }
   };
 
   // --- INICIALIZÁLÁS ---
-  // Ha oldalfrissítéskor van már tokenünk, rögtön dekódoljuk
   if (token.value) {
     decodeUserFromToken(token.value);
+    fetchUserProfile(); // Oldalfrissítéskor rögtön lekérjük a képet is
   }
 
   // --- MŰVELETEK (Actions) ---
@@ -53,44 +63,20 @@ export const useAuthStore = defineStore('auth', () => {
       token.value = response.data.token;
       localStorage.setItem('userToken', token.value!);
 
-      // Dekódoljuk a friss tokent, így beállítódik a 'felhasznalo' változó is
       decodeUserFromToken(token.value!);
-      if (await (await authService.isFirstLogin(felhasznalo.value!.id)).data.isFirstLogin) {
+      await fetchUserProfile(); // Bejelentkezés után profil betöltése
+
+      const firstLoginRes = await authService.isFirstLogin(felhasznalo.value!.id);
+      if (firstLoginRes.data.isFirstLogin) {
         await router.push('/profile');
       } else {
         await router.push('/');
       }
     } catch (error) {
       authError.value = "Hibás felhasználónév vagy jelszó.";
-      console.error("Bejelentkezési hiba:", error);
       throw error;
     } finally {
       isLoading.value = false;
-    }
-  };
-
-  const regisztracio = async (felhasznaloNev: string, jelszo: string) => {
-    isLoading.value = true;
-    authError.value = null;
-    try {
-      await authService.regisztracio(felhasznaloNev, jelszo);
-      return true;
-    } catch (error) {
-      authError.value = "Hiba történt a regisztráció során.";
-      console.error("Regisztrációs hiba:", error);
-      throw error;
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
-  const checkUsername = async (username: string) => {
-    try {
-      const response = await authService.checkUsername(username);
-      return response.data; // { isTaken: boolean }
-    } catch (error) {
-      console.error("Nem sikerült ellenőrizni a felhasználónevet", error);
-      throw error;
     }
   };
 
@@ -98,19 +84,22 @@ export const useAuthStore = defineStore('auth', () => {
     authService.kijelentkezes();
     token.value = null;
     felhasznalo.value = null;
+    profilAdatok.value = null;
     router.push('/');
   };
 
-  // --- VISSZATÉRÉS (Exportálás a komponensek felé) ---
   return {
     token,
     felhasznalo,
+    profilAdatok,
+    profileImageName,
     isLoading,
     authError,
     isAuthenticated,
     bejelentkezes,
-    regisztracio,
-    checkUsername,
-    kijelentkezes
+    fetchUserProfile,
+    kijelentkezes,
+    checkUsername: async (username: string) => (await authService.checkUsername(username)).data,
+    regisztracio: async (user: string, pass: string) => await authService.regisztracio(user, pass)
   };
 });

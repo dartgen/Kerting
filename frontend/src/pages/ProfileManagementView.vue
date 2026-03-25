@@ -215,7 +215,6 @@ const adatokBetoltese = async () => {
     profilAdatok.telepules = d.telepules || '';
     profilAdatok.rolam = d.rolam || '';
     profilAdatok.roleId = d.roleId || 2; // Alapértelmezett pl. Kertes
-    console.log("Roles API válasz:", profilAdatok); // Nézd meg a konzolt!
   } catch (error) {
     console.error("Betöltési hiba:", error);
     toastStore.addToast('Hiba az adatok betöltésekor!', 4000, 'error');

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { motion, AnimatePresence } from 'motion-v'
-import { RouterLink } from 'vue-router'
-import { useRouter } from 'vue-router'
-import {useAuthStore} from "@/stores/authStore.ts"
+import { RouterLink, useRouter } from 'vue-router'
+import { useAuthStore } from "@/stores/authStore.ts"
+import apiClient from '@/services/axios'
 
 interface NavLink {
   key: string
@@ -15,8 +15,35 @@ interface NavLink {
 
 const authStore = useAuthStore();
 const router = useRouter();
-
 const mobileMenuOpen = ref(false)
+const imageTimestamp = ref(Date.now());
+
+// Biztosítjuk, hogy legyen profiladatunk
+onMounted(() => {
+  if (authStore.isAuthenticated && !authStore.profilAdatok) {
+    authStore.fetchUserProfile();
+  }
+});
+// Profilkép URL generálása
+const userProfileImage = computed(() => {
+  // 1. Ellenőrizzük, hogy a store-ban egyáltalján megvan-e az adat
+  const fileName = authStore.profileImageName;
+
+  // Debug: Látnunk kell, mi van a store-ban
+  console.log("Store-ból jövő fájlnév:", fileName);
+
+  if (!fileName) return null;
+
+  const axiosBaseUrl = apiClient.defaults.baseURL;
+  try {
+    const origin = new URL(axiosBaseUrl).origin;
+    const finalUrl = `${origin}/resources/profiles/${fileName}`;
+    return finalUrl;
+  } catch (e) {
+    console.error("URL generálási hiba:", e);
+    return null;
+  }
+});
 
 const navLinks: NavLink[] = [
   { key: 'forum', label: 'Fórum', to: '/forum', delay: 0.05 },
@@ -28,15 +55,11 @@ const aboutLink: NavLink = { key: 'about', label: 'Rólunk', to: '/about', bold:
 
 const displayedLinks = computed<NavLink[]>(() => {
   if (authStore.isAuthenticated) {
-    return [
-      ...navLinks,
-      { ...aboutLink, delay: 0.2 },
-    ]
+    return [...navLinks, { ...aboutLink, delay: 0.2 }]
   }
   return [{ ...aboutLink, delay: 0 }]
 })
 
-// Segédváltozó, hogy az IDE felismerje a komponens használatát
 const MotionDiv = motion.div
 </script>
 
@@ -45,9 +68,7 @@ const MotionDiv = motion.div
     <header class="header-card">
       <div class="w-full mx-auto px-4 sm:px-6">
         <div class="flex items-center justify-between h-16 sm:h-20">
-          <!-- Baloldali menü és mobilmenü -->
           <div class="flex items-center">
-            <!-- Gép Navbar -->
             <nav class="hidden lg:flex items-center gap-4 xl:gap-6">
               <AnimatePresence>
                 <MotionDiv
@@ -58,151 +79,60 @@ const MotionDiv = motion.div
                   :exit="{ opacity: 0, x: -20 }"
                   :transition="{ duration: 0.3, delay: link.delay }"
                 >
-                  <RouterLink
-                    :to="link.to"
-                    :class="link.bold ? 'nav-link-bold' : 'nav-link'"
-                  >
+                  <RouterLink :to="link.to" :class="link.bold ? 'nav-link-bold' : 'nav-link'">
                     {{ link.label }}
                   </RouterLink>
                 </MotionDiv>
               </AnimatePresence>
             </nav>
 
-
-            <!-- Telefonos Navbar -->
             <div class="lg:hidden flex items-center">
-              <!-- Hamburger menü -->
-              <button
-                @click="mobileMenuOpen = !mobileMenuOpen"
-                :aria-expanded="mobileMenuOpen"
-                aria-label="Toggle mobile menu"
-                class="text-earth-100 hover:text-earth-200 focus:outline-none p-1 transition-colors"
-              >
-                <svg
-                  v-if="!mobileMenuOpen"
-                  class="w-7 h-7"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
+              <button @click="mobileMenuOpen = !mobileMenuOpen" class="text-earth-100 p-1">
+                <svg v-if="!mobileMenuOpen" class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
-                <svg
-                  v-else
-                  class="w-7 h-7"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
+                <svg v-else class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
           </div>
 
-          <!-- Középsô logó -->
           <div class="absolute left-1/2 transform -translate-x-1/2 w-[56%] sm:w-auto px-2">
             <RouterLink to="/" class="logo-text block text-center truncate"> KERTING </RouterLink>
           </div>
 
-          <!-- Jobb oldal: Keresés és Login/Profile -->
           <div class="flex items-center gap-3 sm:gap-5">
-            <!-- Nagy keresômezô -->
-            <div v-if="authStore.isAuthenticated" class="relative hidden lg:block group">
-              <input type="text" placeholder="Keresés..." class="search-input" />
-              <svg
-                class="w-4 h-4 text-white absolute right-3 top-1/2 transform -translate-y-1/2 transition-colors duration-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            </div>
-
-            <!-- Telefon csak keresô gomb -->
-            <button
-              v-if="authStore.isAuthenticated"
-              class="lg:hidden text-earth-100/90 hover:text-earth-400 transition-colors p-1"
-              aria-label="Search"
-            >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            </button>
-
-            <!-- Bejelentkezés / Profil gomb -->
-            <button
-              v-if="!authStore.isAuthenticated"
-              @click="router.push('/login')"
-              aria-label="Log in"
-              class="btn-primary hidden lg:block"
-            >
+            <button v-if="!authStore.isAuthenticated" @click="router.push('/login')" class="btn-primary hidden lg:block">
               Bejelentkezés
             </button>
 
             <button
               v-else
               @click="authStore.kijelentkezes()"
-              aria-label="Profile — click to log out"
-              class="btn-profile"
+              class="btn-profile overflow-hidden flex items-center justify-center border-2 border-white/20 hover:border-white/50 transition-all bg-earth-800 shadow-md"
+              style="width: 40px; height: 40px; min-width: 40px; border-radius: 50%;"
             >
-              <svg
-                class="w-4 h-4 sm:w-5 sm:h-5 text-earth-50"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-                aria-hidden="true"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                  clip-rule="evenodd"
-                />
+              <img
+                v-if="userProfileImage"
+                :src="userProfileImage"
+                class="w-full h-full object-cover block"
+                alt="Profil"
+                @load="console.log('Kép a Headerben sikeresen betöltve')"
+                @error="console.error('Kép a Headerben nem tudott betölteni')"
+              />
+              <svg v-else class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
               </svg>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Átfedő réteg: kattintásra bezárja a mobilmenüt -->
       <Transition name="fade">
-        <div
-          v-if="mobileMenuOpen"
-          class="fixed inset-0 z-10"
-          aria-hidden="true"
-          @click="mobileMenuOpen = false"
-        /></Transition>
+        <div v-if="mobileMenuOpen" class="fixed inset-0 z-10" @click="mobileMenuOpen = false" />
+      </Transition>
 
-      <!-- Mobil lenyíló menü -->
       <AnimatePresence>
         <MotionDiv
           v-if="mobileMenuOpen"
@@ -212,22 +142,17 @@ const MotionDiv = motion.div
           :exit="{ opacity: 0, scaleY: 0.8 }"
           :transition="{ duration: 0.2, ease: 'easeOut' }"
         >
-          <div class="px-4 py-4 flex flex-col space-y-4">
+          <div class="px-4 py-4 flex flex-col space-y-4 text-center">
             <template v-if="authStore.isAuthenticated">
-              <RouterLink
-                v-for="link in navLinks"
-                :key="link.key"
-                :to="link.to"
-                class="nav-link text-center"
-              >
+              <RouterLink v-for="link in navLinks" :key="link.key" :to="link.to" class="nav-link">
                 {{ link.label }}
               </RouterLink>
               <hr class="border-earth-100/10" />
             </template>
-            <RouterLink :to="aboutLink.to" class="nav-link-bold text-lg! text-center"> {{ aboutLink.label }}</RouterLink>
+            <RouterLink :to="aboutLink.to" class="nav-link-bold text-lg!"> {{ aboutLink.label }}</RouterLink>
             <template v-if="!authStore.isAuthenticated">
-               <hr class="border-earth-100/10" />
-               <button @click="router.push('/login'); mobileMenuOpen = false" class="nav-link-bold text-lg! text-center w-full">Bejelentkezés</button>
+              <hr class="border-earth-100/10" />
+              <button @click="router.push('/login'); mobileMenuOpen = false" class="nav-link-bold text-lg! w-full">Bejelentkezés</button>
             </template>
           </div>
         </MotionDiv>

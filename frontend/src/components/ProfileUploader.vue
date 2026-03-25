@@ -59,9 +59,9 @@ const props = defineProps<{
 const emit = defineEmits(['update:modelValue'])
 
 const getImageUrl = (fileName: string) => {
-  const axiosBaseUrl = api.defaults.baseURL || 'https://localhost:44351';
+  const axiosBaseUrl = api.defaults.baseURL;
   const origin = new URL(axiosBaseUrl).origin;
-  return `${origin}/resources/profiles/${fileName}?t=${imageTimestamp.value}`
+  return `${origin}/resources/profiles/${fileName}`
 }
 
 // MÓDOSÍTOTT WATCH
