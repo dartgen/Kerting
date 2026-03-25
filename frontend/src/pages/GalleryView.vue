@@ -109,8 +109,8 @@ const fetchFeed = async () => {
     galleryItems.value = data.map((item: any) => ({
       id: item.id,
       imageUrl: getFullImageUrl(item.imageUrl),
-      title: item.title || item.description || '',
-      description: item.description || item.title || '',
+      title: item.title || '',
+      description: item.description || '',
       uploaderName: item.uploaderName,
       uploaderAvatarUrl: `https://i.pravatar.cc/96?u=${item.uploaderId}`,
       uploadedAt: new Date(item.createdAtUtc).toLocaleDateString(),
