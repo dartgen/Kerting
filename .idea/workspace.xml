@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="9b5935a1-c4c0-4953-9cc0-9ebe4c7dab19" name="Changes" comment="PROFILKÉP!!!!">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="EmbeddingIndexingInfo">
+    <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Vue Composition API Component" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;totoka28&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/dartgen/Kerting.git&quot;,
+    &quot;accountId&quot;: &quot;42fc8099-a5c8-4e7c-af37-e3419b151290&quot;
+  }
+}</component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 7,
+  &quot;fromUser&quot;: false
+}</component>
+  <component name="ProjectId" id="3B8da36AQ8lIlMzMJIUvDTPGCRr" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Node.js.authStore.ts.executor": "Run",
+    "RunOnceActivity.MCP Project settings loaded": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "git-widget-placeholder": "master",
+    "ignore.virus.scanning.warn.message": "true",
+    "kotlin-language-version-configured": "true",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "npm.dev.executor": "Run",
+    "settings.editor.selected.configurable": "ml.llm.AcpAgentsConfigurable",
+    "ts.external.directory.path": "C:\\Users\\totoka28\\AppData\\Roaming\\JetBrains\\IntelliJIdea2025.3\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external",
+    "vue.rearranger.settings.migration": "true"
+  },
+  "keyToStringList": {
+    "vue.recent.templates": [
+      "Vue Composition API Component"
+    ]
+  }
+}]]></component>
+  <component name="RunManager">
+    <configuration name="dev" type="js.build_tools.npm" nameIsGenerated="true">
+      <package-json value="$PROJECT_DIR$/frontend/package.json" />
+      <command value="run" />
+      <scripts>
+        <script value="dev" />
+      </scripts>
+      <node-interpreter value="project" />
+      <envs />
+      <method v="2" />
+    </configuration>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-30f59d01ecdd-2fc7cc6b9a17-intellij.indexing.shared.core-IU-253.32098.37" />
+        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-IU-253.32098.37" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="9b5935a1-c4c0-4953-9cc0-9ebe4c7dab19" name="Changes" comment="" />
+      <created>1773874691221</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1773874691221</updated>
+      <workItem from="1773874692345" duration="939000" />
+      <workItem from="1774090101053" duration="130000" />
+      <workItem from="1774090241835" duration="8931000" />
+      <workItem from="1774120412461" duration="11000" />
+      <workItem from="1774203116764" duration="757000" />
+      <workItem from="1774204101500" duration="67000" />
+      <workItem from="1774279662117" duration="68000" />
+      <workItem from="1774286485033" duration="9055000" />
+      <workItem from="1774377608783" duration="154000" />
+      <workItem from="1774377831480" duration="11440000" />
+      <workItem from="1774391984161" duration="453000" />
+      <workItem from="1774429250453" duration="6342000" />
+      <workItem from="1774436016741" duration="1878000" />
+      <workItem from="1774453460339" duration="3893000" />
+    </task>
+    <task id="LOCAL-00001" summary="Login kicsit segitve a felhasználó élményt">
+      <option name="closed" value="true" />
+      <created>1774096321019</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1774096321019</updated>
+    </task>
+    <task id="LOCAL-00002" summary="LoginView.vue fejlesztve">
+      <option name="closed" value="true" />
+      <created>1774096938090</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1774096938090</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Profile adatok nézet kész, backend nincs hozzá">
+      <option name="closed" value="true" />
+      <created>1774297028792</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1774297028792</updated>
+    </task>
+    <task id="LOCAL-00004" summary="ProfileUploader.vue profilkép feltöltései lehetőség, back and még nincsen">
+      <option name="closed" value="true" />
+      <created>1774311519578</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1774311519578</updated>
+    </task>
+    <task id="LOCAL-00005" summary="Login javitva">
+      <option name="closed" value="true" />
+      <created>1774383724625</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1774383724625</updated>
+    </task>
+    <task id="LOCAL-00006" summary="RAlapaadtos panel javitva">
+      <option name="closed" value="true" />
+      <created>1774391293734</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1774391293735</updated>
+    </task>
+    <task id="LOCAL-00007" summary="Képfeltöltés">
+      <option name="closed" value="true" />
+      <created>1774431742737</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1774431742737</updated>
+    </task>
+    <task id="LOCAL-00008" summary="Profile ok?">
+      <option name="closed" value="true" />
+      <created>1774436144385</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1774436144385</updated>
+    </task>
+    <task id="LOCAL-00009" summary="Mükdöik a képekcske">
+      <option name="closed" value="true" />
+      <created>1774437302895</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1774437302895</updated>
+    </task>
+    <task id="LOCAL-00010" summary="PROFILKÉP!!!!">
+      <option name="closed" value="true" />
+      <created>1774458053269</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1774458053269</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Login kicsit segitve a felhasználó élményt" />
+    <MESSAGE value="Push" />
+    <MESSAGE value="LoginView.vue fejlesztve" />
+    <MESSAGE value="Profile adatok nézet kész, backend nincs hozzá" />
+    <MESSAGE value="ProfileUploader.vue profilkép feltöltései lehetőség, back and még nincsen" />
+    <MESSAGE value="Login javitva" />
+    <MESSAGE value="RAlapaadtos panel javitva" />
+    <MESSAGE value="Képfeltöltés" />
+    <MESSAGE value="Profile ok?" />
+    <MESSAGE value="Mükdöik a képekcske" />
+    <MESSAGE value="PROFILKÉP!!!!" />
+    <option name="LAST_COMMIT_MESSAGE" value="PROFILKÉP!!!!" />
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
+  </component>
+  <component name="github-copilot-workspace">
+    <instructionFileLocations>
+      <option value=".github/instructions" />
+    </instructionFileLocations>
+    <promptFileLocations>
+      <option value=".github/prompts" />
+    </promptFileLocations>
+  </component>
+</project>
