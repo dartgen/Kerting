@@ -97,14 +97,6 @@ namespace Kerting_Api
 
             var app = builder.Build();
 
-            // Statikus fájlok engedélyezése a Resources mappához
-            app.UseStaticFiles(new StaticFileOptions
-            {
-                FileProvider = new PhysicalFileProvider(
-                    Path.Combine(builder.Environment.ContentRootPath, "Resources")),
-                RequestPath = "/Resources"
-            });
-
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
@@ -113,9 +105,16 @@ namespace Kerting_Api
             }
 
             app.UseHttpsRedirection();
-;
 
             app.UseCors("VueCorsPolicy");
+
+            // 2. UTÁNA jöhetnek a statikus fájlok (kisbetűs RequestPath-el!)
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(
+                    Path.Combine(builder.Environment.ContentRootPath, "Resources")),
+                RequestPath = "/resources"
+            });
 
             app.UseAuthentication();
             app.UseAuthorization();

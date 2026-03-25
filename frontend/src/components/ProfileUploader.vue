@@ -47,8 +47,10 @@ const toastStore = useToastStore()
 const fileInput = ref<HTMLInputElement | null>(null)
 const imageUrl = ref<string | null>(null)
 
-// Ezzel verjük át a böngészőt, hogy mindig frissítse a képet
 const imageTimestamp = ref(Date.now())
+
+// ÚJ: Ezzel jelezzük a watch-nak, hogy saját magunk módosítottuk a képet, ne bántsa az előnézetet!
+const justUploaded = ref(false)
 
 const props = defineProps<{
   modelValue?: string | null
@@ -57,12 +59,19 @@ const props = defineProps<{
 const emit = defineEmits(['update:modelValue'])
 
 const getImageUrl = (fileName: string) => {
-  // Rátesszük az időbélyeget a végére
-  return `https://localhost:7067/resources/profiles/${fileName}?t=${imageTimestamp.value}`
+  const axiosBaseUrl = api.defaults.baseURL || 'https://localhost:44351';
+  const origin = new URL(axiosBaseUrl).origin;
+  return `${origin}/resources/profiles/${fileName}?t=${imageTimestamp.value}`
 }
 
-// Ha a szülőtől jön adat, betöltjük a képet
+// MÓDOSÍTOTT WATCH
 watch(() => props.modelValue, (newImgName) => {
+  // Ha mi magunk töltöttünk fel képet, blokkoljuk a backend frissítést
+  if (justUploaded.value) {
+    justUploaded.value = false // Visszaállítjuk, hogy legközelebb (pl. oldalfrissítésnél) működjön
+    return
+  }
+
   if (newImgName) {
     imageUrl.value = getImageUrl(newImgName)
   }
@@ -78,25 +87,24 @@ const handleFileUpload = async (event: Event) => {
 
   if (!file) return;
 
-  // Ideiglenes böngészős előnézet
+  // 1. Azonnal megkapjuk a tökéletes minőségű helyi képet a böngészőből
   imageUrl.value = URL.createObjectURL(file)
+
+  // 2. Szólunk a watch-nak, hogy most egy ideig hagyja békén a képet
+  justUploaded.value = true
 
   const formData = new FormData()
   formData.append('file', file)
 
   try {
-    const response = await api.post('/api/Gallery/profile-image', formData, {
+    const response = await api.post('/Gallery/profile-image', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
 
-    // Kinyerjük az új fájlnevet a C# válaszából
     const newFileName = response.data.fileName || response.data
-
-    // 1. Frissítjük az időbélyeget (Hogy tuti ne a régit mutassa)
     imageTimestamp.value = Date.now()
 
-    // 2. Szólunk a szülőnek, hogy változott a név.
-    // Ekkor a 'watch' újra le fog futni, de már az ÚJ időbélyeggel!
+    // 3. Frissítjük a szülőt. Ekkor a watch lefut, de a 'justUploaded' megvédi a böngészős előnézetet!
     emit('update:modelValue', newFileName)
 
     toastStore.addToast('Profilkép sikeresen feltöltve!', 3000, 'success')
@@ -104,7 +112,8 @@ const handleFileUpload = async (event: Event) => {
     console.error("Feltöltési hiba:", error)
     toastStore.addToast('Hiba a feltöltésnél!', 3000, 'error')
 
-    // Hiba esetén visszatesszük az eredetit
+    // Hiba esetén vissza kell állítanunk a régi képet a backendről
+    justUploaded.value = false
     if (props.modelValue) {
       imageUrl.value = getImageUrl(props.modelValue)
     } else {
