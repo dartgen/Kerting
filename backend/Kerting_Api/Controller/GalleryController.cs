@@ -34,6 +34,14 @@ namespace Kerting_Api.Controller
             return Ok(await _galleryService.GetGalleryFeedAsync(page, pageSize));
         }
 
+        [HttpGet("{id}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var item = await _galleryService.GetGalleryItemByIdAsync(id);
+            return item is null ? NotFound() : Ok(item);
+        }
+
         // --- PROFILKÉP FELTÖLTÉS(userId-t Form-ból kapja) ---
         [HttpPost("profile-image")]
         public async Task<IActionResult> UploadProfileImage(IFormFile file)

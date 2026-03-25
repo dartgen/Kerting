@@ -20,6 +20,30 @@ interface GalleryItem {
   }[]
 }
 
+interface GalleryFeedItemDto {
+  id: number
+  imageUrl: string
+  title?: string
+  description?: string
+  uploaderName: string
+  profileImageUrl?: string | null
+  createdAtUtc: string
+}
+
+interface GalleryDetailCommentDto {
+  id: number
+  userName: string
+  message: string
+  createdAtUtc: string
+  profileImageUrl?: string | null
+}
+
+interface GalleryDetailDto {
+  id: number
+  profileImageUrl?: string | null
+  comments?: GalleryDetailCommentDto[]
+}
+
 const galleryItems = ref<GalleryItem[]>([])
 
 const MotionDiv = motion.div
@@ -35,7 +59,7 @@ const isCardPreviewed = (id: number) => previewCardId.value === id
 
 const openExpandedCard = async (id: number) => {
   try {
-    const { data } = await api.get(`/Gallery/${id}`)
+    const { data } = await api.get<GalleryDetailDto>(`/Gallery/${id}`)
     const itemIndex = galleryItems.value.findIndex(i => i.id === id)
     if (itemIndex !== -1) {
       const existingItem = galleryItems.value[itemIndex]
@@ -46,12 +70,16 @@ const openExpandedCard = async (id: number) => {
           title: existingItem.title,
           description: existingItem.description,
           uploaderName: existingItem.uploaderName,
-          uploaderAvatarUrl: existingItem.uploaderAvatarUrl,
+          uploaderAvatarUrl: data.profileImageUrl
+            ? getFullImageUrl(data.profileImageUrl)
+            : existingItem.uploaderAvatarUrl,
           uploadedAt: existingItem.uploadedAt,
-          comments: data.comments?.map((c: any) => ({
+          comments: data.comments?.map((c) => ({
             id: c.id,
             userName: c.userName,
-            avatarUrl: `https://i.pravatar.cc/72?u=${c.userId}`,
+            avatarUrl: c.profileImageUrl
+              ? getFullImageUrl(c.profileImageUrl)
+              : `https://i.pravatar.cc/72?u=${c.id}`,
             message: c.message,
             createdAt: new Date(c.createdAtUtc).toLocaleDateString()
           })) || []
@@ -105,14 +133,16 @@ const getFullImageUrl = (url: string) => {
 
 const fetchFeed = async () => {
   try {
-    const { data } = await api.get('/Gallery/feed')
-    galleryItems.value = data.map((item: any) => ({
+    const { data } = await api.get<GalleryFeedItemDto[]>('/Gallery/feed')
+    galleryItems.value = data.map((item) => ({
       id: item.id,
       imageUrl: getFullImageUrl(item.imageUrl),
       title: item.title || '',
       description: item.description || '',
       uploaderName: item.uploaderName,
-      uploaderAvatarUrl: `https://i.pravatar.cc/96?u=${item.uploaderId}`,
+      uploaderAvatarUrl: item.profileImageUrl
+        ? getFullImageUrl(item.profileImageUrl)
+        : `https://i.pravatar.cc/96?u=${item.id}`,
       uploadedAt: new Date(item.createdAtUtc).toLocaleDateString(),
       comments: []
     }))

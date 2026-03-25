@@ -129,35 +129,71 @@ namespace Kerting_Api.Service
                 .OrderByDescending(i => i.CreatedAtUtc)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(i => new {
-                    i.Id,
-                    i.Title,
-                    i.Description,
-                    ImageUrl = $"/resources/gallery/{i.Id}{i.FileExtension}",
-                    UploaderName = i.Login.Username,
-                    i.CreatedAtUtc,
-                    LikesCount = i.Reactions.Count(r => r.IsLike),
-                    CommentsCount = i.Comments.Count()
-                }).ToListAsync<object>();
+                .Join(
+                    _context.User,
+                    i => i.UserId,
+                    u => u.Id,
+                    (i,u) => new
+                    {
+                        i.Id,
+                        i.Title,
+                        i.Description,
+                        ImageUrl = $"/resources/gallery/{i.Id}{i.FileExtension}",
+                        UploaderName = i.Login.Username,
+                        ProfileImageUrl = string.IsNullOrWhiteSpace(u.IMGString)
+                            ? null
+                            : $"/resources/profiles/{u.IMGString}",
+                        i.CreatedAtUtc,
+                        LikesCount = i.Reactions.Count(r => r.IsLike),
+                        CommentsCount = i.Comments.Count()
+                    })
+                .ToListAsync<object>();
         }
 
         public async Task<object?> GetGalleryItemByIdAsync(int itemId)
         {
             var item = await _context.GalleryItem
                 .Include(i => i.Login)
-                .Include(i => i.Comments).ThenInclude(c => c.Login)
-                .FirstOrDefaultAsync(i => i.Id == itemId);
+                .Join(
+                    _context.User,
+                    i => i.UserId,
+                    u => u.Id,
+                    (i, u) => new { Item = i, User = u })
+                .FirstOrDefaultAsync(x => x.Item.Id == itemId);
 
             if (item == null) return null;
 
+            var comments = await _context.GalleryComment
+                .Include(c => c.Login)
+                .Where(c => c.GalleryItemId == itemId)
+                .Join(
+                    _context.User,
+                    c => c.UserId,
+                    u => u.Id,
+                    (c, u) => new
+                    {
+                        c.Id,
+                        c.Message,
+                        UserName = c.Login.Username,
+                        c.CreatedAtUtc,
+                        ProfileImageUrl = string.IsNullOrWhiteSpace(u.IMGString)
+                            ? null
+                            : $"/resources/profiles/{u.IMGString}"
+                    })
+                .OrderByDescending(c => c.CreatedAtUtc)
+                .ToListAsync();
+
             return new
             {
-                item.Id,
-                item.Title,
-                item.Description,
-                ImageUrl = $"/resources/gallery/{item.Id}{item.FileExtension}",
-                UploaderName = item.Login.Username,
-                Comments = item.Comments.Select(c => new { c.Message, UserName = c.Login.Username })
+                item.Item.Id,
+                item.Item.Title,
+                item.Item.Description,
+                ImageUrl = $"/resources/gallery/{item.Item.Id}{item.Item.FileExtension}",
+                UploaderName = item.Item.Login.Username,
+                ProfileImageUrl = string.IsNullOrWhiteSpace(item.User.IMGString)
+                    ? null
+                    : $"/resources/profiles/{item.User.IMGString}",
+                Comments = comments
             };
         }
 
