@@ -39,13 +39,34 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useToastStore } from '@/stores/toast'
+import api from '@/services/axios'
 
-const emit = defineEmits(['update:modelValue'])
 const toastStore = useToastStore()
 const fileInput = ref<HTMLInputElement | null>(null)
 const imageUrl = ref<string | null>(null)
+
+// Ezzel verjük át a böngészőt, hogy mindig frissítse a képet
+const imageTimestamp = ref(Date.now())
+
+const props = defineProps<{
+  modelValue?: string | null
+}>()
+
+const emit = defineEmits(['update:modelValue'])
+
+const getImageUrl = (fileName: string) => {
+  // Rátesszük az időbélyeget a végére
+  return `https://localhost:7067/resources/profiles/${fileName}?t=${imageTimestamp.value}`
+}
+
+// Ha a szülőtől jön adat, betöltjük a képet
+watch(() => props.modelValue, (newImgName) => {
+  if (newImgName) {
+    imageUrl.value = getImageUrl(newImgName)
+  }
+}, { immediate: true })
 
 const triggerFileInput = () => {
   fileInput.value?.click()
@@ -55,16 +76,39 @@ const handleFileUpload = async (event: Event) => {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
 
-  if (file) {
-    imageUrl.value = URL.createObjectURL(file)
+  if (!file) return;
 
-    try {
-      // Mock ID szimuláció
-      const mockId = Math.floor(Math.random() * 1000)
-      emit('update:modelValue', mockId)
-      toastStore.addToast('Profilkép kiválasztva!', 3000, 'success')
-    } catch (e) {
-      toastStore.addToast('Hiba a feltöltésnél!', 3000, 'error')
+  // Ideiglenes böngészős előnézet
+  imageUrl.value = URL.createObjectURL(file)
+
+  const formData = new FormData()
+  formData.append('file', file)
+
+  try {
+    const response = await api.post('/api/Gallery/profile-image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+
+    // Kinyerjük az új fájlnevet a C# válaszából
+    const newFileName = response.data.fileName || response.data
+
+    // 1. Frissítjük az időbélyeget (Hogy tuti ne a régit mutassa)
+    imageTimestamp.value = Date.now()
+
+    // 2. Szólunk a szülőnek, hogy változott a név.
+    // Ekkor a 'watch' újra le fog futni, de már az ÚJ időbélyeggel!
+    emit('update:modelValue', newFileName)
+
+    toastStore.addToast('Profilkép sikeresen feltöltve!', 3000, 'success')
+  } catch (error) {
+    console.error("Feltöltési hiba:", error)
+    toastStore.addToast('Hiba a feltöltésnél!', 3000, 'error')
+
+    // Hiba esetén visszatesszük az eredetit
+    if (props.modelValue) {
+      imageUrl.value = getImageUrl(props.modelValue)
+    } else {
+      imageUrl.value = null
     }
   }
 }

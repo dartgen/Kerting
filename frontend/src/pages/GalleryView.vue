@@ -99,7 +99,7 @@ const syncInteractionMode = () => {
 const getFullImageUrl = (url: string) => {
   if (!url) return ''
   if (url.startsWith('http')) return url
-  const baseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:5224'
+  const baseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:44351'
   return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
 }
 
