@@ -23,7 +23,7 @@
 
               <div class="relative group">
                 <i class="fa-regular fa-user absolute left-4 top-1/2 -translate-y-1/2 text-earth-200/70 group-focus-within:text-earth-400 z-20 pointer-events-none"></i>
-                <input type="text" id="login-user" v-model="felhasznaloNev" placeholder=" " required
+                <input type="text" id="login-user" autocomplete="username" v-model="felhasznaloNev" placeholder=" " required
                        class="peer w-full bg-earth-50/10 border border-earth-200/30 rounded-xl py-3.5 pl-11 pr-4 text-earth-50 focus:outline-none focus:ring-2 focus:ring-earth-400 transition-all z-10">
                 <label for="login-user" class="absolute text-sm text-earth-200/70 duration-300 transform -translate-y-1/2 top-1/2 left-11 z-20 peer-placeholder-shown:scale-100 peer-focus:top-0 peer-focus:scale-90 peer-focus:-translate-y-5 peer-focus:left-2 peer-focus:text-earth-400 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:scale-90 peer-[:not(:placeholder-shown)]:-translate-y-5 peer-[:not(:placeholder-shown)]:left-2 pointer-events-none">
                   Felhasználónév
@@ -32,7 +32,7 @@
 
               <div class="relative group">
                 <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-earth-200/70 group-focus-within:text-earth-400 z-20 pointer-events-none"></i>
-                <input type="password" id="login-pass" v-model="jelszo" placeholder=" " required
+                <input type="password" id="login-pass" autocomplete="current-password" v-model="jelszo" placeholder=" " required
                        class="peer w-full bg-earth-50/10 border border-earth-200/30 rounded-xl py-3.5 pl-11 pr-4 text-earth-50 focus:outline-none focus:ring-2 focus:ring-earth-400 transition-all z-10">
                 <label for="login-pass" class="absolute text-sm text-earth-200/70 duration-300 transform -translate-y-1/2 top-1/2 left-11 z-20 peer-placeholder-shown:scale-100 peer-focus:top-0 peer-focus:scale-90 peer-focus:-translate-y-5 peer-focus:left-2 peer-focus:text-earth-400 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:scale-90 peer-[:not(:placeholder-shown)]:-translate-y-5 peer-[:not(:placeholder-shown)]:left-2 pointer-events-none">
                   Jelszó
@@ -81,7 +81,7 @@
                 <div class="relative group">
                   <i class="fa-regular fa-user absolute left-4 top-1/2 -translate-y-1/2 z-20 pointer-events-none transition-colors"
                      :class="regFelhasznaloNev ? (isNevFoglalt ? 'text-red-400' : 'text-green-400') : 'text-earth-200/70'"></i>
-                  <input type="text" id="reg-user" v-model="regFelhasznaloNev" @blur="felhasznaloNevEllenorzes" placeholder=" " required
+                  <input type="text" id="reg-user" autocomplete="username" v-model="regFelhasznaloNev" @blur="felhasznaloNevEllenorzes" placeholder=" " required
                          class="peer w-full bg-earth-50/10 border rounded-xl py-3.5 pl-11 pr-4 text-earth-50 focus:outline-none focus:ring-2 transition-all z-10 shadow-inner"
                          :class="regFelhasznaloNev ? (isNevFoglalt ? 'border-red-500 focus:ring-red-500 bg-red-500/10' : 'border-green-500 focus:ring-green-500 bg-green-500/10') : 'border-earth-200/30 focus:ring-earth-400'">
                   <label for="reg-user" class="absolute text-sm duration-300 transform -translate-y-1/2 top-1/2 left-11 z-20 peer-placeholder-shown:scale-100 peer-focus:top-0 peer-focus:scale-90 peer-focus:-translate-y-5 peer-focus:left-2 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:scale-90 peer-[:not(:placeholder-shown)]:-translate-y-5 peer-[:not(:placeholder-shown)]:left-2 pointer-events-none"
@@ -93,7 +93,7 @@
 
                 <div class="relative group">
                   <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 z-20 pointer-events-none text-earth-200/70"></i>
-                  <input type="password" id="reg-pass1" v-model="regJelszo" placeholder=" " required
+                  <input type="password" id="reg-pass1" autocomplete="new-password" v-model="regJelszo" placeholder=" " required
                          class="peer w-full bg-earth-50/10 border border-earth-200/30 rounded-xl py-3.5 pl-11 pr-4 text-earth-50 focus:outline-none focus:ring-2 focus:ring-earth-400 transition-all z-10 shadow-inner"
                          :class="regJelszos ? (regJelszo === regJelszos ? 'border-green-500 focus:ring-green-500 bg-green-500/10' : 'border-red-500 focus:ring-red-500 bg-red-500/10') : 'border-earth-200/30 focus:ring-earth-400'">
                   <label for="reg-pass1" class="absolute text-sm text-earth-200/70 duration-300 transform -translate-y-1/2 top-1/2 left-11 z-20 peer-placeholder-shown:scale-100 peer-focus:top-0 peer-focus:scale-90 peer-focus:-translate-y-5 peer-focus:left-2 peer-focus:text-earth-400 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:scale-90 peer-[:not(:placeholder-shown)]:-translate-y-5 peer-[:not(:placeholder-shown)]:left-2 pointer-events-none">Jelszó</label>
@@ -102,7 +102,7 @@
                 <div class="relative group">
                   <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 z-20 pointer-events-none transition-colors"
                      :class="regJelszos ? (regJelszo === regJelszos ? 'text-green-400' : 'text-red-400') : 'text-earth-200/70'"></i>
-                  <input type="password" id="reg-pass2" v-model="regJelszos" placeholder=" " required
+                  <input type="password" id="reg-pass2" autocomplete="new-password" v-model="regJelszos" placeholder=" " required
                          class="peer w-full bg-earth-50/10 border rounded-xl py-3.5 pl-11 pr-4 text-earth-50 focus:outline-none focus:ring-2 transition-all z-10 shadow-inner"
                          :class="regJelszos ? (regJelszo === regJelszos ? 'border-green-500 focus:ring-green-500 bg-green-500/10' : 'border-red-500 focus:ring-red-500 bg-red-500/10') : 'border-earth-200/30 focus:ring-earth-400'">
                   <label for="reg-pass2" class="absolute text-sm duration-300 transform -translate-y-1/2 top-1/2 left-11 z-20 peer-placeholder-shown:scale-100 peer-focus:top-0 peer-focus:scale-90 peer-focus:-translate-y-5 peer-focus:left-2 peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:scale-90 peer-[:not(:placeholder-shown)]:-translate-y-5 peer-[:not(:placeholder-shown)]:left-2 pointer-events-none"

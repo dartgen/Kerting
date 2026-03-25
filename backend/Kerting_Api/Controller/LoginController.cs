@@ -92,13 +92,24 @@ namespace Kerting_Api.Controller
         }
 
         [Authorize]
-        [HttpGet("{id}/first-login")]
-        public async Task<IActionResult> CheckFirstLogin(int id)
+        [HttpPost("{id}/first-login")] // Fontos: POST kérés, mert állapotot módosítunk!
+        public async Task<IActionResult> HandleFirstLogin(int id)
         {
-            // 1. Kikeresjük a felhasználót az adatbázisból az ID alapján
+            // 1. Kikeresjük a felhasználót az adatbázisból
             var user = await _context.Login.FindAsync(id);
-            // 2. Visszaadjuk a FirstLogin értékét egy JSON objektumban
-            return Ok(new { isFirstLogin = user.FirstLogin });
+
+            // 2. Eltároljuk egy változóba az eredeti (lekéréskori) állapotot
+            bool wasFirstLogin = user.FirstLogin;
+
+            // 3. Ha ez tényleg az első belépés volt, akkor most felülírjuk az adatbázisban
+            if (wasFirstLogin)
+            {
+                user.FirstLogin = false;
+                await _context.SaveChangesAsync(); // Figyelj az "await" és az "Async" használatára!
+            }
+
+            // 4. Visszaadjuk a frontendnek azt az értéket, amivel még a kérés elején indultunk
+            return Ok(new { isFirstLogin = wasFirstLogin });
         }
 
         [HttpGet("CheckUsername")]

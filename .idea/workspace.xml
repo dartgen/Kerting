@@ -4,10 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="9b5935a1-c4c0-4953-9cc0-9ebe4c7dab19" name="Changes" comment="PROFILKÉP!!!!">
-      <change beforePath="$PROJECT_DIR$/backend/Kerting_Api/Resources/Profiles/1.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/Kerting_Api/Resources/Profiles/1.webp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/Kerting_Api/Resources/Profiles/3.jpeg" beforeDir="false" />
+    <list default="true" id="9b5935a1-c4c0-4953-9cc0-9ebe4c7dab19" name="Changes" comment="KÉPEK">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/Kerting_Api/Controller/LoginController.cs" beforeDir="false" afterPath="$PROJECT_DIR$/backend/Kerting_Api/Controller/LoginController.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/headerComponent.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/headerComponent.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/LoginView.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/LoginView.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/ProfileManagementView.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/ProfileManagementView.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/services/authService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/services/authService.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -121,7 +124,7 @@
       <workItem from="1774391984161" duration="453000" />
       <workItem from="1774429250453" duration="6342000" />
       <workItem from="1774436016741" duration="1878000" />
-      <workItem from="1774453460339" duration="4210000" />
+      <workItem from="1774453460339" duration="9840000" />
     </task>
     <task id="LOCAL-00001" summary="Login kicsit segitve a felhasználó élményt">
       <option name="closed" value="true" />
@@ -227,7 +230,15 @@
       <option name="project" value="LOCAL" />
       <updated>1774458088945</updated>
     </task>
-    <option name="localTasksCounter" value="14" />
+    <task id="LOCAL-00014" summary="KÉPEK">
+      <option name="closed" value="true" />
+      <created>1774458533905</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1774458533905</updated>
+    </task>
+    <option name="localTasksCounter" value="15" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -256,7 +267,8 @@
     <MESSAGE value="Profile ok?" />
     <MESSAGE value="Mükdöik a képekcske" />
     <MESSAGE value="PROFILKÉP!!!!" />
-    <option name="LAST_COMMIT_MESSAGE" value="PROFILKÉP!!!!" />
+    <MESSAGE value="KÉPEK" />
+    <option name="LAST_COMMIT_MESSAGE" value="KÉPEK" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

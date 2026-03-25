@@ -29,9 +29,6 @@ const userProfileImage = computed(() => {
   // 1. Ellenőrizzük, hogy a store-ban egyáltalján megvan-e az adat
   const fileName = authStore.profileImageName;
 
-  // Debug: Látnunk kell, mi van a store-ban
-  console.log("Store-ból jövő fájlnév:", fileName);
-
   if (!fileName) return null;
 
   const axiosBaseUrl = apiClient.defaults.baseURL;
@@ -118,7 +115,6 @@ const MotionDiv = motion.div
                 :src="userProfileImage"
                 class="w-full h-full object-cover block"
                 alt="Profil"
-                @load="console.log('Kép a Headerben sikeresen betöltve')"
                 @error="console.error('Kép a Headerben nem tudott betölteni')"
               />
               <svg v-else class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">

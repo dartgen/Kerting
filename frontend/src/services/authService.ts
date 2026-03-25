@@ -37,8 +37,7 @@ export const authService = {
   checkUsername(username: string) {
     return apiClient.get(`/CheckUsername?username=${username}`);
   }, isFirstLogin(id: string) {
-    console.log(apiClient.get(`/${id}/first-login`))
-    return apiClient.get(`/${id}/first-login`);
+    return apiClient.post(`/${id}/first-login`);
   }, updateProfile(profilAdatok: ProfilAdatokDTO) {
     return apiClient.put('/UpdateMyProfile', {
       vezetekNev: profilAdatok.vezetekNev,
