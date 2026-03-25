@@ -8,7 +8,6 @@ export interface ProfilAdatokDTO {
   rolam: string;
   roleId: number;
   telefon: string;
-  profileIMGId: number;
 }
 
 export const authService = {
@@ -49,7 +48,6 @@ export const authService = {
       telepules: profilAdatok.telepules,
       rolam: profilAdatok.rolam,
       roleId: profilAdatok.roleId,
-      profileIMGId: profilAdatok.profileIMGId || 0,
     });
   }, getProfile() {
     return apiClient.get('/GetMyProfile');

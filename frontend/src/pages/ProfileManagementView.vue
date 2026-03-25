@@ -77,7 +77,7 @@
                   <input type="text" v-model="profilAdatok.keresztNev" placeholder="Pl.: Géza"
                          class="w-full bg-earth-50/10 border border-earth-200/30 rounded-lg py-3 px-4 text-earth-50 focus:outline-none focus:ring-2 focus:ring-green-400 transition-all shadow-inner placeholder-earth-200/50">
                 </div>
-                <ProfileUploader v-model="profilAdatok.profileIMGId" />
+                <ProfileUploader v-model="profilAdatok.IMGString" />
               </div>
 
               <div class="flex flex-col flex-1 gap-4">
@@ -176,7 +176,7 @@ const profilAdatok = reactive({
   telepules: '',
   roleId: 1,
   rolam: '',
-  profileIMGId: 0
+  IMGString: ''
 });
 
 // Címke kezelés adatai
@@ -203,10 +203,11 @@ const adatokBetoltese = async () => {
   try {
     const rolesRes = await authService.getRoles();
     roles.value = rolesRes.data;
-    console.log("Roles API válasz:", rolesRes.data); // Nézd meg a konzolt!
+
     const profileRes = await authService.getProfile();
     const d = profileRes.data;
 
+    profilAdatok.IMGString = d.imgString || '';
     profilAdatok.vezetekNev = d.vezetekNev || '';
     profilAdatok.keresztNev = d.keresztNev || '';
     profilAdatok.email = d.email || '';
@@ -214,8 +215,7 @@ const adatokBetoltese = async () => {
     profilAdatok.telepules = d.telepules || '';
     profilAdatok.rolam = d.rolam || '';
     profilAdatok.roleId = d.roleId || 2; // Alapértelmezett pl. Kertes
-    profilAdatok.profileIMGId = d.profileIMGId || 0;
-
+    console.log("Roles API válasz:", profilAdatok); // Nézd meg a konzolt!
   } catch (error) {
     console.error("Betöltési hiba:", error);
     toastStore.addToast('Hiba az adatok betöltésekor!', 4000, 'error');
