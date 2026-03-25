@@ -10,8 +10,7 @@ const router = createRouter({
       name: 'home',
       component: () => import('../pages/HomeView.vue'),
       meta: {
-        title: `${pre} Kerting`,
-        requiresGuest: true
+        title: `${pre} Kerting`
       },
     },
     {
@@ -48,7 +47,8 @@ const router = createRouter({
       name: 'works',
       component: () => import('../pages/WorksView.vue'),
       meta: {
-        title: `${pre} Munkák`
+        title: `${pre} Munkák`,
+        requiresAuth: true,
       }
     },
     {
