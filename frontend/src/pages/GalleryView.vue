@@ -45,6 +45,9 @@ interface GalleryDetailDto {
 }
 
 const galleryItems = ref<GalleryItem[]>([])
+const commentDraft = ref('')
+const isSubmittingComment = ref(false)
+const commentSubmitError = ref('')
 
 const MotionDiv = motion.div
 // A kártyák interakciós állapota: előnézet (touch) és nagyított nézet.
@@ -58,6 +61,7 @@ const expandedCard = computed(() => galleryItems.value.find((item) => item.id ==
 const isCardPreviewed = (id: number) => previewCardId.value === id
 
 const openExpandedCard = async (id: number) => {
+  commentSubmitError.value = ''
   try {
     const { data } = await api.get<GalleryDetailDto>(`/Gallery/${id}`)
     const itemIndex = galleryItems.value.findIndex(i => i.id === id)
@@ -114,6 +118,29 @@ const closeExpandedCard = () => {
   // Bezáráskor minden kiválasztási állapotot nullázunk.
   expandedCardId.value = null
   previewCardId.value = null
+  commentDraft.value = ''
+  commentSubmitError.value = ''
+}
+
+const submitComment = async () => {
+  if (!expandedCardId.value) return
+
+  const trimmedMessage = commentDraft.value.trim()
+  if (!trimmedMessage || isSubmittingComment.value) return
+
+  isSubmittingComment.value = true
+  commentSubmitError.value = ''
+
+  try {
+    await api.post(`/Gallery/${expandedCardId.value}/comment`, trimmedMessage)
+    commentDraft.value = ''
+    await openExpandedCard(expandedCardId.value)
+  } catch (err) {
+    console.error('Hiba komment küldésekor', err)
+    commentSubmitError.value = 'A komment küldése nem sikerült. Próbáld újra.'
+  } finally {
+    isSubmittingComment.value = false
+  }
 }
 
 const desktopQuery = '(hover: hover) and (pointer: fine)'
@@ -250,10 +277,10 @@ watch(isDesktopInteraction, (isDesktop) => {
                 <p class="mt-2 text-earth-200/90 text-sm leading-relaxed">{{ expandedCard.description }}</p>
               </div>
 
-              <div class="pt-4 flex-1 min-h-0">
+              <div class="pt-4 flex-1 min-h-0 flex flex-col">
                 <div class="h-px w-full bg-gradient-to-r from-transparent via-earth-100/20 to-transparent mb-5"></div>
                 <h3 class="text-earth-50 font-semibold text-sm sm:text-base">Kommentek</h3>
-                <div class="mt-3 space-y-3 overflow-y-auto max-h-[45vh] sm:max-h-[320px] lg:max-h-[420px] pr-1">
+                <div class="mt-3 min-h-0 flex-1 overflow-y-auto pr-1 space-y-3">
                   <div
                     v-for="comment in expandedCard.comments"
                     :key="comment.id"
@@ -272,6 +299,36 @@ watch(isDesktopInteraction, (isDesktop) => {
                     </div>
                     <p class="mt-2 text-earth-200/95 text-xs sm:text-sm leading-relaxed">{{ comment.message }}</p>
                   </div>
+                </div>
+
+                <div class="mt-3 shrink-0 sticky bottom-0 z-10 rounded-2xl border border-earth-100/15 bg-earth-950/90 backdrop-blur-sm px-3 py-3 shadow-[0_12px_24px_rgba(0,0,0,0.25)]">
+                  <div class="flex items-end gap-2 sm:gap-3">
+                    <textarea
+                      v-model="commentDraft"
+                      rows="2"
+                      maxlength="1000"
+                      placeholder="Írj egy kommentet..."
+                      class="w-full resize-none rounded-xl border border-earth-100/20 bg-earth-900/60 px-3 py-2 text-sm text-earth-100 placeholder:text-earth-200/55 focus:outline-none focus:ring-2 focus:ring-earth-300/35 focus:border-earth-100/35"
+                      :disabled="isSubmittingComment"
+                      @keydown.enter.exact.prevent="submitComment"
+                    />
+
+                    <button
+                      type="button"
+                      class="h-[42px] sm:h-[44px] shrink-0 rounded-full border border-earth-100/25 bg-earth-700/85 px-5 text-xs sm:text-sm font-semibold text-earth-50 transition-colors hover:bg-earth-600 disabled:cursor-not-allowed disabled:opacity-60"
+                      :disabled="isSubmittingComment || !commentDraft.trim()"
+                      @click="submitComment"
+                    >
+                      {{ isSubmittingComment ? 'Küldés...' : 'Küldés' }}
+                    </button>
+                  </div>
+
+                  <p v-if="commentSubmitError" class="mt-2 text-[11px] sm:text-xs text-red-300">
+                    {{ commentSubmitError }}
+                  </p>
+                  <p v-else class="mt-2 text-[11px] sm:text-xs text-earth-200/70">
+                    Enter: küldés, Shift+Enter: új sor
+                  </p>
                 </div>
               </div>
             </MotionDiv>
