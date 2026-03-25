@@ -97,13 +97,12 @@ namespace Kerting_Api
 
             var app = builder.Build();
 
-            // A teljes "Resources" mappát elérhetővé tesszük
-            // így könyedén eléri a frontend.
+            // Statikus fájlok engedélyezése a Resources mappához
             app.UseStaticFiles(new StaticFileOptions
             {
                 FileProvider = new PhysicalFileProvider(
                     Path.Combine(builder.Environment.ContentRootPath, "Resources")),
-                RequestPath = "/resources"
+                RequestPath = "/Resources"
             });
 
             // Configure the HTTP request pipeline.
@@ -114,19 +113,7 @@ namespace Kerting_Api
             }
 
             app.UseHttpsRedirection();
-
-            // Create and Serve the new Images folder dynamically
-            var imagesPath = Path.Combine(builder.Environment.ContentRootPath, "Images");
-            if (!Directory.Exists(imagesPath))
-            {
-                Directory.CreateDirectory(imagesPath);
-            }
-
-            app.UseStaticFiles(new StaticFileOptions
-            {
-                FileProvider = new PhysicalFileProvider(imagesPath),
-                RequestPath = "/Images"
-            });
+;
 
             app.UseCors("VueCorsPolicy");
 
