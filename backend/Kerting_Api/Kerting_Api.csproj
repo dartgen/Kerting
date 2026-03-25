@@ -24,7 +24,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Resources\Gallery\" />
     <Folder Include="Resources\Profiles\" />
   </ItemGroup>
 
