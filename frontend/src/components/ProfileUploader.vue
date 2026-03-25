@@ -60,6 +60,7 @@ const emit = defineEmits(['update:modelValue'])
 
 const getImageUrl = (fileName: string) => {
   const axiosBaseUrl = api.defaults.baseURL;
+  if (!axiosBaseUrl) return null;
   const origin = new URL(axiosBaseUrl).origin;
   return `${origin}/resources/profiles/${fileName}`
 }

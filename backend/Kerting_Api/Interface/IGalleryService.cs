@@ -11,7 +11,7 @@ namespace Kerting_Api.Interface
         Task<GalleryItem> UploadItemAsync(int userId, string title, string description, IFormFile file, string contentRootPath);
         Task<bool> DeleteItemAsync(int itemId, int userId, string contentRootPath);
         Task<List<object>> GetGalleryFeedAsync(int page = 1, int pageSize = 20);
-        Task<object?> GetGalleryItemByIdAsync(int itemId);
+        Task<object?> GetGalleryItemByIdAsync(int itemId, int? currentUserId = null);
 
         // Profilkép
         Task<string> UploadProfileImageAsync(int userId, IFormFile file, string contentRootPath);

@@ -27,6 +27,12 @@ namespace Kerting_Api.Controller
         // Segédmetódus a UserId kinyeréséhez a Tokenből
         private int GetCurrentUserId() => int.Parse(User.FindFirst("Id")?.Value ?? "0");
 
+        private int? TryGetCurrentUserId()
+        {
+            var rawId = User.FindFirst("Id")?.Value;
+            return int.TryParse(rawId, out var userId) ? userId : null;
+        }
+
         [HttpGet("feed")]
         [AllowAnonymous] // A feedet bárki láthatja
         public async Task<IActionResult> GetFeed([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
@@ -38,7 +44,7 @@ namespace Kerting_Api.Controller
         [AllowAnonymous]
         public async Task<IActionResult> GetById(int id)
         {
-            var item = await _galleryService.GetGalleryItemByIdAsync(id);
+            var item = await _galleryService.GetGalleryItemByIdAsync(id, TryGetCurrentUserId());
             return item is null ? NotFound() : Ok(item);
         }
 

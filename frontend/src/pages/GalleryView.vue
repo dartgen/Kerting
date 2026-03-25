@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { motion, AnimatePresence } from 'motion-v'
 import api from '@/services/axios'
+import { useAuthStore } from '@/stores/authStore'
 
 interface GalleryItem {
   id: number
@@ -11,6 +12,9 @@ interface GalleryItem {
   uploaderName: string
   uploaderAvatarUrl: string
   uploadedAt: string
+  likesCount: number
+  dislikesCount: number
+  myReaction: boolean | null
   comments: {
     id: number
     userName: string
@@ -28,6 +32,8 @@ interface GalleryFeedItemDto {
   uploaderName: string
   profileImageUrl?: string | null
   createdAtUtc: string
+  likesCount?: number
+  dislikesCount?: number
 }
 
 interface GalleryDetailCommentDto {
@@ -41,12 +47,19 @@ interface GalleryDetailCommentDto {
 interface GalleryDetailDto {
   id: number
   profileImageUrl?: string | null
+  likesCount?: number
+  dislikesCount?: number
+  myReaction?: boolean | null
   comments?: GalleryDetailCommentDto[]
 }
 
 const galleryItems = ref<GalleryItem[]>([])
+const commentDraft = ref('')
+const isSubmittingComment = ref(false)
+const commentSubmitError = ref('')
 
 const MotionDiv = motion.div
+const authStore = useAuthStore()
 // A kártyák interakciós állapota: előnézet (touch) és nagyított nézet.
 const previewCardId = ref<number | null>(null)
 const expandedCardId = ref<number | null>(null)
@@ -58,6 +71,7 @@ const expandedCard = computed(() => galleryItems.value.find((item) => item.id ==
 const isCardPreviewed = (id: number) => previewCardId.value === id
 
 const openExpandedCard = async (id: number) => {
+  commentSubmitError.value = ''
   try {
     const { data } = await api.get<GalleryDetailDto>(`/Gallery/${id}`)
     const itemIndex = galleryItems.value.findIndex(i => i.id === id)
@@ -74,6 +88,9 @@ const openExpandedCard = async (id: number) => {
             ? getFullImageUrl(data.profileImageUrl)
             : existingItem.uploaderAvatarUrl,
           uploadedAt: existingItem.uploadedAt,
+          likesCount: data.likesCount ?? existingItem.likesCount,
+          dislikesCount: data.dislikesCount ?? existingItem.dislikesCount,
+          myReaction: data.myReaction ?? null,
           comments: data.comments?.map((c) => ({
             id: c.id,
             userName: c.userName,
@@ -114,6 +131,40 @@ const closeExpandedCard = () => {
   // Bezáráskor minden kiválasztási állapotot nullázunk.
   expandedCardId.value = null
   previewCardId.value = null
+  commentDraft.value = ''
+  commentSubmitError.value = ''
+}
+
+const submitComment = async () => {
+  if (!expandedCardId.value) return
+
+  const trimmedMessage = commentDraft.value.trim()
+  if (!trimmedMessage || isSubmittingComment.value) return
+
+  isSubmittingComment.value = true
+  commentSubmitError.value = ''
+
+  try {
+    await api.post(`/Gallery/${expandedCardId.value}/comment`, trimmedMessage)
+    commentDraft.value = ''
+    await openExpandedCard(expandedCardId.value)
+  } catch (err) {
+    console.error('Hiba komment küldésekor', err)
+    commentSubmitError.value = 'A komment küldése nem sikerült. Próbáld újra.'
+  } finally {
+    isSubmittingComment.value = false
+  }
+}
+
+const toggleReaction = async (isLike: boolean) => {
+  if (!expandedCardId.value || !authStore.isAuthenticated) return
+
+  try {
+    await api.post(`/Gallery/${expandedCardId.value}/react`, null, { params: { isLike } })
+    await openExpandedCard(expandedCardId.value)
+  } catch (err) {
+    console.error('Hiba reakció küldésekor', err)
+  }
 }
 
 const desktopQuery = '(hover: hover) and (pointer: fine)'
@@ -144,6 +195,9 @@ const fetchFeed = async () => {
         ? getFullImageUrl(item.profileImageUrl)
         : `https://i.pravatar.cc/96?u=${item.id}`,
       uploadedAt: new Date(item.createdAtUtc).toLocaleDateString(),
+      likesCount: item.likesCount ?? 0,
+      dislikesCount: item.dislikesCount ?? 0,
+      myReaction: null,
       comments: []
     }))
   } catch (err) {
@@ -198,15 +252,6 @@ watch(isDesktopInteraction, (isDesktop) => {
           :transition="{ duration: 0.28, ease: 'easeOut' }"
           class="relative min-h-[420px] lg:h-full lg:min-h-[560px]"
         >
-          <button
-            type="button"
-            class="absolute right-2 top-2 sm:right-3 sm:top-3 z-20 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-earth-900/85 border border-earth-100/20 text-earth-50 hover:bg-earth-800 transition-colors"
-            aria-label="Nagy nézet bezárása"
-            @click="closeExpandedCard"
-          >
-            ✕
-          </button>
-
           <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.75fr)] gap-3 sm:gap-4 min-h-[420px] lg:h-full lg:min-h-[560px]">
             <MotionDiv
               :initial="{ opacity: 0.6, scale: 0.985 }"
@@ -217,7 +262,10 @@ watch(isDesktopInteraction, (isDesktop) => {
               <img
                 :src="expandedCard.imageUrl"
                 :alt="expandedCard.description"
-                class="w-full h-full min-h-[280px] lg:min-h-full object-contain"
+                class="w-full h-full min-h-[280px] lg:min-h-full object-contain gallery-protected-image"
+                draggable="false"
+                @dragstart.prevent
+                @contextmenu.prevent
               />
               <div class="absolute bottom-3 right-3 px-2 py-1 rounded-md bg-black/45 text-earth-100 text-xs border border-earth-100/15">
                 {{ expandedCard.uploadedAt }}
@@ -230,15 +278,60 @@ watch(isDesktopInteraction, (isDesktop) => {
               :transition="{ duration: 0.3, ease: 'easeOut' }"
               class="rounded-2xl border border-earth-100/20 bg-earth-950/45 p-4 sm:p-5 overflow-hidden flex flex-col min-h-0"
             >
-              <div class="flex items-center gap-3 pb-3 border-b border-earth-100/10">
-                <img
-                  :src="expandedCard.uploaderAvatarUrl"
-                  :alt="`${expandedCard.uploaderName} profilképe`"
-                  class="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border border-earth-100/25"
-                />
-                <div>
-                  <p class="text-earth-100 font-semibold text-sm sm:text-base">{{ expandedCard.uploaderName }}</p>
-                  <p class="text-earth-200/70 text-xs">Feltöltő</p>
+              <div class="flex items-center justify-between gap-3 pb-3 border-b border-earth-100/10">
+                <div class="flex items-center gap-3">
+                  <img
+                    :src="expandedCard.uploaderAvatarUrl"
+                    :alt="`${expandedCard.uploaderName} profilképe`"
+                    class="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border border-earth-100/25"
+                  />
+                  <div>
+                    <p class="text-earth-100 font-semibold text-sm sm:text-base">{{ expandedCard.uploaderName }}</p>
+                    <p class="text-earth-200/70 text-xs">Feltöltő</p>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    class="h-9 sm:h-10 rounded-full border px-3 sm:px-3.5 text-xs sm:text-sm font-semibold transition-colors inline-flex items-center gap-1.5"
+                    :class="expandedCard.myReaction === true
+                      ? 'border-earth-100/40 bg-earth-100/20 text-white'
+                      : 'border-earth-100/25 bg-earth-900/65 text-white hover:bg-earth-800'"
+                    :disabled="!authStore.isAuthenticated"
+                    @click="toggleReaction(true)"
+                  >
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect x="3" y="9" width="4" height="12" rx="1.25" />
+                      <path d="M14.5 9.5V5.9c0-1-.52-1.92-1.37-2.41l-3.4 5.92a2.2 2.2 0 0 0-.3 1.1V19a2 2 0 0 0 2 2h5.84a2 2 0 0 0 1.97-1.65l1.02-6a2 2 0 0 0-1.97-2.35H14.5Z" />
+                    </svg>
+                    <span>{{ expandedCard.likesCount }}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="h-9 sm:h-10 rounded-full border px-3 sm:px-3.5 text-xs sm:text-sm font-semibold transition-colors inline-flex items-center gap-1.5"
+                    :class="expandedCard.myReaction === false
+                      ? 'border-earth-100/40 bg-earth-100/20 text-white'
+                      : 'border-earth-100/25 bg-earth-900/65 text-white hover:bg-earth-800'"
+                    :disabled="!authStore.isAuthenticated"
+                    @click="toggleReaction(false)"
+                  >
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect x="3" y="3" width="4" height="12" rx="1.25" />
+                      <path d="M14.5 14.5v3.6c0 1-.52 1.92-1.37 2.41l-3.4-5.92a2.2 2.2 0 0 1-.3-1.1V5a2 2 0 0 1 2-2h5.84a2 2 0 0 1 1.97 1.65l1.02 6a2 2 0 0 1-1.97 2.35H14.5Z" />
+                    </svg>
+                    <span>{{ expandedCard.dislikesCount }}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-earth-900/85 border border-earth-100/20 text-earth-50 hover:bg-earth-800 transition-colors"
+                    aria-label="Nagy nézet bezárása"
+                    @click="closeExpandedCard"
+                  >
+                    ✕
+                  </button>
                 </div>
               </div>
 
@@ -250,10 +343,10 @@ watch(isDesktopInteraction, (isDesktop) => {
                 <p class="mt-2 text-earth-200/90 text-sm leading-relaxed">{{ expandedCard.description }}</p>
               </div>
 
-              <div class="pt-4 flex-1 min-h-0">
+              <div class="pt-4 flex-1 min-h-0 flex flex-col">
                 <div class="h-px w-full bg-gradient-to-r from-transparent via-earth-100/20 to-transparent mb-5"></div>
                 <h3 class="text-earth-50 font-semibold text-sm sm:text-base">Kommentek</h3>
-                <div class="mt-3 space-y-3 overflow-y-auto max-h-[45vh] sm:max-h-[320px] lg:max-h-[420px] pr-1">
+                <div class="mt-3 min-h-0 flex-1 overflow-y-auto pr-1 space-y-3">
                   <div
                     v-for="comment in expandedCard.comments"
                     :key="comment.id"
@@ -272,6 +365,36 @@ watch(isDesktopInteraction, (isDesktop) => {
                     </div>
                     <p class="mt-2 text-earth-200/95 text-xs sm:text-sm leading-relaxed">{{ comment.message }}</p>
                   </div>
+                </div>
+
+                <div class="mt-3 shrink-0 sticky bottom-0 z-10 rounded-2xl border border-earth-100/15 bg-earth-950/90 backdrop-blur-sm px-3 py-3 shadow-[0_12px_24px_rgba(0,0,0,0.25)]">
+                  <div class="flex items-end gap-2 sm:gap-3">
+                    <textarea
+                      v-model="commentDraft"
+                      rows="2"
+                      maxlength="1000"
+                      placeholder="Írj egy kommentet..."
+                      class="w-full resize-none rounded-xl border border-earth-100/20 bg-earth-900/60 px-3 py-2 text-sm text-earth-100 placeholder:text-earth-200/55 focus:outline-none focus:ring-2 focus:ring-earth-300/35 focus:border-earth-100/35"
+                      :disabled="isSubmittingComment"
+                      @keydown.enter.exact.prevent="submitComment"
+                    />
+
+                    <button
+                      type="button"
+                      class="h-[42px] sm:h-[44px] shrink-0 rounded-full border border-earth-100/25 bg-earth-700/85 px-5 text-xs sm:text-sm font-semibold text-earth-50 transition-colors hover:bg-earth-600 disabled:cursor-not-allowed disabled:opacity-60"
+                      :disabled="isSubmittingComment || !commentDraft.trim()"
+                      @click="submitComment"
+                    >
+                      {{ isSubmittingComment ? 'Küldés...' : 'Küldés' }}
+                    </button>
+                  </div>
+
+                  <p v-if="commentSubmitError" class="mt-2 text-[11px] sm:text-xs text-red-300">
+                    {{ commentSubmitError }}
+                  </p>
+                  <p v-else class="mt-2 text-[11px] sm:text-xs text-earth-200/70">
+                    Enter: küldés, Shift+Enter: új sor
+                  </p>
                 </div>
               </div>
             </MotionDiv>
@@ -307,8 +430,11 @@ watch(isDesktopInteraction, (isDesktop) => {
             <img
               :src="item.imageUrl"
               :alt="item.description"
-              class="block w-full h-auto object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+              class="block w-full h-auto object-cover transition-transform duration-300 group-hover:scale-[1.02] gallery-protected-image"
               loading="lazy"
+              draggable="false"
+              @dragstart.prevent
+              @contextmenu.prevent
             />
 
             <div
@@ -354,3 +480,12 @@ watch(isDesktopInteraction, (isDesktop) => {
     </MotionDiv>
   </div>
 </template>
+
+<style scoped>
+.gallery-protected-image {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+}
+</style>

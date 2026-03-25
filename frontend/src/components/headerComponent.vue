@@ -16,7 +16,6 @@ interface NavLink {
 const authStore = useAuthStore();
 const router = useRouter();
 const mobileMenuOpen = ref(false)
-const imageTimestamp = ref(Date.now());
 
 // Biztosítjuk, hogy legyen profiladatunk
 onMounted(() => {
@@ -32,6 +31,8 @@ const userProfileImage = computed(() => {
   if (!fileName) return null;
 
   const axiosBaseUrl = apiClient.defaults.baseURL;
+  if (!axiosBaseUrl) return null;
+
   try {
     const origin = new URL(axiosBaseUrl).origin;
     const finalUrl = `${origin}/resources/profiles/${fileName}`;
@@ -45,7 +46,7 @@ const userProfileImage = computed(() => {
 const navLinks: NavLink[] = [
   { key: 'forum', label: 'Fórum', to: '/forum', delay: 0.05 },
   { key: 'works', label: 'Munkák', to: '/works', delay: 0.1 },
-  { key: 'gallery', label: 'Galléria', to: '/gallery', delay: 0.15 },
+  { key: 'gallery', label: 'Galéria', to: '/gallery', delay: 0.15 },
 ]
 
 const aboutLink: NavLink = { key: 'about', label: 'Rólunk', to: '/about', bold: true }
