@@ -47,6 +47,8 @@ namespace Libary
                 entity.Property(x => x.Title).HasMaxLength(150).IsRequired();
                 entity.Property(x => x.Description).HasMaxLength(2000);
                 entity.Property(x => x.FileExtension).HasMaxLength(10).IsRequired();
+                entity.Property(x => x.IsPublished).HasDefaultValue(true);
+                entity.Property(x => x.IsDeleted).HasDefaultValue(false);
                 entity.Property(x => x.CreatedAtUtc).HasDefaultValueSql("SYSUTCDATETIME()");
 
                 entity.HasOne(x => x.Login)
@@ -57,6 +59,9 @@ namespace Libary
 
                 entity.HasIndex(x => new { x.UserId, x.CreatedAtUtc })
                     .HasDatabaseName("IX_GalleryItem_UserId_CreatedAtUtc");
+
+                entity.HasIndex(x => new { x.IsPublished, x.IsDeleted, x.CreatedAtUtc })
+                    .HasDatabaseName("IX_GalleryItem_Published_Deleted_CreatedAtUtc");
             });
 
             modelBuilder.Entity<GalleryComment>(entity =>
@@ -65,6 +70,7 @@ namespace Libary
                 entity.HasKey(x => x.Id);
 
                 entity.Property(x => x.Message).HasMaxLength(1000).IsRequired();
+                entity.Property(x => x.IsDeleted).HasDefaultValue(false);
                 entity.Property(x => x.CreatedAtUtc).HasDefaultValueSql("SYSUTCDATETIME()");
 
                 entity.HasOne(x => x.GalleryItem)
@@ -80,6 +86,9 @@ namespace Libary
 
                 entity.HasIndex(x => new { x.GalleryItemId, x.CreatedAtUtc })
                     .HasDatabaseName("IX_GalleryComment_GalleryItemId_CreatedAtUtc");
+
+                entity.HasIndex(x => new { x.GalleryItemId, x.IsDeleted, x.CreatedAtUtc })
+                    .HasDatabaseName("IX_GalleryComment_GalleryItemId_IsDeleted_CreatedAtUtc");
             });
 
             modelBuilder.Entity<UserActivityTag>()
