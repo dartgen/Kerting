@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Libary.Model.User
@@ -17,5 +19,8 @@ namespace Libary.Model.User
         public int RoleId { get; set; }
         public string? IMGString { get; set; }
         public string? Rolam { get; set; }
+
+        [NotMapped]
+        public List<string>? Cimkek { get; set; }
     }
 }

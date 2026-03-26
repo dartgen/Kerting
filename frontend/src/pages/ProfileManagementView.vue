@@ -189,16 +189,17 @@ const profilAdatok = reactive({
   email: '',
   telefon: '',
   telepules: '',
-  roleId: 1,
+  roleId: '',
   rolam: '',
-  IMGString: ''
+  IMGString: '',
+  cimkek: [] as string[]
 });
 
 // Címke kezelés adatai
 const cimkeInput = ref<HTMLInputElement | null>(null);
 const ujCimke = ref('');
 const cimkek = ref<string[]>([]);
-const eloreDefinialtCimkek = ['Locsolás', 'Metszés', 'Permetezés', 'Fűnyírás', 'Gyomlálás', 'Betakarítás', 'Szüretelés', 'Tereprendezés', 'Faültetés', 'Vetés', 'Öntözés', 'Trágyázás', 'Ültetés'];
+const eloreDefinialtCimkek = ref<string[]>([]);
 const mutasdAzAjanlasokat = ref(false);
 
 // SZŰRÉS: Ne kínálja fel az Admin (ID: 1) szerepkört
@@ -210,7 +211,7 @@ const szurtRoles = computed(() => {
 const szurtAjanlasok = computed(() => {
   const keresoSzoveg = ujCimke.value.toLowerCase().trim();
   if (!keresoSzoveg) return [];
-  return eloreDefinialtCimkek.filter(c => c.toLowerCase().includes(keresoSzoveg) && !cimkek.value.includes(c));
+  return eloreDefinialtCimkek.value.filter(c => c.toLowerCase().includes(keresoSzoveg) && !cimkek.value.includes(c));
 });
 
 // Adatok betöltése
@@ -219,6 +220,8 @@ const adatokBetoltese = async () => {
     const rolesRes = await authService.getRoles();
     roles.value = rolesRes.data;
 
+    const tagekRes = await authService.GetCimekek();
+    eloreDefinialtCimkek.value = tagekRes.data.map((tag: string) => tag.trim());
     const profileRes = await authService.getProfile();
     const d = profileRes.data;
 
@@ -229,7 +232,22 @@ const adatokBetoltese = async () => {
     profilAdatok.telefon = d.telefon || '';
     profilAdatok.telepules = d.telepules || '';
     profilAdatok.rolam = d.rolam || '';
-    profilAdatok.roleId = d.roleId || 2; // Alapértelmezett pl. Kertes
+    profilAdatok.roleId = d.roleId || 2;
+
+    // ÚJ RÉSZ: Betöltjük a backendtől kapott címkéket a Vue.js változókba
+    if (d.cimkek && Array.isArray(d.cimkek)) {
+      // 1. Megtisztítjuk a bejövő adatokat a felesleges szóközöktől (SQL CHAR típus miatt)
+      const tisztitottCimkek = d.cimkek.map((c: string) => c.trim());
+
+      // 2. Beletesszük a megjelenítésért felelős tömbbe (ez rajzolja ki a zöld gombokat)
+      cimkek.value = tisztitottCimkek;
+
+      // 3. Beletesszük a profilAdatok objektumba is (hogy szinkronban legyen)
+      profilAdatok.cimkek = tisztitottCimkek;
+    } else {
+      cimkek.value = [];
+      profilAdatok.cimkek = [];
+    }
   } catch (error) {
     console.error("Betöltési hiba:", error);
     toastStore.addToast('Hiba az adatok betöltésekor!', 4000, 'error');
@@ -282,7 +300,7 @@ const adatokMentese = async () => {
 
     profilAdatok.telefon = tisztitottSzam; // Tiszta adat elmentése az objektumba
   }
-
+  profilAdatok.cimkek = cimkek.value;
   // 2. Adatok mentése a szerverre
   isLoading.value = true;
   try {

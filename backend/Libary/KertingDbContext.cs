@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Libary.Model.Tag;
+using Libary.Model.Gallery;
 
 namespace Libary
 {
@@ -14,9 +16,11 @@ namespace Libary
         public DbSet<Login> Login { get; set; }
         public DbSet<Role> Role { get; set; }
         public DbSet<User> User { get; set; }
-        public DbSet<Model.Gallery.GalleryItem> GalleryItem { get; set; }
-        public DbSet<Model.Gallery.GalleryComment> GalleryComment { get; set; }
-        public DbSet<Model.Gallery.GalleryReaction> GalleryReaction { get; set; }
+        public DbSet<UserActivityTag> UserActivityTag { get; set; }
+        public DbSet<ActivityTag> ActivityTag { get; set; }
+        public DbSet<GalleryItem> GalleryItem { get; set; }
+        public DbSet<GalleryComment> GalleryComment { get; set; }
+        public DbSet<GalleryReaction> GalleryReaction { get; set; }
 
         public KertingDbContext(DbContextOptions options) : base(options)
         {
@@ -30,7 +34,7 @@ namespace Libary
         {
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.Entity<Model.Gallery.GalleryItem>(entity =>
+            modelBuilder.Entity<GalleryItem>(entity =>
             {
                 entity.ToTable("GalleryItem", "dbo", t =>
                 {
@@ -55,7 +59,7 @@ namespace Libary
                     .HasDatabaseName("IX_GalleryItem_UserId_CreatedAtUtc");
             });
 
-            modelBuilder.Entity<Model.Gallery.GalleryComment>(entity =>
+            modelBuilder.Entity<GalleryComment>(entity =>
             {
                 entity.ToTable("GalleryComment", "dbo");
                 entity.HasKey(x => x.Id);
@@ -78,7 +82,10 @@ namespace Libary
                     .HasDatabaseName("IX_GalleryComment_GalleryItemId_CreatedAtUtc");
             });
 
-            modelBuilder.Entity<Model.Gallery.GalleryReaction>(entity =>
+            modelBuilder.Entity<UserActivityTag>()
+            .HasKey(uat => new { uat.USerId, uat.TagId });
+
+            modelBuilder.Entity<GalleryReaction>(entity =>
             {
                 entity.ToTable("GalleryReaction", "dbo");
                 entity.HasKey(x => x.Id);

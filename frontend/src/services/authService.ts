@@ -1,5 +1,6 @@
 import apiClient from './axios';
 
+// 1. Kiegészített interfész a profilképnek
 export interface ProfilAdatokDTO {
   vezetekNev: string;
   keresztNev: string;
@@ -8,9 +9,12 @@ export interface ProfilAdatokDTO {
   rolam: string;
   roleId: number;
   telefon: string;
+  cimkek: string[];
+  IMGString?: string; // Opcionális, mert nem biztos, hogy mindenkinek van képe
 }
 
 export const authService = {
+  // Bejelentkezés és Regisztráció
   bejelentkezes(felhasznaloNev: string, jelszo: string) {
     return apiClient.post('/Login', {
       username: felhasznaloNev,
@@ -23,6 +27,8 @@ export const authService = {
       password: jelszo,
     });
   },
+
+  // Token kezelés
   kijelentkezes() {
     localStorage.removeItem('userToken');
   },
@@ -31,14 +37,26 @@ export const authService = {
   },
   isAuthenticated() {
     return !!localStorage.getItem('userToken');
-  },getRoles() {
+  },
+
+  // Szerepkörök és Címkék (Tagek) lekérése
+  getRoles() {
     return apiClient.get('/GetRoles');
   },
+  GetCimekek() {
+    return apiClient.get('/ActivityTag');
+  },
+
+  // Felhasználói validációk
   checkUsername(username: string) {
     return apiClient.get(`/CheckUsername?username=${username}`);
-  }, isFirstLogin(id: string) {
+  },
+  isFirstLogin(id: string) {
     return apiClient.post(`/${id}/first-login`);
-  }, updateProfile(profilAdatok: ProfilAdatokDTO) {
+  },
+
+  // PROFIL KEZELÉS (Frissítve a kép és címkék elküldésével)
+  updateProfile(profilAdatok: ProfilAdatokDTO) {
     return apiClient.put('/UpdateMyProfile', {
       vezetekNev: profilAdatok.vezetekNev,
       keresztNev: profilAdatok.keresztNev,
@@ -47,8 +65,18 @@ export const authService = {
       telepules: profilAdatok.telepules,
       rolam: profilAdatok.rolam,
       roleId: profilAdatok.roleId,
+      cimkek: profilAdatok.cimkek,      // Bekötve!
+      imgString: profilAdatok.IMGString // Bekötve! (C#-ban kisbetűvel várjuk)
     });
-  }, getProfile() {
+  },
+
+  // Saját profil lekérése (Tokenből azonosít a backend)
+  getProfile() {
     return apiClient.get('/GetMyProfile');
   },
+
+  // ÚJ: Publikus profil lekérése ID alapján (Más profiljának megtekintése)
+  getPublicProfile(id: string | number) {
+    return apiClient.get(`/GetPublicProfile/${id}`);
+  }
 };

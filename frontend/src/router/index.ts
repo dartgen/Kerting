@@ -32,6 +32,15 @@ const router = createRouter({
       }
     },
     {
+      path: '/user/:id', // A :id egy változó, amit a komponensben le tudunk kérdezni
+      name: 'public-profile',
+      component: () => import('../pages/PublicProfileView.vue'),
+      meta: {
+        title: `${pre} Felhasználó megtekintése`,
+        requiresAuth: false // Ez fontos, ha azt akarod, hogy vendégek is láthassák!
+      }
+    },
+    {
       path: '/login',
       name: 'login',
       component: () => import('../pages/LoginView.vue'),

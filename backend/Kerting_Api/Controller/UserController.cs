@@ -1,4 +1,5 @@
 ﻿using Libary;
+using Libary.Model.Tag;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -45,6 +46,42 @@ namespace Kerting_Api.Controller
             existingUser.Email = updatedUser.Email;
             existingUser.Telepules = updatedUser.Telepules;
             existingUser.Rolam = updatedUser.Rolam;
+            existingUser.RoleId = updatedUser.RoleId;
+
+            if (updatedUser.Cimkek != null)
+            {
+                var existingConnections = await _context.UserActivityTag
+                                                      .Where(uat => uat.USerId == loggedInUserId)
+                                                      .ToListAsync();
+                _context.UserActivityTag.RemoveRange(existingConnections);
+
+                // B) Végigmegyünk a Vue-tól kapott string listán
+                foreach (var cimkeNev in updatedUser.Cimkek)
+                {
+                    // Tisztítjuk a szöveget (biztos ami biztos)
+                    var cleanCimkeNev = cimkeNev.Trim();
+
+                    // Megnézzük, létezik-e már az ActivityTag táblában
+                    var tag = await _context.ActivityTag.FirstOrDefaultAsync(t => t.Activity == cleanCimkeNev);
+
+                    // C) Ha még nem létezik, azonnal létrehozzuk!
+                    if (tag == null)
+                    {
+                        tag = new Libary.Model.Tag.ActivityTag { Activity = cleanCimkeNev };
+                        _context.ActivityTag.Add(tag);
+                        await _context.SaveChangesAsync(); // Itt egyből el is mentjük, hogy kapjon egy új Id-t az adatbázistól
+                    }
+
+                    // D) Létrehozzuk a kapcsolatot az aktuális User és a Tag között
+                    var newConnection = new UserActivityTag 
+                    {
+                        USerId = loggedInUserId,
+                        TagId = tag.Id
+                    };
+                    _context.UserActivityTag.Add(newConnection);
+                }
+            }
+
 
             await _context.SaveChangesAsync();
 
@@ -56,7 +93,6 @@ namespace Kerting_Api.Controller
         public async Task<IActionResult> GetMyProfile()
         {
             // 1. Kiszedjük a bejelentkezett felhasználó ID-ját a Tokenből
-            // (Ha korábban a ClaimTypes.NameIdentifier-t választottad, azt írd ide!)
             var userIdString = User.FindFirst("Id")?.Value;
 
             if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out int loggedInUserId))
@@ -67,7 +103,27 @@ namespace Kerting_Api.Controller
             // 2. Kikeresjük a felhasználót az adatbázisból
             var userProfile = await _context.User.FindAsync(loggedInUserId);
 
-            // 3. Visszaadjuk a teljes User objektumot a frontendnek (JSON formátumban)
+            if (userProfile == null)
+            {
+                return NotFound("Felhasználó nem található.");
+            }
+
+            // 3. LEKÉRDEZZÜK A FELHASZNÁLÓ CÍMKÉIT (ÚJ RÉSZ)
+            // Összekapcsoljuk a UserActivityTag (kapcsoló) és az ActivityTag táblákat
+            var userCimkek = await _context.UserActivityTag
+                .Where(uat => uat.USerId == loggedInUserId) // Csak a bejelentkezett user sorai
+                .Join(
+                    _context.ActivityTag, // Melyik táblával kapcsoljuk össze?
+                    uat => uat.TagId,     // Kapcsolótábla kulcsa
+                    tag => tag.Id,        // ActivityTag tábla kulcsa
+                    (uat, tag) => tag.Activity // Mit kérünk ki belőle? (Csak a szöveget!)
+                )
+                .ToListAsync();
+
+            // 4. Belerakjuk a lekérdezett string listát a User objektumba
+            userProfile.Cimkek = userCimkek;
+
+            // 5. Visszaadjuk a teljes User objektumot a frontendnek (JSON formátumban, immár a címkékkel együtt!)
             return Ok(userProfile);
         }
 
@@ -78,6 +134,51 @@ namespace Kerting_Api.Controller
             // Lekérdezzük az összes szerepkört az adatbázisból
             var roles = await _context.Role.ToListAsync();
             return Ok(roles);
+        }
+
+        [HttpGet("GetPublicProfile/{id}")]
+        // Ez a végpont publikus, NEM kell rá [Authorize]!
+        public async Task<IActionResult> GetPublicProfile(int id)
+        {
+            // 1. Kikeresjük a felhasználót az Id alapján
+            var user = await _context.User.FindAsync(id);
+
+            if (user == null)
+            {
+                return NotFound("A felhasználó nem található.");
+            }
+
+            // 2. LEKÉRDEZZÜK A CÍMKÉKET (Pontosan ugyanúgy, mint a GetMyProfile-nál)
+            var userCimkek = await _context.UserActivityTag
+                .Where(uat => uat.USerId == id)
+                .Join(
+                    _context.ActivityTag,
+                    uat => uat.TagId,
+                    tag => tag.Id,
+                    (uat, tag) => tag.Activity
+                )
+                .ToListAsync();
+
+            // 3. ADATVÉDELEM (Döntsd el, mit mutatsz meg!)
+            // Csinálunk egy névtelen objektumot (vagy egy PublicUserDTO-t), 
+            // amibe csak a biztonságos adatokat tesszük bele.
+
+            var publicProfile = new
+            {
+                user.VezetekNev,
+                user.KeresztNev,
+                // Döntés: Megmutatjuk a teljes emailt publikusan?
+                // Ha nem, maszkolhatod itt: user.Email.Substring(0, 1) + "***@..."
+                user.Email,
+                user.Telefon, // Ugyanaz a kérdés, maszkolhatod itt.
+                user.Telepules,
+                user.RoleId,
+                user.IMGString,
+                user.Rolam,
+                Cimkek = userCimkek // A lekérdezett string lista
+            };
+
+            return Ok(publicProfile);
         }
     }
 }
