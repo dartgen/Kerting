@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="9b5935a1-c4c0-4953-9cc0-9ebe4c7dab19" name="Changes" comment="kepek">
+    <list default="true" id="9b5935a1-c4c0-4953-9cc0-9ebe4c7dab19" name="Changes" comment="hamburger profile">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/components/headerComponent.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/headerComponent.vue" afterDir="false" />
     </list>
@@ -121,7 +121,10 @@
       <workItem from="1774429250453" duration="6342000" />
       <workItem from="1774436016741" duration="1878000" />
       <workItem from="1774453460339" duration="10288000" />
-      <workItem from="1774466450273" duration="2282000" />
+      <workItem from="1774466450273" duration="2380000" />
+      <workItem from="1774518036027" duration="28000" />
+      <workItem from="1774523031450" duration="123000" />
+      <workItem from="1774523252937" duration="133000" />
     </task>
     <task id="LOCAL-00001" summary="Login kicsit segitve a felhasználó élményt">
       <option name="closed" value="true" />
@@ -251,7 +254,15 @@
       <option name="project" value="LOCAL" />
       <updated>1774465019130</updated>
     </task>
-    <option name="localTasksCounter" value="17" />
+    <task id="LOCAL-00017" summary="hamburger profile">
+      <option name="closed" value="true" />
+      <created>1774486231917</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1774486231917</updated>
+    </task>
+    <option name="localTasksCounter" value="18" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -283,7 +294,8 @@
     <MESSAGE value="KÉPEK" />
     <MESSAGE value="Telefon elenőrzés profile kép böngésző szeret" />
     <MESSAGE value="kepek" />
-    <option name="LAST_COMMIT_MESSAGE" value="kepek" />
+    <MESSAGE value="hamburger profile" />
+    <option name="LAST_COMMIT_MESSAGE" value="hamburger profile" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

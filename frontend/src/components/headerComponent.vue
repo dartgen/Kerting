@@ -74,13 +74,22 @@
                   <RouterLink to="/profile" class="block px-4 py-2 text-sm text-earth-50 hover:bg-earth-700/50 transition-colors" @click="profileMenuOpen = false">
                     <i class="fa-regular fa-user mr-2 text-earth-200"></i> Profilom
                   </RouterLink>
-                  <RouterLink to="/OwnGalery" class="block px-4 py-2 text-sm text-earth-50 hover:bg-earth-700/50 transition-colors" @click="profileMenuOpen = false">
-                    <i class="fa-solid fa-gear mr-2 text-earth-200"></i> Saját Galéria
+                  <RouterLink to="/profile" class="block px-4 py-2 text-sm text-earth-50 hover:bg-earth-700/50 transition-colors" @click="profileMenuOpen = false">
+                    <i class="fa-regular fa-user mr-2 text-earth-200"></i> Projekt
                   </RouterLink>
+                  <RouterLink to="/profile" class="block px-4 py-2 text-sm text-earth-50 hover:bg-earth-700/50 transition-colors" @click="profileMenuOpen = false">
+                    <i class="fa-regular fa-user mr-2 text-earth-200"></i> Munkák
+                  </RouterLink>
+                  <RouterLink to="/profile" class="block px-4 py-2 text-sm text-earth-50 hover:bg-earth-700/50 transition-colors" @click="profileMenuOpen = false">
+                    <i class="fa-regular fa-user mr-2 text-earth-200"></i> Saját Galéria
+                  </RouterLink>
+                  <RouterLink to="/profile" class="block px-4 py-2 text-sm text-earth-50 hover:bg-earth-700/50 transition-colors" @click="profileMenuOpen = false">
+                    <i class="fa-regular fa-user mr-2 text-earth-200"></i> Naptár
+                  </RouterLink>
+                  <div class="my-1 border-t border-earth-100/10"></div>
                   <RouterLink to="/settings" class="block px-4 py-2 text-sm text-earth-50 hover:bg-earth-700/50 transition-colors" @click="profileMenuOpen = false">
                     <i class="fa-solid fa-gear mr-2 text-earth-200"></i> Beállítások
                   </RouterLink>
-                  <div class="my-1 border-t border-earth-100/10"></div>
                   <button @click="handleKijelentkezes" class="w-full text-left block px-4 py-2 text-sm text-red-400 hover:bg-earth-700/50 transition-colors">
                     <i class="fa-solid fa-arrow-right-from-bracket mr-2"></i> Kijelentkezés
                   </button>
