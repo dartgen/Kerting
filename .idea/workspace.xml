@@ -4,13 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="9b5935a1-c4c0-4953-9cc0-9ebe4c7dab19" name="Changes" comment="KÉPEK">
+    <list default="true" id="9b5935a1-c4c0-4953-9cc0-9ebe4c7dab19" name="Changes" comment="kepek">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/Kerting_Api/Controller/LoginController.cs" beforeDir="false" afterPath="$PROJECT_DIR$/backend/Kerting_Api/Controller/LoginController.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/components/headerComponent.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/headerComponent.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/LoginView.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/LoginView.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/ProfileManagementView.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/ProfileManagementView.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/services/authService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/services/authService.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -55,35 +51,35 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Node.js.authStore.ts.executor": "Run",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "git-widget-placeholder": "master",
-    "ignore.virus.scanning.warn.message": "true",
-    "kotlin-language-version-configured": "true",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "npm.dev.executor": "Run",
-    "settings.editor.selected.configurable": "ml.llm.AcpAgentsConfigurable",
-    "ts.external.directory.path": "C:\\Users\\totoka28\\AppData\\Roaming\\JetBrains\\IntelliJIdea2025.3\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Node.js.authStore.ts.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;npm.dev.executor&quot;: &quot;Run&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;ml.llm.AcpAgentsConfigurable&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;C:\\Users\\totoka28\\AppData\\Roaming\\JetBrains\\IntelliJIdea2025.3\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   },
-  "keyToStringList": {
-    "vue.recent.templates": [
-      "Vue Composition API Component"
+  &quot;keyToStringList&quot;: {
+    &quot;vue.recent.templates&quot;: [
+      &quot;Vue Composition API Component&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="RunManager">
     <configuration name="dev" type="js.build_tools.npm" nameIsGenerated="true">
       <package-json value="$PROJECT_DIR$/frontend/package.json" />
@@ -124,7 +120,8 @@
       <workItem from="1774391984161" duration="453000" />
       <workItem from="1774429250453" duration="6342000" />
       <workItem from="1774436016741" duration="1878000" />
-      <workItem from="1774453460339" duration="9840000" />
+      <workItem from="1774453460339" duration="10288000" />
+      <workItem from="1774466450273" duration="2282000" />
     </task>
     <task id="LOCAL-00001" summary="Login kicsit segitve a felhasználó élményt">
       <option name="closed" value="true" />
@@ -238,7 +235,23 @@
       <option name="project" value="LOCAL" />
       <updated>1774458533905</updated>
     </task>
-    <option name="localTasksCounter" value="15" />
+    <task id="LOCAL-00015" summary="Telefon elenőrzés profile kép böngésző szeret">
+      <option name="closed" value="true" />
+      <created>1774464696119</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1774464696119</updated>
+    </task>
+    <task id="LOCAL-00016" summary="kepek">
+      <option name="closed" value="true" />
+      <created>1774465019130</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1774465019130</updated>
+    </task>
+    <option name="localTasksCounter" value="17" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -268,7 +281,9 @@
     <MESSAGE value="Mükdöik a képekcske" />
     <MESSAGE value="PROFILKÉP!!!!" />
     <MESSAGE value="KÉPEK" />
-    <option name="LAST_COMMIT_MESSAGE" value="KÉPEK" />
+    <MESSAGE value="Telefon elenőrzés profile kép böngésző szeret" />
+    <MESSAGE value="kepek" />
+    <option name="LAST_COMMIT_MESSAGE" value="kepek" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
