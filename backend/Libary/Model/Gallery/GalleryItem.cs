@@ -11,6 +11,10 @@ namespace Libary.Model.Gallery
         public string Title { get; set; } = string.Empty;
         public string? Description { get; set; }
         public string FileExtension { get; set; } = ".jpg";
+        public bool IsPublished { get; set; } = true;
+        public bool IsDeleted { get; set; }
+        public DateTime? DeletedAtUtc { get; set; }
+        public int? DeletedByUserId { get; set; }
         public DateTime CreatedAtUtc { get; set; }
         public DateTime? UpdatedAtUtc { get; set; }
 

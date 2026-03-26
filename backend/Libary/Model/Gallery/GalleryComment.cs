@@ -9,6 +9,9 @@ namespace Libary.Model.Gallery
         public int GalleryItemId { get; set; }
         public int UserId { get; set; }
         public string Message { get; set; } = string.Empty;
+        public bool IsDeleted { get; set; }
+        public DateTime? DeletedAtUtc { get; set; }
+        public int? DeletedByUserId { get; set; }
         public DateTime CreatedAtUtc { get; set; }
         public DateTime? UpdatedAtUtc { get; set; }
 

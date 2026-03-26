@@ -4,8 +4,8 @@ import GalleryLayout from '@/components/gallery/GalleryLayout.vue'
 
 <template>
   <GalleryLayout
-    mode="main"
-    title="Galeria"
-    subtitle="Inspiralodj mas kertekbol es munkafolyamatokbol."
+    mode="own"
+    title="Sajat galeria"
+    subtitle="Itt kezelheted a sajat feltoltott kepeidet, publikaciokat es kommenteket."
   />
 </template>

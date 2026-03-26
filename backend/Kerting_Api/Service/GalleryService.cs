@@ -8,7 +8,6 @@ using Microsoft.EntityFrameworkCore;
 using Libary;
 using Libary.Model.Gallery;
 using Kerting_Api.Interface;
-using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Kerting_Api.Service
 {
@@ -34,6 +33,7 @@ namespace Kerting_Api.Service
                 Title = title,
                 Description = description,
                 FileExtension = extension,
+                IsPublished = true,
                 CreatedAtUtc = DateTime.UtcNow
             };
 
@@ -48,13 +48,64 @@ namespace Kerting_Api.Service
 
         public async Task<bool> DeleteItemAsync(int itemId, int userId, string contentRootPath)
         {
-            var item = await _context.GalleryItem.FirstOrDefaultAsync(x => x.Id == itemId && x.UserId == userId);
+            var item = await _context.GalleryItem.FirstOrDefaultAsync(x => x.Id == itemId);
             if (item == null) return false;
 
-            string filePath = Path.Combine(contentRootPath, "Resources", "Gallery", $"{item.Id}{item.FileExtension}");
-            if (File.Exists(filePath)) File.Delete(filePath);
+            var isAdmin = await IsAdminAsync(userId);
+            if (!isAdmin && item.UserId != userId) return false;
 
-            _context.GalleryItem.Remove(item);
+            if (item.IsDeleted) return true;
+
+            item.IsDeleted = true;
+            item.DeletedAtUtc = DateTime.UtcNow;
+            item.DeletedByUserId = userId;
+            item.UpdatedAtUtc = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> RestoreItemAsync(int itemId, int userId)
+        {
+            var isAdmin = await IsAdminAsync(userId);
+            if (!isAdmin) return false;
+
+            var item = await _context.GalleryItem.FirstOrDefaultAsync(x => x.Id == itemId);
+            if (item == null || !item.IsDeleted) return false;
+
+            item.IsDeleted = false;
+            item.IsPublished = false;
+            item.DeletedAtUtc = null;
+            item.DeletedByUserId = null;
+            item.UpdatedAtUtc = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> UpdateItemAsync(int itemId, int userId, string title, string description)
+        {
+            var item = await _context.GalleryItem.FirstOrDefaultAsync(x => x.Id == itemId && !x.IsDeleted);
+            if (item == null) return false;
+            if (item.UserId != userId) return false;
+
+            item.Title = (title ?? string.Empty).Trim();
+            item.Description = description?.Trim();
+            item.UpdatedAtUtc = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> SetPublishStateAsync(int itemId, int userId, bool isPublished)
+        {
+            var item = await _context.GalleryItem.FirstOrDefaultAsync(x => x.Id == itemId && !x.IsDeleted);
+            if (item == null) return false;
+
+            // Publish/unpublish is owner-only by business requirement.
+            if (item.UserId != userId) return false;
+
+            item.IsPublished = isPublished;
+            item.UpdatedAtUtc = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return true;
         }
@@ -93,7 +144,7 @@ namespace Kerting_Api.Service
             string folder = Path.Combine(contentRootPath, "Resources", "Profiles");
             if (!Directory.Exists(folder)) return false;
 
-            var files = Directory.GetFiles(folder, $"profile_{userId}.*");
+            var files = Directory.GetFiles(folder, $"{userId}.*");
             foreach (var f in files) File.Delete(f);
 
             return true;
@@ -122,10 +173,15 @@ namespace Kerting_Api.Service
 
         // --- LEKÉRDEZÉSEK ÉS INTERAKCIÓK (Frissített URL-ekkel) ---
 
-        public async Task<List<object>> GetGalleryFeedAsync(int page = 1, int pageSize = 20)
+        public async Task<List<object>> GetGalleryFeedAsync(int page = 1, int pageSize = 20, int? currentUserId = null, bool includeDeleted = false)
         {
+            var isAdmin = currentUserId.HasValue && await IsAdminAsync(currentUserId.Value);
+            var canSeeDeleted = includeDeleted && isAdmin;
+
             return await _context.GalleryItem
                 .Include(i => i.Login)
+                .Where(i => i.IsPublished)
+                .Where(i => canSeeDeleted || !i.IsDeleted)
                 .OrderByDescending(i => i.CreatedAtUtc)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
@@ -136,8 +192,11 @@ namespace Kerting_Api.Service
                     (i,u) => new
                     {
                         i.Id,
+                        i.UserId,
                         i.Title,
                         i.Description,
+                        i.IsPublished,
+                        i.IsDeleted,
                         ImageUrl = $"/resources/gallery/{i.Id}{i.FileExtension}",
                         UploaderName = i.Login.Username,
                         ProfileImageUrl = string.IsNullOrWhiteSpace(u.IMGString)
@@ -146,12 +205,60 @@ namespace Kerting_Api.Service
                         i.CreatedAtUtc,
                         LikesCount = i.Reactions.Count(r => r.IsLike),
                         DislikesCount = i.Reactions.Count(r => !r.IsLike),
-                        CommentsCount = i.Comments.Count()
+                        CommentsCount = i.Comments.Count(c => canSeeDeleted || !c.IsDeleted),
+                        CanEdit = currentUserId.HasValue && i.UserId == currentUserId.Value,
+                        CanDelete = currentUserId.HasValue && (i.UserId == currentUserId.Value || isAdmin),
+                        CanPublishToggle = currentUserId.HasValue && i.UserId == currentUserId.Value
                     })
                 .ToListAsync<object>();
         }
 
-        public async Task<object?> GetGalleryItemByIdAsync(int itemId, int? currentUserId = null)
+        public async Task<List<object>> GetOwnGalleryFeedAsync(int ownerUserId, int page = 1, int pageSize = 20, int? currentUserId = null, bool includeDeleted = false)
+        {
+            if (!currentUserId.HasValue) return new List<object>();
+
+            var isAdmin = await IsAdminAsync(currentUserId.Value);
+            var canAccess = isAdmin || currentUserId.Value == ownerUserId;
+            if (!canAccess) return new List<object>();
+
+            var canSeeDeleted = includeDeleted && isAdmin;
+
+            return await _context.GalleryItem
+                .Include(i => i.Login)
+                .Where(i => i.UserId == ownerUserId)
+                .Where(i => canSeeDeleted || !i.IsDeleted)
+                .OrderByDescending(i => i.CreatedAtUtc)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Join(
+                    _context.User,
+                    i => i.UserId,
+                    u => u.Id,
+                    (i, u) => new
+                    {
+                        i.Id,
+                        i.UserId,
+                        i.Title,
+                        i.Description,
+                        i.IsPublished,
+                        i.IsDeleted,
+                        ImageUrl = $"/resources/gallery/{i.Id}{i.FileExtension}",
+                        UploaderName = i.Login.Username,
+                        ProfileImageUrl = string.IsNullOrWhiteSpace(u.IMGString)
+                            ? null
+                            : $"/resources/profiles/{u.IMGString}",
+                        i.CreatedAtUtc,
+                        LikesCount = i.Reactions.Count(r => r.IsLike),
+                        DislikesCount = i.Reactions.Count(r => !r.IsLike),
+                        CommentsCount = i.Comments.Count(c => canSeeDeleted || !c.IsDeleted),
+                        CanEdit = currentUserId.HasValue && i.UserId == currentUserId.Value,
+                        CanDelete = currentUserId.HasValue && (i.UserId == currentUserId.Value || isAdmin),
+                        CanPublishToggle = currentUserId.HasValue && i.UserId == currentUserId.Value
+                    })
+                .ToListAsync<object>();
+        }
+
+        public async Task<object?> GetGalleryItemByIdAsync(int itemId, int? currentUserId = null, bool includeDeleted = false)
         {
             var item = await _context.GalleryItem
                 .Include(i => i.Login)
@@ -164,9 +271,17 @@ namespace Kerting_Api.Service
 
             if (item == null) return null;
 
+            var isAdmin = currentUserId.HasValue && await IsAdminAsync(currentUserId.Value);
+            var canSeeDeleted = includeDeleted && isAdmin;
+            var canSeeUnpublished = currentUserId.HasValue && (currentUserId.Value == item.Item.UserId || isAdmin);
+
+            if (item.Item.IsDeleted && !canSeeDeleted) return null;
+            if (!item.Item.IsPublished && !canSeeUnpublished) return null;
+
             var comments = await _context.GalleryComment
                 .Include(c => c.Login)
                 .Where(c => c.GalleryItemId == itemId)
+                .Where(c => canSeeDeleted || !c.IsDeleted)
                 .Join(
                     _context.User,
                     c => c.UserId,
@@ -174,9 +289,13 @@ namespace Kerting_Api.Service
                     (c, u) => new
                     {
                         c.Id,
+                        c.UserId,
                         c.Message,
+                        c.IsDeleted,
                         UserName = c.Login.Username,
                         c.CreatedAtUtc,
+                        CanDelete = currentUserId.HasValue &&
+                            (currentUserId.Value == c.UserId || currentUserId.Value == item.Item.UserId || isAdmin),
                         ProfileImageUrl = string.IsNullOrWhiteSpace(u.IMGString)
                             ? null
                             : $"/resources/profiles/{u.IMGString}"
@@ -202,8 +321,14 @@ namespace Kerting_Api.Service
             return new
             {
                 item.Item.Id,
+                item.Item.UserId,
                 item.Item.Title,
                 item.Item.Description,
+                item.Item.IsPublished,
+                item.Item.IsDeleted,
+                CanEdit = currentUserId.HasValue && currentUserId.Value == item.Item.UserId,
+                CanDelete = currentUserId.HasValue && (currentUserId.Value == item.Item.UserId || isAdmin),
+                CanPublishToggle = currentUserId.HasValue && currentUserId.Value == item.Item.UserId,
                 ImageUrl = $"/resources/gallery/{item.Item.Id}{item.Item.FileExtension}",
                 UploaderName = item.Item.Login.Username,
                 ProfileImageUrl = string.IsNullOrWhiteSpace(item.User.IMGString)
@@ -218,6 +343,15 @@ namespace Kerting_Api.Service
 
         public async Task<GalleryComment> AddCommentAsync(int itemId, int userId, string message)
         {
+            var item = await _context.GalleryItem.FirstOrDefaultAsync(i => i.Id == itemId);
+            if (item == null || item.IsDeleted) throw new ArgumentException("A bejegyzés nem található.");
+
+            var isAdmin = await IsAdminAsync(userId);
+            if (!item.IsPublished && item.UserId != userId && !isAdmin)
+            {
+                throw new UnauthorizedAccessException("Ehhez a bejegyzéshez nincs hozzáférésed.");
+            }
+
             var comment = new GalleryComment { GalleryItemId = itemId, UserId = userId, Message = message, CreatedAtUtc = DateTime.UtcNow };
             _context.GalleryComment.Add(comment);
             await _context.SaveChangesAsync();
@@ -226,15 +360,52 @@ namespace Kerting_Api.Service
 
         public async Task<bool> DeleteCommentAsync(int commentId, int userId)
         {
-            var comment = await _context.GalleryComment.FirstOrDefaultAsync(c => c.Id == commentId && c.UserId == userId);
+            var comment = await _context.GalleryComment
+                .Include(c => c.GalleryItem)
+                .FirstOrDefaultAsync(c => c.Id == commentId);
             if (comment == null) return false;
-            _context.GalleryComment.Remove(comment);
+
+            if (comment.IsDeleted) return true;
+
+            var isAdmin = await IsAdminAsync(userId);
+            var isCommentOwner = comment.UserId == userId;
+            var isItemOwner = comment.GalleryItem.UserId == userId;
+
+            if (!isCommentOwner && !isItemOwner && !isAdmin) return false;
+
+            comment.IsDeleted = true;
+            comment.DeletedAtUtc = DateTime.UtcNow;
+            comment.DeletedByUserId = userId;
+            comment.UpdatedAtUtc = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> RestoreCommentAsync(int commentId, int userId)
+        {
+            var isAdmin = await IsAdminAsync(userId);
+            if (!isAdmin) return false;
+
+            var comment = await _context.GalleryComment.FirstOrDefaultAsync(c => c.Id == commentId);
+            if (comment == null || !comment.IsDeleted) return false;
+
+            comment.IsDeleted = false;
+            comment.DeletedAtUtc = null;
+            comment.DeletedByUserId = null;
+            comment.UpdatedAtUtc = DateTime.UtcNow;
+
             await _context.SaveChangesAsync();
             return true;
         }
 
         public async Task<bool> ToggleReactionAsync(int itemId, int userId, bool isLike)
         {
+            var item = await _context.GalleryItem.FirstOrDefaultAsync(i => i.Id == itemId);
+            if (item == null || item.IsDeleted) return false;
+
+            var isAdmin = await IsAdminAsync(userId);
+            if (!item.IsPublished && item.UserId != userId && !isAdmin) return false;
+
             var reaction = await _context.GalleryReaction.FirstOrDefaultAsync(r => r.GalleryItemId == itemId && r.UserId == userId);
             if (reaction == null)
             {
@@ -258,6 +429,14 @@ namespace Kerting_Api.Service
 
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        private async Task<bool> IsAdminAsync(int userId)
+        {
+            return await _context.User
+                .Where(u => u.Id == userId)
+                .Select(u => u.RoleId == 1)
+                .FirstOrDefaultAsync();
         }
     }
 }

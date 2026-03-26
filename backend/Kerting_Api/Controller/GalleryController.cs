@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -35,16 +36,23 @@ namespace Kerting_Api.Controller
 
         [HttpGet("feed")]
         [AllowAnonymous] // A feedet bárki láthatja
-        public async Task<IActionResult> GetFeed([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        public async Task<IActionResult> GetFeed([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] bool includeDeleted = false)
         {
-            return Ok(await _galleryService.GetGalleryFeedAsync(page, pageSize));
+            return Ok(await _galleryService.GetGalleryFeedAsync(page, pageSize, TryGetCurrentUserId(), includeDeleted));
+        }
+
+        [HttpGet("mine")]
+        public async Task<IActionResult> GetMyFeed([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] bool includeDeleted = false)
+        {
+            var userId = GetCurrentUserId();
+            return Ok(await _galleryService.GetOwnGalleryFeedAsync(userId, page, pageSize, userId, includeDeleted));
         }
 
         [HttpGet("{id}")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetById(int id)
+        public async Task<IActionResult> GetById(int id, [FromQuery] bool includeDeleted = false)
         {
-            var item = await _galleryService.GetGalleryItemByIdAsync(id, TryGetCurrentUserId());
+            var item = await _galleryService.GetGalleryItemByIdAsync(id, TryGetCurrentUserId(), includeDeleted);
             return item is null ? NotFound() : Ok(item);
         }
 
@@ -101,18 +109,73 @@ namespace Kerting_Api.Controller
             return success ? Ok() : NotFound();
         }
 
+        [HttpPatch("{id}/restore")]
+        public async Task<IActionResult> Restore(int id)
+        {
+            var success = await _galleryService.RestoreItemAsync(id, GetCurrentUserId());
+            return success ? Ok() : NotFound();
+        }
+
+        public sealed class UpdateGalleryItemRequest
+        {
+            [MaxLength(150)]
+            public string Title { get; set; } = string.Empty;
+
+            [MaxLength(2000)]
+            public string? Description { get; set; }
+        }
+
+        [HttpPatch("{id}")]
+        public async Task<IActionResult> Update(int id, [FromBody] UpdateGalleryItemRequest request)
+        {
+            var success = await _galleryService.UpdateItemAsync(id, GetCurrentUserId(), request.Title, request.Description ?? string.Empty);
+            return success ? Ok() : NotFound();
+        }
+
+        [HttpPatch("{id}/publish")]
+        public async Task<IActionResult> SetPublishState(int id, [FromQuery] bool isPublished)
+        {
+            var success = await _galleryService.SetPublishStateAsync(id, GetCurrentUserId(), isPublished);
+            return success ? Ok() : NotFound();
+        }
+
         [HttpPost("{id}/react")]
         public async Task<IActionResult> ToggleReaction(int id, [FromQuery] bool isLike)
         {
-            await _galleryService.ToggleReactionAsync(id, GetCurrentUserId(), isLike);
-            return Ok();
+            var success = await _galleryService.ToggleReactionAsync(id, GetCurrentUserId(), isLike);
+            return success ? Ok() : NotFound();
         }
 
         [HttpPost("{id}/comment")]
         public async Task<IActionResult> AddComment(int id, [FromBody] string message)
         {
-            var comment = await _galleryService.AddCommentAsync(id, GetCurrentUserId(), message);
-            return Ok(comment);
+            try
+            {
+                var comment = await _galleryService.AddCommentAsync(id, GetCurrentUserId(), message);
+                return Ok(comment);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, ex.Message);
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(ex.Message);
+            }
+        }
+
+        [HttpDelete("comment/{commentId}")]
+        public async Task<IActionResult> DeleteComment(int commentId)
+        {
+            var success = await _galleryService.DeleteCommentAsync(commentId, GetCurrentUserId());
+            return success ? Ok() : NotFound();
+        }
+
+        [HttpPatch("comment/{commentId}/restore")]
+        public async Task<IActionResult> RestoreComment(int commentId)
+        {
+            var success = await _galleryService.RestoreCommentAsync(commentId, GetCurrentUserId());
+            return success ? Ok() : NotFound();
         }
     }
 }

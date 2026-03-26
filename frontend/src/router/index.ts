@@ -32,6 +32,15 @@ const router = createRouter({
       }
     },
     {
+      path: '/profile/gallery',
+      name: 'profile-gallery',
+      component: () => import('../pages/ProfileGalleryView.vue'),
+      meta: {
+        title: `${pre} Sajat Galeria`,
+        requiresAuth: true
+      }
+    },
+    {
       path: '/login',
       name: 'login',
       component: () => import('../pages/LoginView.vue'),
