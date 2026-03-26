@@ -76,7 +76,16 @@ const router = createRouter({
         title: `${pre} Fórum`,
         requiresAuth: true
       }
-    }
+    },
+    {
+      path: '/profile/gallery',
+      name: 'profile-gallery',
+      component: () => import('../pages/ProfileGalleryView.vue'),
+      meta: {
+        title: `${pre} Saját Galéria`,
+        requiresAuth: true
+      }
+    },
   ],
 })
 
