@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Libary;
 using Libary.Model.Gallery;
 using Kerting_Api.Interface;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Kerting_Api.Service
 {
@@ -198,7 +199,7 @@ namespace Kerting_Api.Service
                         i.IsPublished,
                         i.IsDeleted,
                         ImageUrl = $"/resources/gallery/{i.Id}{i.FileExtension}",
-                        UploaderName = i.Login.Username,
+                        UploaderName = u.VezetekNev.IsNullOrEmpty() || u.KeresztNev.IsNullOrEmpty() ? i.Login.Username : $"{u.VezetekNev} {u.KeresztNev}",
                         ProfileImageUrl = string.IsNullOrWhiteSpace(u.IMGString)
                             ? null
                             : $"/resources/profiles/{u.IMGString}",
@@ -292,7 +293,7 @@ namespace Kerting_Api.Service
                         c.UserId,
                         c.Message,
                         c.IsDeleted,
-                        UserName = c.Login.Username,
+                        UserName = u.VezetekNev.IsNullOrEmpty() || u.KeresztNev.IsNullOrEmpty() ? c.Login.Username : $"{u.VezetekNev} {u.KeresztNev}",
                         c.CreatedAtUtc,
                         CanDelete = currentUserId.HasValue &&
                             (currentUserId.Value == c.UserId || currentUserId.Value == item.Item.UserId || isAdmin),
