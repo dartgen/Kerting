@@ -5,7 +5,7 @@ import GalleryLayout from '@/components/gallery/GalleryLayout.vue'
 <template>
   <GalleryLayout
     mode="main"
-    title="Galeria"
-    subtitle="Inspiralodj mas kertekbol es munkafolyamatokbol."
+    title="Galéria"
+    subtitle="Inspirálódj más kertekből és munkafolyamatokból."
   />
 </template>

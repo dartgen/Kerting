@@ -87,8 +87,8 @@ const props = withDefaults(defineProps<{
   subtitle?: string
 }>(), {
   mode: 'main',
-  title: 'Galeria',
-  subtitle: 'Inspiralodj mas kertekbol es munkafolyamatokbol.'
+  title: 'Galéria',
+  subtitle: 'Inspirálódj más kertekből és munkafolyamatokból.'
 })
 
 const galleryItems = ref<GalleryItem[]>([])
@@ -168,7 +168,7 @@ const openExpandedCard = async (id: number) => {
       }
     }
   } catch (err) {
-    console.error('Hiba a reszletek lekeresekor', err)
+    console.error('Hiba a részletek lekérésekor', err)
   }
   expandedCardId.value = id
   isEditingItem.value = false
@@ -213,8 +213,8 @@ const submitComment = async () => {
     commentDraft.value = ''
     await openExpandedCard(expandedCardId.value)
   } catch (err) {
-    console.error('Hiba komment kuldesekor', err)
-    commentSubmitError.value = 'A komment kuldese nem sikerult. Probald ujra.'
+    console.error('Hiba komment küldésekor', err)
+    commentSubmitError.value = 'A komment küldése nem sikerült. Próbáld újra.'
   } finally {
     isSubmittingComment.value = false
   }
@@ -222,25 +222,25 @@ const submitComment = async () => {
 
 const deleteComment = async (commentId: number) => {
   if (!expandedCardId.value) return
-  if (!window.confirm('Biztosan torolni szeretned ezt a kommentet?')) return
+  if (!window.confirm('Biztosan törölni szeretnéd ezt a kommentet?')) return
 
   try {
     await api.delete(`/Gallery/comment/${commentId}`)
     await openExpandedCard(expandedCardId.value)
   } catch (err) {
-    console.error('Hiba komment torlesekor', err)
+    console.error('Hiba komment törlésekor', err)
   }
 }
 
 const restoreComment = async (commentId: number) => {
   if (!expandedCardId.value || !isAdmin.value) return
-  if (!window.confirm('Biztosan vissza szeretned allitani ezt a kommentet?')) return
+  if (!window.confirm('Biztosan vissza szeretnéd állítani ezt a kommentet?')) return
 
   try {
     await api.patch(`/Gallery/comment/${commentId}/restore`)
     await openExpandedCard(expandedCardId.value)
   } catch (err) {
-    console.error('Hiba komment visszaallitasakor', err)
+    console.error('Hiba komment visszaállításakor', err)
   }
 }
 
@@ -251,7 +251,7 @@ const toggleReaction = async (isLike: boolean) => {
     await api.post(`/Gallery/${expandedCardId.value}/react`, null, { params: { isLike } })
     await openExpandedCard(expandedCardId.value)
   } catch (err) {
-    console.error('Hiba reakcio kuldesekor', err)
+    console.error('Hiba reakció küldésekor', err)
   }
 }
 
@@ -269,7 +269,7 @@ const saveItemMetadata = async () => {
     await fetchFeed()
     await openExpandedCard(itemId)
   } catch (err) {
-    console.error('Hiba a bejegyzes mentesekor', err)
+    console.error('Hiba a bejegyzés mentésekor', err)
   } finally {
     isSavingItem.value = false
   }
@@ -283,13 +283,13 @@ const setPublishState = async (isPublished: boolean) => {
     await fetchFeed()
     await openExpandedCard(itemId)
   } catch (err) {
-    console.error('Hiba publikacio allitasakor', err)
+    console.error('Hiba publikáció állításakor', err)
   }
 }
 
 const restoreItem = async () => {
   if (!expandedCard.value || !isAdmin.value) return
-  if (!window.confirm('Biztosan vissza szeretned allitani ezt a publikaciot? Visszaallitas utan nem lesz publikus.')) return
+  if (!window.confirm('Biztosan vissza szeretnéd állítani ezt a publikációt? Visszaállítás után nem lesz publikus.')) return
 
   const itemId = expandedCard.value.id
   try {
@@ -297,20 +297,20 @@ const restoreItem = async () => {
     await fetchFeed()
     await openExpandedCard(itemId)
   } catch (err) {
-    console.error('Hiba publikacio visszaallitasakor', err)
+    console.error('Hiba publikáció visszaállításakor', err)
   }
 }
 
 const softDeleteItem = async () => {
   if (!expandedCard.value) return
-  if (!window.confirm('Biztosan torolni szeretned ezt a publikaciot?')) return
+  if (!window.confirm('Biztosan törölni szeretnéd ezt a publikációt?')) return
 
   try {
     await api.delete(`/Gallery/${expandedCard.value.id}`)
     closeExpandedCard()
     await fetchFeed()
   } catch (err) {
-    console.error('Hiba publikacio torlesekor', err)
+    console.error('Hiba publikáció törlésekor', err)
   }
 }
 
@@ -360,7 +360,7 @@ const fetchFeed = async () => {
       comments: []
     }))
   } catch (err) {
-    console.error('Hiba a galeria betoltesekor', err)
+    console.error('Hiba a galéria betöltésekor', err)
   }
 }
 
@@ -409,7 +409,7 @@ watch(expandedCard, () => {
         <div v-if="isAdmin" class="mt-4 flex justify-center">
           <label class="inline-flex items-center gap-2 text-xs sm:text-sm text-earth-100">
             <input v-model="showDeleted" type="checkbox" class="h-4 w-4 rounded border-earth-200/25 bg-earth-950/40" />
-            Torolt elemek megjelenitese
+            Törölt elemek megjelenítése
           </label>
         </div>
       </div>
@@ -444,7 +444,7 @@ watch(expandedCard, () => {
                 {{ expandedCard.uploadedAt }}
               </div>
               <div v-if="expandedCard.isDeleted" class="absolute top-3 left-3 px-2 py-1 rounded-md bg-red-600/90 text-white text-xs border border-red-300/70">
-                Torolt
+                Törölt
               </div>
               <div v-if="!expandedCard.isPublished" class="absolute top-3 right-3 px-2 py-1 rounded-md bg-amber-600/90 text-white text-xs border border-amber-300/70">
                 Nem publikus
@@ -461,12 +461,12 @@ watch(expandedCard, () => {
                 <div class="flex items-center gap-3">
                   <img
                     :src="expandedCard.uploaderAvatarUrl"
-                    :alt="`${expandedCard.uploaderName} profilkepe`"
+                    :alt="`${expandedCard.uploaderName} profilképe`"
                     class="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border border-earth-100/25"
                   />
                   <div>
                     <p class="text-earth-100 font-semibold text-sm sm:text-base">{{ expandedCard.uploaderName }}</p>
-                    <p class="text-earth-200/70 text-xs">Feltolto</p>
+                    <p class="text-earth-200/70 text-xs">Feltöltő</p>
                   </div>
                 </div>
 
@@ -506,7 +506,7 @@ watch(expandedCard, () => {
                   <button
                     type="button"
                     class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-earth-900/85 border border-earth-100/20 text-earth-50 hover:bg-earth-800 transition-colors"
-                    aria-label="Nagy nezet bezarasa"
+                    aria-label="Nagy nézet bezárása"
                     @click="closeExpandedCard"
                   >
                     ✕
@@ -522,7 +522,7 @@ watch(expandedCard, () => {
                     class="text-xs px-3 py-1 rounded-full border border-earth-100/25 bg-earth-900/65 text-earth-50 hover:bg-earth-800"
                     @click="isEditingItem = !isEditingItem"
                   >
-                    {{ isEditingItem ? 'Megse' : 'Szerkesztes' }}
+                    {{ isEditingItem ? 'Mégse' : 'Szerkesztés' }}
                   </button>
                 </div>
               </div>
@@ -549,14 +549,14 @@ watch(expandedCard, () => {
                     :disabled="isSavingItem"
                     @click="saveItemMetadata"
                   >
-                    {{ isSavingItem ? 'Mentes...' : 'Mentes' }}
+                    {{ isSavingItem ? 'Mentés...' : 'Mentés' }}
                   </button>
                   <button
                     type="button"
                     class="h-9 rounded-full border border-earth-100/25 bg-earth-900/70 px-4 text-xs text-earth-50"
                     @click="isEditingItem = false"
                   >
-                    Megse
+                    Mégse
                   </button>
                 </div>
               </div>
@@ -573,7 +573,7 @@ watch(expandedCard, () => {
                     : 'border-emerald-300/35 bg-emerald-700/80 text-white'"
                   @click="setPublishState(!expandedCard.isPublished)"
                 >
-                  {{ expandedCard.isPublished ? 'Elrejtes (Unpublish)' : 'Publikalas' }}
+                  {{ expandedCard.isPublished ? 'Elrejtés (Unpublish)' : 'Publikálás' }}
                 </button>
 
                 <button
@@ -581,7 +581,7 @@ watch(expandedCard, () => {
                   class="h-9 rounded-full border border-red-300/35 bg-red-700/80 px-4 text-xs font-semibold text-white"
                   @click="softDeleteItem"
                 >
-                  Publikacio torlese
+                  Publikáció törlése
                 </button>
               </div>
 
@@ -591,7 +591,7 @@ watch(expandedCard, () => {
                   class="h-9 rounded-full border border-emerald-300/35 bg-emerald-700/80 px-4 text-xs font-semibold text-white"
                   @click="restoreItem"
                 >
-                  Visszaallitas (nem publikus)
+                  Visszaállítás (nem publikus)
                 </button>
               </div>
 
@@ -604,17 +604,23 @@ watch(expandedCard, () => {
                     :key="comment.id"
                     class="group/comment rounded-xl border p-3 transition-colors"
                     :class="comment.isDeleted
-                      ? 'border-red-400/65 bg-red-950/30'
+                      ? 'border-red-400/90 bg-red-950/40'
                       : 'border-earth-100/10 bg-earth-900/55'"
                   >
                     <div class="flex items-center justify-between gap-2">
                       <div class="flex items-center gap-2">
                         <img
                           :src="comment.avatarUrl"
-                          :alt="`${comment.userName} profilkepe`"
+                          :alt="`${comment.userName} profilképe`"
                           class="w-8 h-8 rounded-full object-cover border border-earth-100/20"
                         />
                         <span class="text-earth-100 text-xs sm:text-sm font-medium">{{ comment.userName }}</span>
+                        <span
+                          v-if="comment.isDeleted"
+                          class="rounded-full border border-red-300/70 bg-red-700/70 px-2 py-0.5 text-[10px] font-semibold text-white"
+                        >
+                          Törölt
+                        </span>
                       </div>
 
                       <div class="flex items-center gap-2">
@@ -623,7 +629,7 @@ watch(expandedCard, () => {
                           v-if="comment.canDelete && !comment.isDeleted"
                           type="button"
                           class="opacity-0 group-hover/comment:opacity-100 transition-opacity text-red-300 hover:text-red-200 text-sm font-bold px-1"
-                          aria-label="Komment torlese"
+                          aria-label="Komment törlése"
                           @click="deleteComment(comment.id)"
                         >
                           X
@@ -632,10 +638,10 @@ watch(expandedCard, () => {
                           v-if="comment.isDeleted && isAdmin"
                           type="button"
                           class="text-emerald-300 hover:text-emerald-200 text-[11px] font-semibold px-1"
-                          aria-label="Komment visszaallitasa"
+                          aria-label="Komment visszaállítása"
                           @click="restoreComment(comment.id)"
                         >
-                          Visszaallit
+                          Visszaállít
                         </button>
                       </div>
                     </div>
@@ -651,7 +657,7 @@ watch(expandedCard, () => {
                       v-model="commentDraft"
                       rows="2"
                       maxlength="1000"
-                      placeholder="Irj egy kommentet..."
+                      placeholder="Írj egy kommentet..."
                       class="w-full resize-none rounded-xl border border-earth-100/20 bg-earth-900/60 px-3 py-2 text-sm text-earth-100 placeholder:text-earth-200/55 focus:outline-none focus:ring-2 focus:ring-earth-300/35 focus:border-earth-100/35"
                       :disabled="isSubmittingComment"
                       @keydown.enter.exact.prevent="submitComment"
@@ -663,7 +669,7 @@ watch(expandedCard, () => {
                       :disabled="isSubmittingComment || !commentDraft.trim()"
                       @click="submitComment"
                     >
-                      {{ isSubmittingComment ? 'Kuldes...' : 'Kuldes' }}
+                      {{ isSubmittingComment ? 'Küldés...' : 'Küldés' }}
                     </button>
                   </div>
 
@@ -671,7 +677,7 @@ watch(expandedCard, () => {
                     {{ commentSubmitError }}
                   </p>
                   <p v-else class="mt-2 text-[11px] sm:text-xs text-earth-200/70">
-                    Enter: kuldes, Shift+Enter: uj sor
+                    Enter: küldés, Shift+Enter: új sor
                   </p>
                 </div>
               </div>
@@ -699,7 +705,7 @@ watch(expandedCard, () => {
             :class="item.isDeleted ? 'border-red-400/85' : 'border-earth-100/15'"
             tabindex="0"
             role="button"
-            :aria-label="`Kep megnyitasa: ${item.uploaderName}`"
+            :aria-label="`Kép megnyitása: ${item.uploaderName}`"
             :aria-pressed="previewCardId === item.id"
             @click.stop="handleCardClick(item.id)"
             @keyup.enter.stop="handleCardClick(item.id)"
@@ -729,8 +735,8 @@ watch(expandedCard, () => {
                 :class="isCardPreviewed(item.id) ? 'opacity-100' : ''"
               >
                 <span class="rounded-full border border-earth-100/30 bg-black/45 px-3 py-1.5 text-[11px] sm:text-xs font-semibold tracking-wide text-earth-50 shadow-md">
-                  <span v-if="isDesktopInteraction">Kattints kozepre a nagy nezet megnyitasahoz</span>
-                  <span v-else>Koppints kozepre a nagy nezet megnyitasahoz</span>
+                  <span v-if="isDesktopInteraction">Kattints középre a nagy nézet megnyitásához</span>
+                  <span v-else>Koppints középre a nagy nézet megnyitásához</span>
                 </span>
               </div>
 
@@ -747,8 +753,8 @@ watch(expandedCard, () => {
                       {{ item.uploaderName }}
                     </p>
                     <p class="mt-1 text-earth-200/75 text-[10px] sm:text-[11px]">
-                      <span v-if="isDesktopInteraction">Kattints a nagy nezet megnyitasahoz</span>
-                      <span v-else>Koppints meg egyszer a nagy nezethez</span>
+                      <span v-if="isDesktopInteraction">Kattints a nagy nézet megnyitásához</span>
+                      <span v-else>Koppints még egyszer a nagy nézethez</span>
                     </p>
                   </div>
                   <p class="shrink-0 text-earth-100/85 text-[10px] sm:text-xs md:text-[0.78rem] self-end">

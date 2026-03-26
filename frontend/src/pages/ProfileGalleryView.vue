@@ -5,7 +5,7 @@ import GalleryLayout from '@/components/gallery/GalleryLayout.vue'
 <template>
   <GalleryLayout
     mode="own"
-    title="Sajat galeria"
-    subtitle="Itt kezelheted a sajat feltoltott kepeidet, publikaciokat es kommenteket."
+    title="Saját galéria"
+    subtitle="Itt kezelheted a saját feltöltött képeidet, publikációkat és kommenteket."
   />
 </template>

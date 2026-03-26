@@ -36,7 +36,7 @@ const router = createRouter({
       name: 'profile-gallery',
       component: () => import('../pages/ProfileGalleryView.vue'),
       meta: {
-        title: `${pre} Sajat Galeria`,
+        title: `${pre} Saját Galéria`,
         requiresAuth: true
       }
     },
