@@ -25,11 +25,7 @@ const isFullPage = computed(() => Boolean(route.meta.fullPage))
           isFullPage ? 'px-0 pb-0' : 'px-4 pb-2 sm:pb-4',
         ]"
       >
-        <RouterView v-slot="{ Component }">
-          <transition name="fade" mode="out-in">
-            <component :is="Component" />
-          </transition>
-        </RouterView>
+        <RouterView />
       </main>
 
       <ToastContainer />
@@ -37,15 +33,3 @@ const isFullPage = computed(() => Boolean(route.meta.fullPage))
     </div>
   </div>
 </template>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>

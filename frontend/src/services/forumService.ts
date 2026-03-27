@@ -47,6 +47,12 @@ export const forumService = {
     })
   },
 
+  getOwnGalleryItems(page = 1, pageSize = 100, includeDeleted = false) {
+    return api.get('/Gallery/mine', {
+      params: { page, pageSize, includeDeleted }
+    })
+  },
+
   createPost(payload: UpsertForumPostPayload) {
     return api.post('/Forum', payload)
   },

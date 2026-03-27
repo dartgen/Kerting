@@ -87,6 +87,13 @@ interface ForumDetail {
   canModerate: boolean
 }
 
+interface OwnGalleryItem {
+  id: number
+  title: string
+  imageUrl: string
+  isDeleted: boolean
+}
+
 const props = withDefaults(defineProps<{ mode?: 'list' | 'detail' }>(), {
   mode: 'list'
 })
@@ -97,6 +104,7 @@ const authStore = useAuthStore()
 const toastStore = useToastStore()
 
 const isDetailMode = computed(() => props.mode === 'detail')
+const isForumListRoute = computed(() => route.name === 'forum' && !isDetailMode.value)
 const isAdmin = computed(() => authStore.profilAdatok?.roleId === 1)
 
 const roles = ref<Array<{ id: number; name: string }>>([])
@@ -119,11 +127,17 @@ const showCreateForm = ref(false)
 const createForm = reactive({
   title: '',
   description: '',
-  attachedGalleryItemId: '',
   tagInput: ''
 })
 const createTags = ref<string[]>([])
 const savingPost = ref(false)
+const showTagSuggestions = ref(false)
+
+const ownGalleryItems = ref<OwnGalleryItem[]>([])
+const selectedGalleryItemId = ref<number | null>(null)
+const pickerOpen = ref(false)
+const pickerLoading = ref(false)
+const pickerLoaded = ref(false)
 
 const detail = ref<ForumDetail | null>(null)
 const detailLoading = ref(false)
@@ -148,6 +162,16 @@ const canCreateTag = computed(() => {
 
 const selectedRoleSet = computed(() => new Set(filters.selectedRoleIds))
 const selectedTagSet = computed(() => new Set(filters.selectedTags.map(t => t.toLowerCase())))
+const createTagSet = computed(() => new Set(createTags.value.map(t => t.toLowerCase())))
+const selectedGalleryItem = computed(() => ownGalleryItems.value.find(item => item.id === selectedGalleryItemId.value) || null)
+const filteredTagSuggestions = computed(() => {
+  const keyword = createForm.tagInput.toLowerCase().trim()
+  if (!keyword) return []
+
+  return allTags.value
+    .filter(tag => tag.toLowerCase().includes(keyword) && !createTagSet.value.has(tag.toLowerCase()))
+    .slice(0, 8)
+})
 
 const parseIntQuery = (value: unknown, fallback: number) => {
   const n = Number(value)
@@ -188,7 +212,7 @@ const getApiErrorMessage = (error: unknown, fallback: string) => {
 }
 
 const syncFiltersFromQuery = () => {
-  if (isDetailMode.value) return
+  if (!isForumListRoute.value) return
 
   filters.sort = (route.query.sort as ForumSort) || 'latest'
   filters.search = (route.query.search as string) || ''
@@ -202,16 +226,40 @@ const syncFiltersFromQuery = () => {
 }
 
 const syncQueryFromFilters = () => {
-  if (isDetailMode.value) return
+  if (!isForumListRoute.value) return
+
+  const nextQuery = {
+    sort: filters.sort,
+    search: filters.search || undefined,
+    maxAgeDays: String(filters.maxAgeDays),
+    roleIds: filters.selectedRoleIds.length ? filters.selectedRoleIds.map(String) : undefined,
+    tagNames: filters.selectedTags.length ? filters.selectedTags : undefined
+  }
+
+  const currentRoleIds = Array.isArray(route.query.roleIds)
+    ? route.query.roleIds.map(v => String(v))
+    : route.query.roleIds
+      ? [String(route.query.roleIds)]
+      : []
+
+  const currentTagNames = Array.isArray(route.query.tagNames)
+    ? route.query.tagNames.map(v => String(v))
+    : route.query.tagNames
+      ? [String(route.query.tagNames)]
+      : []
+
+  const sameQuery =
+    String(route.query.sort || 'latest') === String(nextQuery.sort) &&
+    String(route.query.search || '') === String(nextQuery.search || '') &&
+    String(route.query.maxAgeDays || '30') === String(nextQuery.maxAgeDays) &&
+    JSON.stringify(currentRoleIds) === JSON.stringify(nextQuery.roleIds || []) &&
+    JSON.stringify(currentTagNames) === JSON.stringify(nextQuery.tagNames || [])
+
+  if (sameQuery) return
 
   router.replace({
-    query: {
-      sort: filters.sort,
-      search: filters.search || undefined,
-      maxAgeDays: String(filters.maxAgeDays),
-      roleIds: filters.selectedRoleIds.length ? filters.selectedRoleIds : undefined,
-      tagNames: filters.selectedTags.length ? filters.selectedTags : undefined
-    }
+    name: 'forum',
+    query: nextQuery
   })
 }
 
@@ -347,6 +395,12 @@ const addCreateTag = () => {
 
   createTags.value = [...createTags.value, tag]
   createForm.tagInput = ''
+  showTagSuggestions.value = false
+}
+
+const selectCreateTagSuggestion = (tag: string) => {
+  createForm.tagInput = tag
+  addCreateTag()
 }
 
 const removeCreateTag = (tag: string) => {
@@ -354,6 +408,7 @@ const removeCreateTag = (tag: string) => {
 }
 
 const openDetail = (postId: number) => {
+  syncQueryFromFilters()
   router.push({
     name: 'forum-post',
     params: { id: postId },
@@ -368,21 +423,89 @@ const goBackToList = () => {
   })
 }
 
+const fetchOwnGalleryItems = async () => {
+  pickerLoading.value = true
+  try {
+    const { data } = await forumService.getOwnGalleryItems(1, 120, false)
+    ownGalleryItems.value = ((data || []) as Array<{ id: number; title?: string; imageUrl?: string | null; isDeleted?: boolean }>)
+      .filter(item => !item.isDeleted)
+      .map(item => ({
+        id: item.id,
+        title: item.title?.trim() || `Kép #${item.id}`,
+        imageUrl: getFullImageUrl(item.imageUrl || ''),
+        isDeleted: Boolean(item.isDeleted)
+      }))
+    pickerLoaded.value = true
+  } catch (error) {
+    console.error('Saját galéria betöltési hiba', error)
+    toastStore.addToast('Nem sikerült betölteni a saját galériádat.', 4000, 'error')
+  } finally {
+    pickerLoading.value = false
+  }
+}
+
+const openGalleryPicker = async () => {
+  pickerOpen.value = true
+  if (!pickerLoaded.value) {
+    await fetchOwnGalleryItems()
+  }
+}
+
+const closeGalleryPicker = () => {
+  pickerOpen.value = false
+}
+
+const selectGalleryItem = (itemId: number) => {
+  selectedGalleryItemId.value = itemId
+  closeGalleryPicker()
+}
+
+const clearSelectedGalleryItem = () => {
+  selectedGalleryItemId.value = null
+}
+
+const applyReactionDelta = (current: boolean | null | undefined, target: boolean) => {
+  if (current === target) {
+    return {
+      nextReaction: null as boolean | null,
+      likesDelta: target ? -1 : 0,
+      dislikesDelta: target ? 0 : -1
+    }
+  }
+
+  if (current === null || current === undefined) {
+    return {
+      nextReaction: target,
+      likesDelta: target ? 1 : 0,
+      dislikesDelta: target ? 0 : 1
+    }
+  }
+
+  return {
+    nextReaction: target,
+    likesDelta: target ? 1 : -1,
+    dislikesDelta: target ? -1 : 1
+  }
+}
+
+const findCommentById = (comments: ForumComment[], commentId: number): ForumComment | null => {
+  for (const comment of comments) {
+    if (comment.id === commentId) return comment
+    const nested = findCommentById(comment.replies || [], commentId)
+    if (nested) return nested
+  }
+  return null
+}
+
 const submitCreatePost = async () => {
   if (savingPost.value) return
 
   const title = createForm.title.trim()
   const description = createForm.description.trim()
-  const rawAttachmentId = (createForm.attachedGalleryItemId || '').trim()
-  const parsedAttachmentId = rawAttachmentId ? Number(rawAttachmentId) : null
+  const selectedAttachmentId = selectedGalleryItemId.value
 
   if (!title || !description) {
     toastStore.addToast('A cím és leírás kötelező.', 3500, 'warning')
-    return
-  }
-
-  if (parsedAttachmentId !== null && (!Number.isInteger(parsedAttachmentId) || parsedAttachmentId <= 0)) {
-    toastStore.addToast('A csatolt kép azonosítója csak pozitív egész szám lehet.', 4000, 'warning')
     return
   }
 
@@ -391,16 +514,17 @@ const submitCreatePost = async () => {
     await forumService.createPost({
       title,
       description,
-      attachedGalleryItemId: parsedAttachmentId,
+      attachedGalleryItemId: selectedAttachmentId,
       tags: createTags.value
     })
 
     toastStore.addToast('Bejegyzés létrehozva.', 3000, 'success')
     createForm.title = ''
     createForm.description = ''
-    createForm.attachedGalleryItemId = ''
     createForm.tagInput = ''
     createTags.value = []
+    selectedGalleryItemId.value = null
+    showTagSuggestions.value = false
     showCreateForm.value = false
     await fetchFeed(false)
   } catch (error) {
@@ -469,20 +593,52 @@ const toggleLocked = async (postId: number, target: boolean) => {
 
 const reactPost = async (isLike: boolean) => {
   if (!detail.value) return
+
+  const previous = {
+    myReaction: detail.value.myReaction,
+    likesCount: detail.value.likesCount,
+    dislikesCount: detail.value.dislikesCount
+  }
+
+  const delta = applyReactionDelta(previous.myReaction, isLike)
+  detail.value.myReaction = delta.nextReaction
+  detail.value.likesCount = Math.max(0, detail.value.likesCount + delta.likesDelta)
+  detail.value.dislikesCount = Math.max(0, detail.value.dislikesCount + delta.dislikesDelta)
+
   try {
     await forumService.reactPost(detail.value.id, isLike)
-    await fetchDetail(false)
   } catch (error) {
+    detail.value.myReaction = previous.myReaction
+    detail.value.likesCount = previous.likesCount
+    detail.value.dislikesCount = previous.dislikesCount
     console.error('Post reakció hiba', error)
     toastStore.addToast('A reakció mentése nem sikerült.', 3500, 'error')
   }
 }
 
 const reactComment = async (commentId: number, isLike: boolean) => {
+  if (!detail.value) return
+
+  const targetComment = findCommentById(detail.value.comments, commentId)
+  if (!targetComment) return
+
+  const previous = {
+    myReaction: targetComment.myReaction,
+    likesCount: targetComment.likesCount,
+    dislikesCount: targetComment.dislikesCount
+  }
+
+  const delta = applyReactionDelta(previous.myReaction, isLike)
+  targetComment.myReaction = delta.nextReaction
+  targetComment.likesCount = Math.max(0, targetComment.likesCount + delta.likesDelta)
+  targetComment.dislikesCount = Math.max(0, targetComment.dislikesCount + delta.dislikesDelta)
+
   try {
     await forumService.reactComment(commentId, isLike)
-    await fetchDetail(false)
   } catch (error) {
+    targetComment.myReaction = previous.myReaction
+    targetComment.likesCount = previous.likesCount
+    targetComment.dislikesCount = previous.dislikesCount
     console.error('Comment reakció hiba', error)
     toastStore.addToast('A reakció mentése nem sikerült.', 3500, 'error')
   }
@@ -567,8 +723,7 @@ const loadMoreReplies = async (comment: ForumComment) => {
 watch(
   () => [filters.sort, filters.search, filters.maxAgeDays, JSON.stringify(filters.selectedRoleIds), JSON.stringify(filters.selectedTags)],
   async () => {
-    if (isDetailMode.value) return
-    syncQueryFromFilters()
+    if (!isForumListRoute.value) return
     await fetchFeed(false)
   }
 )
@@ -582,15 +737,19 @@ watch(
 )
 
 onMounted(async () => {
+  if (isDetailMode.value) {
+    try {
+      await fetchDetail(false)
+    } catch (error) {
+      console.error('Forum detail inicializálási hiba', error)
+      toastStore.addToast('A bejegyzés nem tölthető be.', 4000, 'error')
+    }
+    return
+  }
+
   try {
     await loadMeta()
     syncFiltersFromQuery()
-
-    if (isDetailMode.value) {
-      await fetchDetail(false)
-      return
-    }
-
     await fetchFeed(false)
   } catch (error) {
     console.error('Forum inicializálási hiba', error)
@@ -601,8 +760,10 @@ onMounted(async () => {
 
 <template>
   <InnerPageLayout v-if="!isDetailMode">
-    <PageTitle title="Fórum" />
-    <p class="text-earth-200/90 mt-2 mb-6">Közösségi beszélgetések, tippek és kérdések.</p>
+    <div class="mb-6 flex flex-wrap items-baseline justify-between gap-2">
+      <PageTitle title="Fórum" />
+      <p class="text-earth-200/90">Közösségi beszélgetések, tippek és kérdések.</p>
+    </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-[1fr_3fr] gap-6">
       <aside class="rounded-2xl border border-earth-100/10 bg-earth-900/40 p-4 space-y-5">
@@ -674,17 +835,44 @@ onMounted(async () => {
               class="w-full rounded-lg bg-earth-800/80 px-3 py-2 text-earth-50 border border-earth-100/10" />
             <textarea v-model="createForm.description" rows="4" placeholder="Leírás"
               class="w-full rounded-lg bg-earth-800/80 px-3 py-2 text-earth-50 border border-earth-100/10" />
-            <input v-model="createForm.attachedGalleryItemId" type="number" min="1" placeholder="Saját galéria kép azonosító (opcionális)"
-              class="w-full rounded-lg bg-earth-800/80 px-3 py-2 text-earth-50 border border-earth-100/10" />
 
-            <div class="flex gap-2">
-              <input
-                v-model="createForm.tagInput"
-                type="text"
-                placeholder="Címke"
-                class="flex-1 rounded-lg bg-earth-800/80 px-3 py-2 text-earth-50 border border-earth-100/10"
-                @keydown.enter.prevent="addCreateTag"
-              />
+            <div class="rounded-lg border border-earth-100/10 bg-earth-800/60 p-3 space-y-2">
+              <p class="text-sm text-earth-200">Csatolt saját galéria kép (opcionális)</p>
+              <p v-if="selectedGalleryItem" class="text-sm text-earth-100">
+                Kiválasztva: <span class="font-semibold">{{ selectedGalleryItem.title }}</span> (ID: {{ selectedGalleryItem.id }})
+              </p>
+              <p v-else class="text-sm text-earth-300">Nincs kép kiválasztva</p>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" class="px-3 py-2 rounded-lg bg-earth-700 text-earth-100" @click="openGalleryPicker">Kép választó megnyitása</button>
+                <button v-if="selectedGalleryItem" type="button" class="px-3 py-2 rounded-lg bg-red-700/80 text-red-100" @click="clearSelectedGalleryItem">Kiválasztás törlése</button>
+              </div>
+            </div>
+
+            <div class="relative flex gap-2">
+              <div class="flex-1">
+                <input
+                  v-model="createForm.tagInput"
+                  type="text"
+                  placeholder="Címke"
+                  class="w-full rounded-lg bg-earth-800/80 px-3 py-2 text-earth-50 border border-earth-100/10"
+                  @keydown.enter.prevent="addCreateTag"
+                  @focus="showTagSuggestions = true"
+                  @blur="showTagSuggestions = false"
+                />
+                <ul
+                  v-if="showTagSuggestions && filteredTagSuggestions.length"
+                  class="absolute left-0 right-0 top-11 z-20 rounded-lg border border-earth-600 bg-earth-800 shadow-xl overflow-hidden max-h-44 overflow-y-auto"
+                >
+                  <li
+                    v-for="suggestion in filteredTagSuggestions"
+                    :key="suggestion"
+                    class="px-3 py-2 text-sm text-earth-100 hover:bg-earth-700 cursor-pointer"
+                    @mousedown.prevent="selectCreateTagSuggestion(suggestion)"
+                  >
+                    {{ suggestion }}
+                  </li>
+                </ul>
+              </div>
               <button type="button" @click="addCreateTag" class="px-3 py-2 rounded-lg bg-earth-700 text-earth-100">Hozzáad</button>
             </div>
             <div class="flex flex-wrap gap-2">
@@ -810,8 +998,8 @@ onMounted(async () => {
           </div>
 
           <div class="flex items-center gap-3 pt-1">
-            <button type="button" class="px-3 py-1.5 rounded-lg bg-green-700/70 text-green-100" @click="reactPost(true)">👍 {{ detail.likesCount }}</button>
-            <button type="button" class="px-3 py-1.5 rounded-lg bg-red-700/70 text-red-100" @click="reactPost(false)">👎 {{ detail.dislikesCount }}</button>
+            <button type="button" class="px-3 py-1.5 rounded-lg text-green-100" :class="detail.myReaction === true ? 'bg-green-600' : 'bg-green-700/70'" @click="reactPost(true)">👍 {{ detail.likesCount }}</button>
+            <button type="button" class="px-3 py-1.5 rounded-lg text-red-100" :class="detail.myReaction === false ? 'bg-red-600' : 'bg-red-700/70'" @click="reactPost(false)">👎 {{ detail.dislikesCount }}</button>
           </div>
         </div>
       </article>
@@ -837,8 +1025,8 @@ onMounted(async () => {
                 <p class="text-xs text-earth-300">{{ formatDateTime(comment.createdAtUtc) }}</p>
               </div>
               <div class="flex gap-2">
-                <button type="button" class="text-xs px-2 py-1 rounded bg-earth-700 text-earth-100" @click="reactComment(comment.id, true)">👍 {{ comment.likesCount }}</button>
-                <button type="button" class="text-xs px-2 py-1 rounded bg-earth-700 text-earth-100" @click="reactComment(comment.id, false)">👎 {{ comment.dislikesCount }}</button>
+                <button type="button" class="text-xs px-2 py-1 rounded text-earth-100" :class="comment.myReaction === true ? 'bg-green-700' : 'bg-earth-700'" @click="reactComment(comment.id, true)">👍 {{ comment.likesCount }}</button>
+                <button type="button" class="text-xs px-2 py-1 rounded text-earth-100" :class="comment.myReaction === false ? 'bg-red-700' : 'bg-earth-700'" @click="reactComment(comment.id, false)">👎 {{ comment.dislikesCount }}</button>
                 <button v-if="comment.canDelete" type="button" class="text-xs px-2 py-1 rounded bg-red-700/80 text-red-100" @click="deleteComment(comment.id)">Törlés</button>
                 <button v-if="comment.canRestore" type="button" class="text-xs px-2 py-1 rounded bg-green-700/80 text-green-100" @click="restoreComment(comment.id)">Visszaállít</button>
               </div>
@@ -874,8 +1062,8 @@ onMounted(async () => {
                 </div>
                 <p class="text-earth-100 mt-2 whitespace-pre-line">{{ reply.message }}</p>
                 <div class="mt-2 flex gap-2">
-                  <button type="button" class="text-xs px-2 py-1 rounded bg-earth-700 text-earth-100" @click="reactComment(reply.id, true)">👍 {{ reply.likesCount }}</button>
-                  <button type="button" class="text-xs px-2 py-1 rounded bg-earth-700 text-earth-100" @click="reactComment(reply.id, false)">👎 {{ reply.dislikesCount }}</button>
+                  <button type="button" class="text-xs px-2 py-1 rounded text-earth-100" :class="reply.myReaction === true ? 'bg-green-700' : 'bg-earth-700'" @click="reactComment(reply.id, true)">👍 {{ reply.likesCount }}</button>
+                  <button type="button" class="text-xs px-2 py-1 rounded text-earth-100" :class="reply.myReaction === false ? 'bg-red-700' : 'bg-earth-700'" @click="reactComment(reply.id, false)">👎 {{ reply.dislikesCount }}</button>
                   <button v-if="reply.canDelete" type="button" class="text-xs px-2 py-1 rounded bg-red-700/80 text-red-100" @click="deleteComment(reply.id)">Törlés</button>
                   <button v-if="reply.canRestore" type="button" class="text-xs px-2 py-1 rounded bg-green-700/80 text-green-100" @click="restoreComment(reply.id)">Visszaállít</button>
                 </div>
@@ -907,5 +1095,39 @@ onMounted(async () => {
         </div>
       </section>
     </template>
+
+    <div v-else class="rounded-xl border border-earth-100/10 bg-earth-900/40 p-6 text-earth-200">
+      A bejegyzés nem található vagy jelenleg nem betölthető.
+    </div>
   </InnerPageLayout>
+
+  <div v-if="pickerOpen" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" @click.self="closeGalleryPicker">
+    <div class="w-full max-w-5xl max-h-[85vh] overflow-hidden rounded-2xl border border-earth-100/10 bg-earth-900/95 shadow-2xl">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-earth-100/10">
+        <h3 class="text-lg font-semibold text-earth-50">Saját galéria képek</h3>
+        <button type="button" class="text-earth-300 hover:text-earth-50" @click="closeGalleryPicker">Bezárás</button>
+      </div>
+
+      <div class="p-4 overflow-y-auto max-h-[70vh]">
+        <div v-if="pickerLoading" class="text-earth-200">Képek betöltése...</div>
+        <div v-else-if="!ownGalleryItems.length" class="text-earth-200">Nincs elérhető saját galéria képed.</div>
+        <div v-else class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          <button
+            v-for="item in ownGalleryItems"
+            :key="item.id"
+            type="button"
+            class="group text-left rounded-xl overflow-hidden border border-earth-100/10 bg-earth-800/70 hover:border-green-400/60 transition-colors"
+            :class="selectedGalleryItemId === item.id ? 'ring-2 ring-green-400' : ''"
+            @click="selectGalleryItem(item.id)"
+          >
+            <img :src="item.imageUrl" :alt="item.title" class="w-full h-32 object-cover" />
+            <div class="p-2">
+              <p class="text-sm text-earth-100 truncate">{{ item.title }}</p>
+              <p class="text-xs text-earth-300">ID: {{ item.id }}</p>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
