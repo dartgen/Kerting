@@ -3,5 +3,5 @@ import ForumLayout from '@/components/forum/ForumLayout.vue'
 </script>
 
 <template>
-  <ForumLayout mode="list" />
+  <ForumLayout mode="detail" />
 </template>

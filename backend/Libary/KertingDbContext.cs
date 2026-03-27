@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Libary.Model.Tag;
 using Libary.Model.Gallery;
+using Libary.Model.Forum;
 
 namespace Libary
 {
@@ -21,6 +22,11 @@ namespace Libary
         public DbSet<GalleryItem> GalleryItem { get; set; }
         public DbSet<GalleryComment> GalleryComment { get; set; }
         public DbSet<GalleryReaction> GalleryReaction { get; set; }
+        public DbSet<ForumPost> ForumPost { get; set; }
+        public DbSet<ForumComment> ForumComment { get; set; }
+        public DbSet<ForumPostReaction> ForumPostReaction { get; set; }
+        public DbSet<ForumCommentReaction> ForumCommentReaction { get; set; }
+        public DbSet<ForumPostTag> ForumPostTag { get; set; }
 
         public KertingDbContext(DbContextOptions options) : base(options)
         {
@@ -115,6 +121,137 @@ namespace Libary
                 entity.HasIndex(x => new { x.GalleryItemId, x.UserId })
                     .IsUnique()
                     .HasDatabaseName("UX_GalleryReaction_GalleryItemId_UserId");
+            });
+
+            modelBuilder.Entity<ForumPost>(entity =>
+            {
+                entity.ToTable("ForumPost", "dbo");
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.Title).HasMaxLength(150).IsRequired();
+                entity.Property(x => x.Description).HasMaxLength(2000).IsRequired();
+                entity.Property(x => x.LockReason).HasMaxLength(300);
+                entity.Property(x => x.IsDeleted).HasDefaultValue(false);
+                entity.Property(x => x.IsPinned).HasDefaultValue(false);
+                entity.Property(x => x.IsLocked).HasDefaultValue(false);
+                entity.Property(x => x.ViewCount).HasDefaultValue(0);
+                entity.Property(x => x.CreatedAtUtc).HasDefaultValueSql("SYSUTCDATETIME()");
+                entity.Property(x => x.LastActivityAtUtc).HasDefaultValueSql("SYSUTCDATETIME()");
+
+                entity.HasOne(x => x.Login)
+                    .WithMany()
+                    .HasForeignKey(x => x.UserId)
+                    .HasConstraintName("FK_ForumPost_Login_UserId")
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(x => x.AttachedGalleryItem)
+                    .WithMany()
+                    .HasForeignKey(x => x.AttachedGalleryItemId)
+                    .HasConstraintName("FK_ForumPost_GalleryItem_AttachedGalleryItemId")
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(x => new { x.IsDeleted, x.IsPinned, x.CreatedAtUtc })
+                    .HasDatabaseName("IX_ForumPost_Deleted_Pinned_CreatedAtUtc");
+
+                entity.HasIndex(x => new { x.IsDeleted, x.LastActivityAtUtc })
+                    .HasDatabaseName("IX_ForumPost_Deleted_LastActivityAtUtc");
+            });
+
+            modelBuilder.Entity<ForumComment>(entity =>
+            {
+                entity.ToTable("ForumComment", "dbo");
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.Message).HasMaxLength(1000).IsRequired();
+                entity.Property(x => x.IsDeleted).HasDefaultValue(false);
+                entity.Property(x => x.CreatedAtUtc).HasDefaultValueSql("SYSUTCDATETIME()");
+
+                entity.HasOne(x => x.ForumPost)
+                    .WithMany(x => x.Comments)
+                    .HasForeignKey(x => x.ForumPostId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.ParentComment)
+                    .WithMany(x => x.Replies)
+                    .HasForeignKey(x => x.ParentCommentId)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(x => x.Login)
+                    .WithMany()
+                    .HasForeignKey(x => x.UserId)
+                    .HasConstraintName("FK_ForumComment_Login_UserId")
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasIndex(x => new { x.ForumPostId, x.ParentCommentId, x.CreatedAtUtc })
+                    .HasDatabaseName("IX_ForumComment_Post_Parent_CreatedAtUtc");
+
+                entity.HasIndex(x => new { x.ForumPostId, x.IsDeleted, x.CreatedAtUtc })
+                    .HasDatabaseName("IX_ForumComment_Post_Deleted_CreatedAtUtc");
+            });
+
+            modelBuilder.Entity<ForumPostReaction>(entity =>
+            {
+                entity.ToTable("ForumPostReaction", "dbo");
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.CreatedAtUtc).HasDefaultValueSql("SYSUTCDATETIME()");
+
+                entity.HasOne(x => x.ForumPost)
+                    .WithMany(x => x.Reactions)
+                    .HasForeignKey(x => x.ForumPostId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.Login)
+                    .WithMany()
+                    .HasForeignKey(x => x.UserId)
+                    .HasConstraintName("FK_ForumPostReaction_Login_UserId")
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasIndex(x => new { x.ForumPostId, x.UserId })
+                    .IsUnique()
+                    .HasDatabaseName("UX_ForumPostReaction_ForumPostId_UserId");
+            });
+
+            modelBuilder.Entity<ForumCommentReaction>(entity =>
+            {
+                entity.ToTable("ForumCommentReaction", "dbo");
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.CreatedAtUtc).HasDefaultValueSql("SYSUTCDATETIME()");
+
+                entity.HasOne(x => x.ForumComment)
+                    .WithMany(x => x.Reactions)
+                    .HasForeignKey(x => x.ForumCommentId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.Login)
+                    .WithMany()
+                    .HasForeignKey(x => x.UserId)
+                    .HasConstraintName("FK_ForumCommentReaction_Login_UserId")
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasIndex(x => new { x.ForumCommentId, x.UserId })
+                    .IsUnique()
+                    .HasDatabaseName("UX_ForumCommentReaction_ForumCommentId_UserId");
+            });
+
+            modelBuilder.Entity<ForumPostTag>(entity =>
+            {
+                entity.ToTable("ForumPostTag", "dbo");
+                entity.HasKey(x => new { x.ForumPostId, x.TagId });
+
+                entity.HasOne(x => x.ForumPost)
+                    .WithMany(x => x.PostTags)
+                    .HasForeignKey(x => x.ForumPostId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.ActivityTag)
+                    .WithMany()
+                    .HasForeignKey(x => x.TagId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(x => x.TagId)
+                    .HasDatabaseName("IX_ForumPostTag_TagId");
             });
         }
     }

@@ -78,6 +78,15 @@ const router = createRouter({
       }
     },
     {
+      path: '/forum/:id',
+      name: 'forum-post',
+      component: () => import('../pages/ForumPostView.vue'),
+      meta: {
+        title: `${pre} Fórum bejegyzés`,
+        requiresAuth: true
+      }
+    },
+    {
       path: '/profile/gallery',
       name: 'profile-gallery',
       component: () => import('../pages/ProfileGalleryView.vue'),

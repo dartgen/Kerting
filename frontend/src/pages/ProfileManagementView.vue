@@ -189,7 +189,7 @@ const profilAdatok = reactive({
   email: '',
   telefon: '',
   telepules: '',
-  roleId: '',
+  roleId: 2,
   rolam: '',
   IMGString: '',
   cimkek: [] as string[]
