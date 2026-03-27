@@ -10,6 +10,7 @@ export interface ForumFeedFilters {
   maxAgeDays?: number
   roleIds?: number[]
   tagNames?: string[]
+  includeDeleted?: boolean
 }
 
 export interface UpsertForumPostPayload {
@@ -24,9 +25,36 @@ export interface AddForumCommentPayload {
   parentCommentId?: number | null
 }
 
+const buildForumFeedQuery = (filters: ForumFeedFilters) => {
+  const params = new URLSearchParams()
+
+  if (typeof filters.page === 'number') params.append('page', String(filters.page))
+  if (typeof filters.pageSize === 'number') params.append('pageSize', String(filters.pageSize))
+  if (filters.sort) params.append('sort', filters.sort)
+  if (typeof filters.search === 'string' && filters.search.trim()) params.append('search', filters.search)
+  if (typeof filters.maxAgeDays === 'number') params.append('maxAgeDays', String(filters.maxAgeDays))
+  if (typeof filters.includeDeleted === 'boolean') params.append('includeDeleted', String(filters.includeDeleted))
+
+  for (const roleId of filters.roleIds || []) {
+    params.append('roleIds', String(roleId))
+  }
+
+  for (const tagName of filters.tagNames || []) {
+    if (!tagName?.trim()) continue
+    params.append('tagNames', tagName)
+  }
+
+  return params
+}
+
 export const forumService = {
   getFeed(filters: ForumFeedFilters) {
-    return api.get('/Forum/feed', { params: filters })
+    return api.get('/Forum/feed', {
+      params: buildForumFeedQuery(filters),
+      paramsSerializer: {
+        serialize: (params) => params.toString()
+      }
+    })
   },
 
   getPostById(

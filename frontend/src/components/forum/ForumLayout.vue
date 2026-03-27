@@ -13,6 +13,7 @@ interface ForumFeedItem {
   userId: number
   title: string
   description: string
+  attachedGalleryItemId?: number | null
   createdAtUtc: string
   updatedAtUtc?: string | null
   lastActivityAtUtc: string
@@ -62,6 +63,7 @@ interface ForumDetail {
   userId: number
   title: string
   description: string
+  attachedGalleryItemId?: number | null
   createdAtUtc: string
   updatedAtUtc?: string | null
   lastActivityAtUtc: string
@@ -117,6 +119,7 @@ const filters = reactive({
   selectedRoleIds: [] as number[],
   selectedTags: [] as string[]
 })
+const showDeleted = ref(false)
 
 const feedItems = ref<ForumFeedItem[]>([])
 const feedPage = ref(1)
@@ -133,8 +136,20 @@ const createTags = ref<string[]>([])
 const savingPost = ref(false)
 const showTagSuggestions = ref(false)
 
+const editingPostId = ref<number | null>(null)
+const editForm = reactive({
+  title: '',
+  description: '',
+  tagInput: ''
+})
+const editTags = ref<string[]>([])
+const editSaving = ref(false)
+const editShowTagSuggestions = ref(false)
+
 const ownGalleryItems = ref<OwnGalleryItem[]>([])
 const selectedGalleryItemId = ref<number | null>(null)
+const editSelectedGalleryItemId = ref<number | null>(null)
+const pickerMode = ref<'create' | 'edit'>('create')
 const pickerOpen = ref(false)
 const pickerLoading = ref(false)
 const pickerLoaded = ref(false)
@@ -163,13 +178,23 @@ const canCreateTag = computed(() => {
 const selectedRoleSet = computed(() => new Set(filters.selectedRoleIds))
 const selectedTagSet = computed(() => new Set(filters.selectedTags.map(t => t.toLowerCase())))
 const createTagSet = computed(() => new Set(createTags.value.map(t => t.toLowerCase())))
+const editTagSet = computed(() => new Set(editTags.value.map(t => t.toLowerCase())))
 const selectedGalleryItem = computed(() => ownGalleryItems.value.find(item => item.id === selectedGalleryItemId.value) || null)
+const selectedEditGalleryItem = computed(() => ownGalleryItems.value.find(item => item.id === editSelectedGalleryItemId.value) || null)
 const filteredTagSuggestions = computed(() => {
   const keyword = createForm.tagInput.toLowerCase().trim()
   if (!keyword) return []
 
   return allTags.value
     .filter(tag => tag.toLowerCase().includes(keyword) && !createTagSet.value.has(tag.toLowerCase()))
+    .slice(0, 8)
+})
+const filteredEditTagSuggestions = computed(() => {
+  const keyword = editForm.tagInput.toLowerCase().trim()
+  if (!keyword) return []
+
+  return allTags.value
+    .filter(tag => tag.toLowerCase().includes(keyword) && !editTagSet.value.has(tag.toLowerCase()))
     .slice(0, 8)
 })
 
@@ -210,6 +235,56 @@ const getApiErrorMessage = (error: unknown, fallback: string) => {
   }
   return fallback
 }
+
+const getCurrentUserId = () => {
+  const raw = authStore.felhasznalo?.id
+  const parsed = Number(raw)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const getCurrentUserName = () => {
+  const profile = authStore.profilAdatok || {}
+  const vezetekNev = String(profile.vezetekNev || '').trim()
+  const keresztNev = String(profile.keresztNev || '').trim()
+  const fullName = `${vezetekNev} ${keresztNev}`.trim()
+  if (fullName) return fullName
+  return String(authStore.felhasznalo?.felhasznaloNev || 'Te')
+}
+
+const getCurrentUserRoleName = () => String(authStore.profilAdatok?.roleName || '').trim()
+
+const getCurrentUserProfileImageUrl = () => {
+  const fileName = String(authStore.profilAdatok?.imgString || '').trim()
+  return fileName ? getFullImageUrl(`/resources/profiles/${fileName}`) : null
+}
+
+const extractCreatedCommentId = (responseData: unknown) => {
+  if (!responseData || typeof responseData !== 'object') return undefined
+  const candidate = responseData as { id?: unknown; Id?: unknown }
+  const numeric = Number(candidate.id ?? candidate.Id)
+  return Number.isFinite(numeric) ? numeric : undefined
+}
+
+const createLocalComment = (message: string, id?: number, parentCommentId?: number | null): ForumComment => ({
+  id: id ?? -Date.now(),
+  parentCommentId: parentCommentId ?? null,
+  userId: getCurrentUserId(),
+  message,
+  isDeleted: false,
+  createdAtUtc: new Date().toISOString(),
+  updatedAtUtc: null,
+  authorName: getCurrentUserName(),
+  authorRoleName: getCurrentUserRoleName(),
+  profileImageUrl: getCurrentUserProfileImageUrl(),
+  likesCount: 0,
+  dislikesCount: 0,
+  myReaction: null,
+  canDelete: true,
+  canRestore: false,
+  hasMoreReplies: false,
+  nextReplyCursor: 0,
+  replies: []
+})
 
 const syncFiltersFromQuery = () => {
   if (!isForumListRoute.value) return
@@ -273,10 +348,6 @@ const loadMeta = async () => {
   allTags.value = (tagRes.data || [])
     .map((t: string) => t.trim())
     .filter(Boolean)
-
-  if (!filters.selectedRoleIds.length) {
-    filters.selectedRoleIds = roles.value.map(r => r.id)
-  }
 }
 
 const fetchFeed = async (append = false) => {
@@ -292,7 +363,8 @@ const fetchFeed = async (append = false) => {
       search: normalizeText(filters.search) || undefined,
       maxAgeDays: filters.maxAgeDays,
       roleIds: filters.selectedRoleIds,
-      tagNames: filters.selectedTags
+      tagNames: filters.selectedTags,
+      includeDeleted: isAdmin.value && showDeleted.value
     })
 
     const incoming = (data.items || []) as ForumFeedItem[]
@@ -321,7 +393,7 @@ const fetchDetail = async (appendComments = false) => {
       commentCursor: appendComments && detail.value ? detail.value.comments.length : 0,
       commentPageSize: 20,
       replyPageSize: 4,
-      includeDeleted: isAdmin.value
+      includeDeleted: isAdmin.value && showDeleted.value
     })
 
     const mappedComments = ((data.comments || []) as ForumComment[]).map(mapComment)
@@ -403,8 +475,43 @@ const selectCreateTagSuggestion = (tag: string) => {
   addCreateTag()
 }
 
+const addEditTag = () => {
+  const tag = editForm.tagInput.trim()
+  if (!tag) return
+  if (editTags.value.some(t => t.toLowerCase() === tag.toLowerCase())) {
+    editForm.tagInput = ''
+    return
+  }
+
+  if (!allTags.value.some(t => t.toLowerCase() === tag.toLowerCase()) && !canCreateTag.value) {
+    toastStore.addToast('Új címke létrehozásához nincs jogosultságod.', 4000, 'warning')
+    return
+  }
+
+  editTags.value = [...editTags.value, tag]
+  editForm.tagInput = ''
+  editShowTagSuggestions.value = false
+}
+
+const selectEditTagSuggestion = (tag: string) => {
+  editForm.tagInput = tag
+  addEditTag()
+}
+
+const handleCreateTagInput = () => {
+  showTagSuggestions.value = createForm.tagInput.trim().length > 0
+}
+
+const handleEditTagInput = () => {
+  editShowTagSuggestions.value = editForm.tagInput.trim().length > 0
+}
+
 const removeCreateTag = (tag: string) => {
   createTags.value = createTags.value.filter(t => t.toLowerCase() !== tag.toLowerCase())
+}
+
+const removeEditTag = (tag: string) => {
+  editTags.value = editTags.value.filter(t => t.toLowerCase() !== tag.toLowerCase())
 }
 
 const openDetail = (postId: number) => {
@@ -445,6 +552,15 @@ const fetchOwnGalleryItems = async () => {
 }
 
 const openGalleryPicker = async () => {
+  pickerMode.value = 'create'
+  pickerOpen.value = true
+  if (!pickerLoaded.value) {
+    await fetchOwnGalleryItems()
+  }
+}
+
+const openEditGalleryPicker = async () => {
+  pickerMode.value = 'edit'
   pickerOpen.value = true
   if (!pickerLoaded.value) {
     await fetchOwnGalleryItems()
@@ -456,12 +572,77 @@ const closeGalleryPicker = () => {
 }
 
 const selectGalleryItem = (itemId: number) => {
-  selectedGalleryItemId.value = itemId
+  if (pickerMode.value === 'edit') {
+    editSelectedGalleryItemId.value = itemId
+  } else {
+    selectedGalleryItemId.value = itemId
+  }
   closeGalleryPicker()
 }
 
 const clearSelectedGalleryItem = () => {
   selectedGalleryItemId.value = null
+}
+
+const clearEditSelectedGalleryItem = () => {
+  editSelectedGalleryItemId.value = null
+}
+
+const openEditPost = (post: {
+  id: number
+  title: string
+  description: string
+  attachedGalleryItemId?: number | null
+  tags: string[]
+}) => {
+  editingPostId.value = post.id
+  editForm.title = post.title || ''
+  editForm.description = post.description || ''
+  editForm.tagInput = ''
+  editTags.value = [...(post.tags || [])]
+  editSelectedGalleryItemId.value = post.attachedGalleryItemId ?? null
+  editShowTagSuggestions.value = false
+}
+
+const closeEditPost = () => {
+  editingPostId.value = null
+  editForm.title = ''
+  editForm.description = ''
+  editForm.tagInput = ''
+  editTags.value = []
+  editSelectedGalleryItemId.value = null
+  editShowTagSuggestions.value = false
+}
+
+const submitEditPost = async () => {
+  if (!editingPostId.value || editSaving.value) return
+
+  const title = editForm.title.trim()
+  const description = editForm.description.trim()
+  if (!title || !description) {
+    toastStore.addToast('A cím és leírás kötelező.', 3500, 'warning')
+    return
+  }
+
+  editSaving.value = true
+  try {
+    await forumService.updatePost(editingPostId.value, {
+      title,
+      description,
+      attachedGalleryItemId: editSelectedGalleryItemId.value,
+      tags: editTags.value
+    })
+
+    toastStore.addToast('Bejegyzés frissítve.', 3000, 'success')
+    const wasDetailMode = isDetailMode.value
+    closeEditPost()
+    await (wasDetailMode ? fetchDetail(false) : fetchFeed(false))
+  } catch (error) {
+    console.error('Forum post frissítési hiba', error)
+    toastStore.addToast(getApiErrorMessage(error, 'Nem sikerült frissíteni a bejegyzést.'), 5000, 'error')
+  } finally {
+    editSaving.value = false
+  }
 }
 
 const applyReactionDelta = (current: boolean | null | undefined, target: boolean) => {
@@ -650,9 +831,13 @@ const submitComment = async () => {
   if (!message) return
 
   try {
-    await forumService.addComment(detail.value.id, { message })
+    const { data } = await forumService.addComment(detail.value.id, { message })
+    const createdId = extractCreatedCommentId(data)
+    const localComment = createLocalComment(message, createdId, null)
+
+    detail.value.comments = [localComment, ...detail.value.comments]
+    replyVisibility.value[localComment.id] = true
     detailCommentDraft.value = ''
-    await fetchDetail(false)
   } catch (error) {
     console.error('Comment küldési hiba', error)
     toastStore.addToast('A hozzászólás küldése nem sikerült.', 3500, 'error')
@@ -664,11 +849,19 @@ const submitReply = async (parentCommentId: number) => {
   const message = replyDraft.value.trim()
   if (!message) return
 
+  const parentComment = findCommentById(detail.value.comments, parentCommentId)
+  if (!parentComment) return
+
   try {
-    await forumService.addComment(detail.value.id, { message, parentCommentId })
+    const { data } = await forumService.addComment(detail.value.id, { message, parentCommentId })
+    const createdId = extractCreatedCommentId(data)
+    const localReply = createLocalComment(message, createdId, parentCommentId)
+
+    parentComment.replies = [localReply, ...parentComment.replies]
+    parentComment.hasMoreReplies = false
+    replyVisibility.value[parentCommentId] = true
     replyDraft.value = ''
     replyingToComment.value = null
-    await fetchDetail(false)
   } catch (error) {
     console.error('Reply küldési hiba', error)
     toastStore.addToast('A válasz küldése nem sikerült.', 3500, 'error')
@@ -705,7 +898,12 @@ const loadMoreReplies = async (comment: ForumComment) => {
 
   loadingReplies.value[comment.id] = true
   try {
-    const { data } = await forumService.getReplies(comment.id, comment.nextReplyCursor || comment.replies.length, 5, isAdmin.value)
+    const { data } = await forumService.getReplies(
+      comment.id,
+      comment.nextReplyCursor || comment.replies.length,
+      5,
+      isAdmin.value && showDeleted.value
+    )
     if (!data?.found) return
 
     const incoming = ((data.replies || []) as ForumComment[]).map(mapComment)
@@ -721,10 +919,19 @@ const loadMoreReplies = async (comment: ForumComment) => {
 }
 
 watch(
-  () => [filters.sort, filters.search, filters.maxAgeDays, JSON.stringify(filters.selectedRoleIds), JSON.stringify(filters.selectedTags)],
+  () => [filters.sort, filters.search, filters.maxAgeDays, showDeleted.value, JSON.stringify(filters.selectedRoleIds), JSON.stringify(filters.selectedTags)],
   async () => {
     if (!isForumListRoute.value) return
     await fetchFeed(false)
+  }
+)
+
+watch(
+  () => showDeleted.value,
+  async () => {
+    if (isDetailMode.value) {
+      await fetchDetail(false)
+    }
   }
 )
 
@@ -819,6 +1026,13 @@ onMounted(async () => {
             </button>
           </div>
         </div>
+
+        <div v-if="isAdmin">
+          <label class="flex items-center gap-2 text-earth-200 text-sm">
+            <input v-model="showDeleted" type="checkbox" />
+            Törölt elemek megjelenítése
+          </label>
+        </div>
       </aside>
 
       <section class="space-y-4">
@@ -839,7 +1053,7 @@ onMounted(async () => {
             <div class="rounded-lg border border-earth-100/10 bg-earth-800/60 p-3 space-y-2">
               <p class="text-sm text-earth-200">Csatolt saját galéria kép (opcionális)</p>
               <p v-if="selectedGalleryItem" class="text-sm text-earth-100">
-                Kiválasztva: <span class="font-semibold">{{ selectedGalleryItem.title }}</span> (ID: {{ selectedGalleryItem.id }})
+                Kiválasztva: <span class="font-semibold">{{ selectedGalleryItem.title }}</span>
               </p>
               <p v-else class="text-sm text-earth-300">Nincs kép kiválasztva</p>
               <div class="flex flex-wrap gap-2">
@@ -858,6 +1072,7 @@ onMounted(async () => {
                   @keydown.enter.prevent="addCreateTag"
                   @focus="showTagSuggestions = true"
                   @blur="showTagSuggestions = false"
+                  @input="handleCreateTagInput"
                 />
                 <ul
                   v-if="showTagSuggestions && filteredTagSuggestions.length"
@@ -933,6 +1148,7 @@ onMounted(async () => {
                 </div>
                 <div class="flex items-center gap-2">
                   <button type="button" class="px-3 py-1.5 rounded-lg text-sm bg-earth-700 text-earth-100" @click="openDetail(post.id)">Megnyitás</button>
+                  <button v-if="post.canEdit" type="button" class="px-3 py-1.5 rounded-lg text-sm bg-blue-700/80 text-blue-100" @click="openEditPost(post)">Szerkesztés</button>
                   <button v-if="post.canDelete" type="button" class="px-3 py-1.5 rounded-lg text-sm bg-red-700/80 text-red-100" @click="deletePost(post.id)">Törlés</button>
                   <button v-if="post.canRestore" type="button" class="px-3 py-1.5 rounded-lg text-sm bg-green-700/80 text-green-100" @click="restorePost(post.id)">Visszaállítás</button>
                 </div>
@@ -940,6 +1156,10 @@ onMounted(async () => {
             </div>
           </div>
         </article>
+
+        <div v-if="!feedLoading && !feedItems.length" class="rounded-xl border border-earth-100/10 bg-earth-900/40 p-6 text-earth-200">
+          Nincs találat a kiválasztott szűrőkre.
+        </div>
 
         <div class="flex justify-center py-2">
           <button v-if="feedHasMore" type="button" :disabled="feedLoading" @click="fetchFeed(true)" class="px-4 py-2 rounded-lg bg-earth-700 text-earth-100 disabled:opacity-60">
@@ -973,6 +1193,7 @@ onMounted(async () => {
               <button v-if="detail.canModerate" type="button" class="px-3 py-1 rounded-lg bg-earth-700 text-earth-100" @click="toggleLocked(detail.id, !detail.isLocked)">
                 {{ detail.isLocked ? 'Feloldás' : 'Lezárás' }}
               </button>
+              <button v-if="detail.canEdit" type="button" class="px-3 py-1 rounded-lg bg-blue-700/80 text-blue-100" @click="openEditPost(detail)">Szerkesztés</button>
               <button v-if="detail.canDelete" type="button" class="px-3 py-1 rounded-lg bg-red-700/80 text-red-100" @click="deletePost(detail.id)">Törlés</button>
               <button v-if="detail.canRestore" type="button" class="px-3 py-1 rounded-lg bg-green-700/80 text-green-100" @click="restorePost(detail.id)">Visszaállítás</button>
             </div>
@@ -1101,7 +1322,7 @@ onMounted(async () => {
     </div>
   </InnerPageLayout>
 
-  <div v-if="pickerOpen" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" @click.self="closeGalleryPicker">
+  <div v-if="pickerOpen" class="fixed inset-0 z-[70] bg-black/60 flex items-center justify-center p-4" @click.self="closeGalleryPicker">
     <div class="w-full max-w-5xl max-h-[85vh] overflow-hidden rounded-2xl border border-earth-100/10 bg-earth-900/95 shadow-2xl">
       <div class="flex items-center justify-between px-4 py-3 border-b border-earth-100/10">
         <h3 class="text-lg font-semibold text-earth-50">Saját galéria képek</h3>
@@ -1123,10 +1344,83 @@ onMounted(async () => {
             <img :src="item.imageUrl" :alt="item.title" class="w-full h-32 object-cover" />
             <div class="p-2">
               <p class="text-sm text-earth-100 truncate">{{ item.title }}</p>
-              <p class="text-xs text-earth-300">ID: {{ item.id }}</p>
             </div>
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="editingPostId" class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" @click.self="closeEditPost">
+    <div class="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-earth-100/10 bg-earth-900 p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 class="text-xl font-semibold text-earth-50">Bejegyzés szerkesztése</h3>
+        <button type="button" class="text-earth-300 hover:text-earth-50" @click="closeEditPost">Bezárás</button>
+      </div>
+
+      <input v-model="editForm.title" type="text" placeholder="Cím"
+        class="w-full rounded-lg bg-earth-800/80 px-3 py-2 text-earth-50 border border-earth-100/10" />
+      <textarea v-model="editForm.description" rows="5" placeholder="Leírás"
+        class="w-full rounded-lg bg-earth-800/80 px-3 py-2 text-earth-50 border border-earth-100/10" />
+
+      <div class="rounded-lg border border-earth-100/10 bg-earth-800/60 p-3 space-y-2">
+        <p class="text-sm text-earth-200">Csatolt saját galéria kép (opcionális)</p>
+        <p v-if="selectedEditGalleryItem" class="text-sm text-earth-100">
+          Kiválasztva: <span class="font-semibold">{{ selectedEditGalleryItem.title }}</span>
+        </p>
+        <p v-else class="text-sm text-earth-300">Nincs kép kiválasztva</p>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" class="px-3 py-2 rounded-lg bg-earth-700 text-earth-100" @click="openEditGalleryPicker">Kép választó megnyitása</button>
+          <button v-if="selectedEditGalleryItem" type="button" class="px-3 py-2 rounded-lg bg-red-700/80 text-red-100" @click="clearEditSelectedGalleryItem">Kiválasztás törlése</button>
+        </div>
+      </div>
+
+      <div class="relative flex gap-2">
+        <div class="flex-1">
+          <input
+            v-model="editForm.tagInput"
+            type="text"
+            placeholder="Címke"
+            class="w-full rounded-lg bg-earth-800/80 px-3 py-2 text-earth-50 border border-earth-100/10"
+            @keydown.enter.prevent="addEditTag"
+            @focus="editShowTagSuggestions = true"
+            @blur="editShowTagSuggestions = false"
+            @input="handleEditTagInput"
+          />
+          <ul
+            v-if="editShowTagSuggestions && filteredEditTagSuggestions.length"
+            class="absolute left-0 right-0 top-11 z-20 rounded-lg border border-earth-600 bg-earth-800 shadow-xl overflow-hidden max-h-44 overflow-y-auto"
+          >
+            <li
+              v-for="suggestion in filteredEditTagSuggestions"
+              :key="suggestion"
+              class="px-3 py-2 text-sm text-earth-100 hover:bg-earth-700 cursor-pointer"
+              @mousedown.prevent="selectEditTagSuggestion(suggestion)"
+            >
+              {{ suggestion }}
+            </li>
+          </ul>
+        </div>
+        <button type="button" @click="addEditTag" class="px-3 py-2 rounded-lg bg-earth-700 text-earth-100">Hozzáad</button>
+      </div>
+
+      <div class="flex flex-wrap gap-2">
+        <button
+          v-for="tag in editTags"
+          :key="tag"
+          type="button"
+          class="px-2.5 py-1 rounded-full text-xs bg-blue-500/20 border border-blue-400 text-blue-100"
+          @click="removeEditTag(tag)"
+        >
+          {{ tag }} ×
+        </button>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button type="button" class="px-4 py-2 rounded-lg bg-earth-700 text-earth-100" @click="closeEditPost">Mégse</button>
+        <button type="button" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-60" :disabled="editSaving" @click="submitEditPost">
+          {{ editSaving ? 'Mentés...' : 'Mentés' }}
+        </button>
       </div>
     </div>
   </div>
