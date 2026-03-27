@@ -82,6 +82,32 @@
                   <option v-if="profilAdatok.roleId === 1" :value="1" class="bg-earth-800 text-earth-50">Adminisztrátor</option>
                 </select>
               </div>
+
+              <div class="flex flex-col mt-2">
+                <label class="text-sm font-semibold text-earth-100 mb-2 ml-1">Közösségi média</label>
+                <div class="flex gap-5 ml-1">
+                  <button type="button" @click="openModal('facebook')"
+                          :class="['p-2.5 rounded-xl transition-all shadow-md', profilAdatok.facebook ? 'bg-blue-600 hover:bg-blue-500' : 'bg-earth-800 border border-earth-600 hover:bg-earth-700 text-earth-300']">
+                    <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                  </button>
+
+                  <button type="button" @click="openModal('instagram')"
+                          :class="['p-2.5 rounded-xl transition-all shadow-md', profilAdatok.instagram ? 'bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 hover:opacity-90 text-white' : 'bg-earth-800 border border-earth-600 hover:bg-earth-700 text-earth-300']">
+                    <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                    </svg>
+                  </button>
+
+                  <button type="button" @click="openModal('tiktok')"
+                          :class="['p-2.5 rounded-xl transition-all shadow-md', profilAdatok.tiktok ? 'bg-black text-white hover:bg-gray-900 border border-gray-700' : 'bg-earth-800 border border-earth-600 hover:bg-earth-700 text-earth-300']">
+                    <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div class="flex flex-col h-full">
@@ -163,6 +189,39 @@
         </div>
       </div>
     </div>
+
+    <Teleport to="body">
+      <div v-if="isModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div class="bg-earth-900 border border-earth-200/20 rounded-2xl w-full max-w-sm p-6 shadow-[0_10px_40px_rgba(0,0,0,0.8)] transform transition-all"
+             @click.stop>
+
+          <div class="flex items-center justify-between mb-5">
+            <h3 class="text-xl font-bold text-earth-50 capitalize">{{ currentSocial }} link</h3>
+            <button @click="closeModal" class="text-earth-300 hover:text-red-400 transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+          </div>
+
+          <div class="mb-6">
+            <label class="text-sm text-earth-100 mb-2 block">Másold be a profilod URL-jét:</label>
+            <input type="url"
+                   v-model="tempUrl"
+                   @keyup.enter="saveSocialUrl"
+                   :placeholder="`https://www.${currentSocial}.com/profilod`"
+                   class="w-full bg-earth-50/10 border border-earth-200/30 rounded-lg py-3 px-4 text-earth-50 focus:outline-none focus:ring-2 focus:ring-green-400 transition-all shadow-inner placeholder-earth-200/50">
+          </div>
+
+          <div class="flex justify-end gap-3">
+            <button type="button" @click="closeModal" class="px-5 py-2.5 rounded-lg text-earth-100 hover:bg-earth-800 transition-colors font-medium">
+              Mégse
+            </button>
+            <button type="button" @click="saveSocialUrl" class="px-5 py-2.5 bg-green-500/90 hover:bg-green-400 text-white rounded-lg font-bold shadow-lg transition-colors border border-green-300/50">
+              Mentés
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -179,10 +238,10 @@ const router = useRouter();
 const toastStore = useToastStore();
 
 const isLoading = ref(false);
-const telefonHiba = ref(false); // Validációs változó a telefonszámhoz
+const telefonHiba = ref(false);
 const roles = ref<{ id: number, name: string }[]>([]);
 
-// Reaktív adatok (meg kell egyeznie a backend DTO-val)
+// Reaktív adatok kiegészítve a közösségi média mezőkkel
 const profilAdatok = reactive({
   vezetekNev: '',
   keresztNev: '',
@@ -192,8 +251,16 @@ const profilAdatok = reactive({
   roleId: 2,
   rolam: '',
   IMGString: '',
-  cimkek: [] as string[]
+  cimkek: [] as string[],
+  facebook: '',
+  instagram: '',
+  tiktok: ''
 });
+
+// Modal állapota és változói
+const isModalOpen = ref(false);
+const currentSocial = ref<'facebook' | 'instagram' | 'tiktok' | ''>('');
+const tempUrl = ref('');
 
 // Címke kezelés adatai
 const cimkeInput = ref<HTMLInputElement | null>(null);
@@ -202,19 +269,38 @@ const cimkek = ref<string[]>([]);
 const eloreDefinialtCimkek = ref<string[]>([]);
 const mutasdAzAjanlasokat = ref(false);
 
-// SZŰRÉS: Ne kínálja fel az Admin (ID: 1) szerepkört
 const szurtRoles = computed(() => {
   return roles.value.filter(r => r.id !== 1);
 });
 
-// Autocomplete szűrés címkékhez
 const szurtAjanlasok = computed(() => {
   const keresoSzoveg = ujCimke.value.toLowerCase().trim();
   if (!keresoSzoveg) return [];
   return eloreDefinialtCimkek.value.filter(c => c.toLowerCase().includes(keresoSzoveg) && !cimkek.value.includes(c));
 });
 
-// Adatok betöltése
+// Modal kezelő függvények
+const openModal = (social: 'facebook' | 'instagram' | 'tiktok') => {
+  currentSocial.value = social;
+  tempUrl.value = profilAdatok[social] || '';
+  isModalOpen.value = true;
+};
+
+const closeModal = () => {
+  isModalOpen.value = false;
+  setTimeout(() => {
+    currentSocial.value = '';
+    tempUrl.value = '';
+  }, 200);
+};
+
+const saveSocialUrl = () => {
+  if (currentSocial.value) {
+    profilAdatok[currentSocial.value] = tempUrl.value.trim();
+  }
+  closeModal();
+};
+
 const adatokBetoltese = async () => {
   try {
     const rolesRes = await authService.getRoles();
@@ -234,15 +320,14 @@ const adatokBetoltese = async () => {
     profilAdatok.rolam = d.rolam || '';
     profilAdatok.roleId = d.roleId || 2;
 
-    // ÚJ RÉSZ: Betöltjük a backendtől kapott címkéket a Vue.js változókba
+    // Közösségi média adatok betöltése
+    profilAdatok.facebook = d.facebook || '';
+    profilAdatok.instagram = d.instagram || '';
+    profilAdatok.tiktok = d.tiktok || '';
+
     if (d.cimkek && Array.isArray(d.cimkek)) {
-      // 1. Megtisztítjuk a bejövő adatokat a felesleges szóközöktől (SQL CHAR típus miatt)
       const tisztitottCimkek = d.cimkek.map((c: string) => c.trim());
-
-      // 2. Beletesszük a megjelenítésért felelős tömbbe (ez rajzolja ki a zöld gombokat)
       cimkek.value = tisztitottCimkek;
-
-      // 3. Beletesszük a profilAdatok objektumba is (hogy szinkronban legyen)
       profilAdatok.cimkek = tisztitottCimkek;
     } else {
       cimkek.value = [];
@@ -258,7 +343,6 @@ onMounted(() => {
   adatokBetoltese();
 });
 
-// Műveletek
 const selectAjanlas = (cimke: string) => {
   ujCimke.value = cimke;
   addCimke();
@@ -287,7 +371,6 @@ const getCimkeStyle = (index: number) => {
 };
 
 const adatokMentese = async () => {
-  // 1. Telefonszám ellenőrzése
   if (profilAdatok.telefon) {
     const tisztitottSzam = profilAdatok.telefon.replace(/[\s-]/g, '');
     const telefonRegex = /^(\+36|06)\d{8,9}$/;
@@ -295,13 +378,13 @@ const adatokMentese = async () => {
     if (!telefonRegex.test(tisztitottSzam)) {
       telefonHiba.value = true;
       toastStore.addToast('Hibás telefonszám formátum!', 4000, 'error');
-      return; // Mentés megállítása
+      return;
     }
 
-    profilAdatok.telefon = tisztitottSzam; // Tiszta adat elmentése az objektumba
+    profilAdatok.telefon = tisztitottSzam;
   }
   profilAdatok.cimkek = cimkek.value;
-  // 2. Adatok mentése a szerverre
+
   isLoading.value = true;
   try {
     await authService.updateProfile(profilAdatok);
