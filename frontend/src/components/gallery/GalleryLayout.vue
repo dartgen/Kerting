@@ -209,7 +209,7 @@ const submitComment = async () => {
   commentSubmitError.value = ''
 
   try {
-    await api.post(`/Gallery/${expandedCardId.value}/comment`, trimmedMessage)
+    await api.post(`/Gallery/${expandedCardId.value}/comment`, { Message: trimmedMessage })
     commentDraft.value = ''
     await openExpandedCard(expandedCardId.value)
   } catch (err) {
