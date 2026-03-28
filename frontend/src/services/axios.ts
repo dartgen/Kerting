@@ -1,7 +1,12 @@
 import axios from 'axios';
 
+const configuredBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+const normalizedBaseUrl = configuredBaseUrl
+  ? `${configuredBaseUrl.replace(/\/+$/, '').replace(/\/api$/i, '')}/api`
+  : '/api';
+
 const apiClient = axios.create({
-  baseURL: 'https://localhost:7067/api',
+  baseURL: normalizedBaseUrl,
   headers: {
     'Content-Type': 'application/json',
   },

@@ -306,7 +306,7 @@ const getImageUrl = (fileName: string) => {
   if (!axiosBaseUrl) return null;
 
   const origin = new URL(axiosBaseUrl).origin;
-  return `${origin}/resources/profiles/${fileName}`;
+  return `${origin}/resources/Profiles/${fileName}`;
 }
 </script>
 

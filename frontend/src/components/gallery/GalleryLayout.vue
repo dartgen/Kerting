@@ -321,11 +321,23 @@ const syncInteractionMode = () => {
   isDesktopInteraction.value = Boolean(mediaQuery?.matches)
 }
 
+const getApiOrigin = () => {
+  const baseURL = String(api.defaults.baseURL || '').trim()
+  if (!baseURL) return window.location.origin
+
+  try {
+    return new URL(baseURL, window.location.origin).origin
+  } catch {
+    return window.location.origin
+  }
+}
+
 const getFullImageUrl = (url: string) => {
   if (!url) return ''
   if (url.startsWith('http')) return url
-  const baseUrl = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:44351'
-  return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
+
+  const origin = getApiOrigin()
+  return `${origin}${url.startsWith('/') ? '' : '/'}${url}`
 }
 
 const endpoint = computed(() => isOwnMode.value ? '/Gallery/mine' : '/Gallery/feed')

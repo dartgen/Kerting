@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import InnerPageLayout from '@/components/ui/InnerPageLayout.vue'
 import PageTitle from '@/components/ui/PageTitle.vue'
 import { forumService, type ForumSort } from '@/services/forumService'
+import api from '@/services/axios'
 import { authService } from '@/services/authService'
 import { useAuthStore } from '@/stores/authStore'
 import { useToastStore } from '@/stores/toast'
@@ -205,11 +206,23 @@ const parseIntQuery = (value: unknown, fallback: number) => {
 
 const normalizeText = (value: string) => value.trim()
 
+const getApiOrigin = () => {
+  const baseURL = String(api.defaults.baseURL || '').trim()
+  if (!baseURL) return window.location.origin
+
+  try {
+    return new URL(baseURL, window.location.origin).origin
+  } catch {
+    return window.location.origin
+  }
+}
+
 const getFullImageUrl = (url?: string | null) => {
   if (!url) return ''
   if (url.startsWith('http')) return url
-  const baseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace('/api', '') || 'https://localhost:7067'
-  return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
+
+  const origin = getApiOrigin()
+  return `${origin}${url.startsWith('/') ? '' : '/'}${url}`
 }
 
 const excerpt = (text: string, maxLength = 220) => {
