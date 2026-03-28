@@ -31,7 +31,16 @@
               </div>
 
               <div class="flex flex-col">
-                <label class="text-sm font-semibold text-earth-100 mb-1 ml-1">E-mail cím</label>
+                <div class="flex items-center justify-between mb-1 ml-1">
+                  <label class="text-sm font-semibold text-earth-100">E-mail cím</label>
+                  <label class="flex items-center cursor-pointer group">
+                    <span class="mr-2 text-xs text-earth-200 group-hover:text-earth-100 transition-colors">Publikus</span>
+                    <div class="relative">
+                      <input type="checkbox" v-model="profilAdatok.emailPublikus" class="sr-only peer">
+                      <div class="w-9 h-5 bg-earth-800/80 border border-earth-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-earth-300 peer-checked:after:bg-white after:border-earth-600 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500 peer-checked:border-green-400 shadow-inner"></div>
+                    </div>
+                  </label>
+                </div>
                 <div class="relative">
                   <svg class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-earth-200/70 pointer-events-none" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
@@ -42,7 +51,16 @@
               </div>
 
               <div class="flex flex-col">
-                <label class="text-sm font-semibold text-earth-100 mb-1 ml-1">Telefonszám</label>
+                <div class="flex items-center justify-between mb-1 ml-1">
+                  <label class="text-sm font-semibold text-earth-100">Telefonszám</label>
+                  <label class="flex items-center cursor-pointer group">
+                    <span class="mr-2 text-xs text-earth-200 group-hover:text-earth-100 transition-colors">Publikus</span>
+                    <div class="relative">
+                      <input type="checkbox" v-model="profilAdatok.telefonPublikus" class="sr-only peer">
+                      <div class="w-9 h-5 bg-earth-800/80 border border-earth-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-earth-300 peer-checked:after:bg-white after:border-earth-600 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500 peer-checked:border-green-400 shadow-inner"></div>
+                    </div>
+                  </label>
+                </div>
                 <div class="relative">
                   <svg class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-earth-200/70 pointer-events-none" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-2.896-1.596-5.539-4.239-7.135-7.135l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
@@ -236,11 +254,14 @@ import type { RoleDto, UpdateProfilePayload } from '@/types/auth';
 
 type SocialPlatform = 'facebook' | 'instagram' | 'tiktok';
 
+// Kibővítettük a típust a két új logikai változóval
 interface ProfileManagementForm extends UpdateProfilePayload {
   IMGString: string;
   facebook: string;
   instagram: string;
   tiktok: string;
+  emailPublikus: boolean;
+  telefonPublikus: boolean;
 }
 
 const authStore = useAuthStore();
@@ -251,7 +272,7 @@ const isLoading = ref(false);
 const telefonHiba = ref(false);
 const roles = ref<RoleDto[]>([]);
 
-// Reaktív adatok kiegészítve a közösségi média mezőkkel
+// Reaktív adatok kiegészítve az új változókkal
 const profilAdatok = reactive<ProfileManagementForm>({
   vezetekNev: '',
   keresztNev: '',
@@ -264,7 +285,9 @@ const profilAdatok = reactive<ProfileManagementForm>({
   cimkek: [],
   facebook: '',
   instagram: '',
-  tiktok: ''
+  tiktok: '',
+  emailPublikus: false, // Alapértelmezett érték
+  telefonPublikus: false  // Alapértelmezett érték
 });
 
 // Modal állapota és változói
@@ -330,10 +353,12 @@ const adatokBetoltese = async () => {
     profilAdatok.rolam = d.rolam || '';
     profilAdatok.roleId = d.roleId || 2;
 
-    // Közösségi média adatok betöltése
+    // Közösségi média és láthatósági adatok betöltése
     profilAdatok.facebook = d.facebook || '';
     profilAdatok.instagram = d.instagram || '';
     profilAdatok.tiktok = d.tiktok || '';
+    profilAdatok.emailPublikus = !!d.emailPublikus; // Boolean-ra konvertálva
+    profilAdatok.telefonPublikus = !!d.telefonPublikus;
 
     if (d.cimkek && Array.isArray(d.cimkek)) {
       const tisztitottCimkek = d.cimkek.map((c: string) => c.trim());

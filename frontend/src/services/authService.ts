@@ -65,7 +65,9 @@ export const authService = {
       imgString: profilAdatok.IMGString,
       facebook: profilAdatok.facebook,
       instagram: profilAdatok.instagram,
-      tiktok: profilAdatok.tiktok
+      tiktok: profilAdatok.tiktok,
+      emailPublikus: profilAdatok.emailPublikus,
+      telefonPublikus: profilAdatok.telefonPublikus
     });
   },
 

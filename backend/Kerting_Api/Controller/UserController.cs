@@ -50,6 +50,8 @@ namespace Kerting_Api.Controller
             existingUser.Facebook = updatedUser.Facebook;
             existingUser.Instagram = updatedUser.Instagram;
             existingUser.Tiktok = updatedUser.Tiktok;
+            existingUser.EmailPublikus = updatedUser.EmailPublikus;
+            existingUser.TelefonPublikus = updatedUser.TelefonPublikus;
 
             if (updatedUser.Cimkek != null)
             {
@@ -145,13 +147,7 @@ namespace Kerting_Api.Controller
         {
             // 1. Kikeresjük a felhasználót az Id alapján
             var user = await _context.User.FindAsync(id);
-
-            if (user == null)
-            {
-                return NotFound("A felhasználó nem található.");
-            }
-
-            // 2. LEKÉRDEZZÜK A CÍMKÉKET (Pontosan ugyanúgy, mint a GetMyProfile-nál)
+            // 2. LEKÉRDEZZÜK A CÍMKÉKET
             var userCimkek = await _context.UserActivityTag
                 .Where(uat => uat.USerId == id)
                 .Join(
@@ -162,18 +158,51 @@ namespace Kerting_Api.Controller
                 )
                 .ToListAsync();
 
-            // 3. ADATVÉDELEM (Döntsd el, mit mutatsz meg!)
-            // Csinálunk egy névtelen objektumot (vagy egy PublicUserDTO-t), 
-            // amibe csak a biztonságos adatokat tesszük bele.
+            // --- MASZKOLÁSI LOGIKA KEZDETE ---
 
+            // Telefon maszkolása (Csak az utolsó 4 számjegy látszik)
+            string displayTelefon = user.Telefon;
+            if (user.TelefonPublikus != true && !string.IsNullOrEmpty(user.Telefon))
+            {
+                displayTelefon = new string('*', user.Telefon.Length - 4) + user.Telefon.Substring(user.Telefon.Length - 4);
+            }
+
+            // Email maszkolása (Szokásos kitakarás: elso2betu***@domain.com)
+            string displayEmail = user.Email;
+            if (user.EmailPublikus != true && !string.IsNullOrEmpty(user.Email))
+            {
+                int atIndex = user.Email.IndexOf('@');
+                if (atIndex > 0) // Ha van @ és nem a legelső karakter
+                {
+                    string localPart = user.Email.Substring(0, atIndex);
+                    string domainPart = user.Email.Substring(atIndex); // Tartalmazza a @-ot is
+
+                    if (localPart.Length > 2)
+                    {
+                        // Pld: valaki@anya.hu -> va***@anya.hu
+                        displayEmail = localPart.Substring(0, 2) + "***" + domainPart;
+                    }
+                    else
+                    {
+                        // Ha nagyon rövid a név, pld: a@anya.hu -> a***@anya.hu
+                        displayEmail = localPart.Substring(0, 1) + "***" + domainPart;
+                    }
+                }
+                else
+                {
+                    // Ha érvénytelen az email formátum, csak csillagozzuk
+                    displayEmail = "***@***.***";
+                }
+            }
+            // --- MASZKOLÁSI LOGIKA VÉGE ---
+
+            // 3. ADATVÉDELEM
             var publicProfile = new
             {
                 user.VezetekNev,
                 user.KeresztNev,
-                // Döntés: Megmutatjuk a teljes emailt publikusan?
-                // Ha nem, maszkolhatod itt: user.Email.Substring(0, 1) + "***@..."
-                user.Email,
-                user.Telefon, // Ugyanaz a kérdés, maszkolhatod itt.
+                Email = displayEmail,       // A maszkolt (vagy publikus) emailt adjuk át
+                Telefon = displayTelefon,   // A maszkolt (vagy publikus) telefont adjuk át
                 user.Telepules,
                 user.RoleId,
                 user.IMGString,
@@ -181,7 +210,9 @@ namespace Kerting_Api.Controller
                 user.Facebook,
                 user.Instagram,
                 user.Tiktok,
-                Cimkek = userCimkek // A lekérdezett string lista
+                user.EmailPublikus,
+                user.TelefonPublikus,
+                Cimkek = userCimkek
             };
 
             return Ok(publicProfile);

@@ -45,6 +45,11 @@ export interface ProfileBaseFields {
   roleId: number;
   telefon: string;
   cimkek: string[];
+  facebook: string;
+  instagram: string;
+  tiktok: string;
+  emailPublikus: boolean;
+  telefonPublikus : boolean;
 }
 
 export interface UserProfileResponse extends ProfileBaseFields, ProfileSocialLinks {
