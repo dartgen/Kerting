@@ -82,6 +82,7 @@ interface GalleryDetailDto {
 }
 
 const props = withDefaults(defineProps<{
+  userId?: string // <-- ÚJ: Ezt várjuk a Profil oldaltól
   mode?: 'main' | 'own'
   title?: string
   subtitle?: string
@@ -340,7 +341,14 @@ const getFullImageUrl = (url: string) => {
   return `${origin}${url.startsWith('/') ? '' : '/'}${url}`
 }
 
-const endpoint = computed(() => isOwnMode.value ? '/Gallery/mine' : '/Gallery/feed')
+const endpoint = computed(() => {
+  // Ha kapunk userId-t (pl. a Profil oldalról), akkor annak a usernek a képeit töltjük le
+  if (props.userId) {
+    return `/Gallery/user/${props.userId}`;
+  }
+  // Egyébként marad az eddigi logika:
+  return isOwnMode.value ? '/Gallery/mine' : '/Gallery/feed';
+})
 
 const fetchFeed = async () => {
   try {

@@ -19,11 +19,10 @@ namespace Kerting_Api.Controller
         }
 
         [Authorize] // Kötelező a bejelentkezés
-        [HttpPut("UpdateMyProfile")] // Figyeld meg: kivettem az {id}-t az URL-ből!
+        [HttpPut("UpdateMyProfile")]
         public async Task<IActionResult> UpdateMyProfile([FromBody] Libary.Model.User.User updatedUser)
         {
             // 1. Kiszedjük a bejelentkezett felhasználó ID-ját a Tokenből (Claims)
-            // A ClaimTypes.NameIdentifier az a szabványos hely, ahova az ID-t rakni szoktuk a token generálásakor
             var userIdString = User.FindFirst("Id")?.Value;
 
             if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out int loggedInUserId))
@@ -34,12 +33,12 @@ namespace Kerting_Api.Controller
             // 2. KIKERESÉS A TOKENBŐL KAPOTT ID ALAPJÁN (Ezt már nem tudja meghamisítani)
             var existingUser = await _context.User.FindAsync(loggedInUserId);
 
-            if (existingUser == null)
+            if (existingUser == null) // nem lehetséges eset de igy nem kiabál a visual studio
             {
                 return NotFound("Felhasználó nem található.");
             }
 
-            // 3. Adatok felülírása (Ugyanaz, mint eddig)
+            // 3. Adatok felülírása
             existingUser.VezetekNev = updatedUser.VezetekNev;
             existingUser.KeresztNev = updatedUser.KeresztNev;
             existingUser.Telefon = updatedUser.Telefon;
@@ -172,26 +171,18 @@ namespace Kerting_Api.Controller
             if (user.EmailPublikus != true && !string.IsNullOrEmpty(user.Email))
             {
                 int atIndex = user.Email.IndexOf('@');
-                if (atIndex > 0) // Ha van @ és nem a legelső karakter
-                {
-                    string localPart = user.Email.Substring(0, atIndex);
-                    string domainPart = user.Email.Substring(atIndex); // Tartalmazza a @-ot is
+                string localPart = user.Email.Substring(0, atIndex);
+                string domainPart = user.Email.Substring(atIndex); // Tartalmazza a @-ot is
 
-                    if (localPart.Length > 2)
-                    {
-                        // Pld: valaki@anya.hu -> va***@anya.hu
-                        displayEmail = localPart.Substring(0, 2) + "***" + domainPart;
-                    }
-                    else
-                    {
-                        // Ha nagyon rövid a név, pld: a@anya.hu -> a***@anya.hu
-                        displayEmail = localPart.Substring(0, 1) + "***" + domainPart;
-                    }
+                if (localPart.Length > 2)
+                {
+                    // Pld: valaki@anya.hu -> va***@anya.hu
+                    displayEmail = localPart.Substring(0, 2) + "***" + domainPart;
                 }
                 else
                 {
-                    // Ha érvénytelen az email formátum, csak csillagozzuk
-                    displayEmail = "***@***.***";
+                    // Ha nagyon rövid a név, pld: a@anya.hu -> a***@anya.hu
+                    displayEmail = localPart.Substring(0, 1) + "***" + domainPart;
                 }
             }
             // --- MASZKOLÁSI LOGIKA VÉGE ---
