@@ -47,6 +47,9 @@ namespace Kerting_Api.Controller
             existingUser.Telepules = updatedUser.Telepules;
             existingUser.Rolam = updatedUser.Rolam;
             existingUser.RoleId = updatedUser.RoleId;
+            existingUser.Facebook = updatedUser.Facebook;
+            existingUser.Instagram = updatedUser.Instagram;
+            existingUser.Tiktok = updatedUser.Tiktok;
 
             if (updatedUser.Cimkek != null)
             {
@@ -175,6 +178,9 @@ namespace Kerting_Api.Controller
                 user.RoleId,
                 user.IMGString,
                 user.Rolam,
+                user.Facebook,
+                user.Instagram,
+                user.Tiktok,
                 Cimkek = userCimkek // A lekérdezett string lista
             };
 

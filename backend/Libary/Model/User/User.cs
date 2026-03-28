@@ -19,6 +19,9 @@ namespace Libary.Model.User
         public int RoleId { get; set; }
         public string? IMGString { get; set; }
         public string? Rolam { get; set; }
+        public string? Facebook { get; set; }
+        public string? Instagram { get; set; }
+        public string? Tiktok { get; set; }
 
         [NotMapped]
         public List<string>? Cimkek { get; set; }

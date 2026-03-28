@@ -208,7 +208,7 @@ const normalizeText = (value: string) => value.trim()
 const getFullImageUrl = (url?: string | null) => {
   if (!url) return ''
   if (url.startsWith('http')) return url
-  const baseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace('/api', '') || 'https://localhost:7067'
+  const baseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace('/api', '') || 'https://localhost:44351'
   return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
 }
 

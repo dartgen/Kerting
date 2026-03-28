@@ -11,6 +11,9 @@ export interface ProfilAdatokDTO {
   telefon: string;
   cimkek: string[];
   IMGString?: string; // Opcionális, mert nem biztos, hogy mindenkinek van képe
+  facebook: string;
+  instagram: string;
+  tiktok: string;
 }
 
 export const authService = {
@@ -66,7 +69,10 @@ export const authService = {
       rolam: profilAdatok.rolam,
       roleId: profilAdatok.roleId,
       cimkek: profilAdatok.cimkek,      // Bekötve!
-      imgString: profilAdatok.IMGString // Bekötve! (C#-ban kisbetűvel várjuk)
+      imgString: profilAdatok.IMGString, // Bekötve! (C#-ban kisbetűvel várjuk)
+      facebook: profilAdatok.facebook,
+      instagram: profilAdatok.instagram,
+      tiktok: profilAdatok.tiktok,
     });
   },
 
