@@ -50,7 +50,7 @@ const emit = defineEmits<{
     </div>
 
     <div>
-      <label class="text-sm text-earth-100 block mb-2">Maximum életkor (nap)</label>
+      <label class="text-sm text-earth-100 block mb-2">Létrehozva ennyi napon belül</label>
       <input
         :value="props.maxAgeDaysValue"
         type="range"
