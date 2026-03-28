@@ -48,6 +48,8 @@ export interface ProfileBaseFields {
   facebook: string;
   instagram: string;
   tiktok: string;
+  emailPublikus: boolean;
+  telefonPublikus : boolean;
 }
 
 export interface UserProfileResponse extends ProfileBaseFields, ProfileSocialLinks {

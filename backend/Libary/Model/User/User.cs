@@ -22,6 +22,8 @@ namespace Libary.Model.User
         public string? Facebook { get; set; }
         public string? Instagram { get; set; }
         public string? Tiktok { get; set; }
+        public bool EmailPublikus { get; set; }
+        public bool TelefonPublikus { get; set; }
 
         [NotMapped]
         public List<string>? Cimkek { get; set; }
