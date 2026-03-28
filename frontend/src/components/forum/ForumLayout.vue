@@ -3,100 +3,29 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import InnerPageLayout from '@/components/ui/InnerPageLayout.vue'
 import PageTitle from '@/components/ui/PageTitle.vue'
+import ForumFiltersSidebar from '@/components/forum/ForumFiltersSidebar.vue'
+import ForumCreatePostPanel from '@/components/forum/ForumCreatePostPanel.vue'
+import ForumFeedPostCard from '@/components/forum/ForumFeedPostCard.vue'
+import ForumDetailPanel from '@/components/forum/ForumDetailPanel.vue'
+import ForumGalleryPickerModal from '@/components/forum/ForumGalleryPickerModal.vue'
+import ForumEditPostModal from '@/components/forum/ForumEditPostModal.vue'
 import { forumService, type ForumSort } from '@/services/forumService'
 import api from '@/services/axios'
 import { authService } from '@/services/authService'
 import type { RoleDto } from '@/types/auth'
+import type { ForumComment, ForumDetail, ForumFeedItem, OwnGalleryItem } from '@/types/forum'
 import { useAuthStore } from '@/stores/authStore'
 import { useToastStore } from '@/stores/toast'
+import {
+  applyReactionDelta,
+  excerpt,
+  formatDateTime,
+  getApiErrorMessage,
+  getFullImageUrl as resolveFullImageUrl,
+  normalizeText,
+  parseIntQuery
+} from '@/components/forum/forumUtils'
 
-interface ForumFeedItem {
-  id: number
-  userId: number
-  title: string
-  description: string
-  attachedGalleryItemId?: number | null
-  createdAtUtc: string
-  updatedAtUtc?: string | null
-  lastActivityAtUtc: string
-  viewCount: number
-  likesCount: number
-  dislikesCount: number
-  netScore: number
-  commentsCount: number
-  isDeleted: boolean
-  isPinned: boolean
-  isLocked: boolean
-  lockReason?: string | null
-  authorName: string
-  authorRoleName: string
-  profileImageUrl?: string | null
-  attachedImageUrl?: string | null
-  tags: string[]
-  canEdit: boolean
-  canDelete: boolean
-  canRestore: boolean
-  canModerate: boolean
-}
-
-interface ForumComment {
-  id: number
-  parentCommentId?: number | null
-  userId: number
-  message: string
-  isDeleted: boolean
-  createdAtUtc: string
-  updatedAtUtc?: string | null
-  authorName: string
-  authorRoleName: string
-  profileImageUrl?: string | null
-  likesCount: number
-  dislikesCount: number
-  myReaction?: boolean | null
-  canDelete: boolean
-  canRestore: boolean
-  hasMoreReplies: boolean
-  nextReplyCursor: number
-  replies: ForumComment[]
-}
-
-interface ForumDetail {
-  id: number
-  userId: number
-  title: string
-  description: string
-  attachedGalleryItemId?: number | null
-  createdAtUtc: string
-  updatedAtUtc?: string | null
-  lastActivityAtUtc: string
-  viewCount: number
-  likesCount: number
-  dislikesCount: number
-  myReaction?: boolean | null
-  isDeleted: boolean
-  isPinned: boolean
-  isLocked: boolean
-  lockReason?: string | null
-  authorName: string
-  authorRoleName: string
-  profileImageUrl?: string | null
-  attachedImageUrl?: string | null
-  tags: string[]
-  comments: ForumComment[]
-  nextCommentCursor: number
-  hasMoreComments: boolean
-  canEdit: boolean
-  canDelete: boolean
-  canRestore: boolean
-  canModerate: boolean
-}
-
-interface OwnGalleryItem {
-  id: number
-  title: string
-  imageUrl: string
-  isDeleted: boolean
-}
 
 const props = withDefaults(defineProps<{ mode?: 'list' | 'detail' }>(), {
   mode: 'list'
@@ -200,55 +129,7 @@ const filteredEditTagSuggestions = computed(() => {
     .slice(0, 8)
 })
 
-const parseIntQuery = (value: unknown, fallback: number) => {
-  const n = Number(value)
-  return Number.isFinite(n) ? n : fallback
-}
-
-const normalizeText = (value: string) => value.trim()
-
-const getApiOrigin = () => {
-  const baseURL = String(api.defaults.baseURL || '').trim()
-  if (!baseURL) return window.location.origin
-
-  try {
-    return new URL(baseURL, window.location.origin).origin
-  } catch {
-    return window.location.origin
-  }
-}
-
-const getFullImageUrl = (url?: string | null) => {
-  if (!url) return ''
-  if (url.startsWith('http')) return url
-
-  const origin = getApiOrigin()
-  return `${origin}${url.startsWith('/') ? '' : '/'}${url}`
-}
-
-const excerpt = (text: string, maxLength = 220) => {
-  if (!text || text.length <= maxLength) return text
-  return `${text.slice(0, maxLength).trim()}...`
-}
-
-const formatDateTime = (raw?: string | null) => {
-  if (!raw) return '-'
-  return new Date(raw).toLocaleString('hu-HU')
-}
-
-const getApiErrorMessage = (error: unknown, fallback: string) => {
-  const message = (error as { response?: { data?: unknown } })?.response?.data
-  if (typeof message === 'string' && message.trim()) {
-    return message
-  }
-  if (typeof message === 'object' && message !== null) {
-    const objectMessage = (message as { message?: string }).message
-    if (typeof objectMessage === 'string' && objectMessage.trim()) {
-      return objectMessage
-    }
-  }
-  return fallback
-}
+const getFullImageUrl = (url?: string | null) => resolveFullImageUrl(String(api.defaults.baseURL || ''), url)
 
 const getCurrentUserId = () => {
   const raw = authStore.felhasznalo?.id
@@ -658,30 +539,6 @@ const submitEditPost = async () => {
   }
 }
 
-const applyReactionDelta = (current: boolean | null | undefined, target: boolean) => {
-  if (current === target) {
-    return {
-      nextReaction: null as boolean | null,
-      likesDelta: target ? -1 : 0,
-      dislikesDelta: target ? 0 : -1
-    }
-  }
-
-  if (current === null || current === undefined) {
-    return {
-      nextReaction: target,
-      likesDelta: target ? 1 : 0,
-      dislikesDelta: target ? 0 : 1
-    }
-  }
-
-  return {
-    nextReaction: target,
-    likesDelta: target ? 1 : -1,
-    dislikesDelta: target ? -1 : 1
-  }
-}
-
 const findCommentById = (comments: ForumComment[], commentId: number): ForumComment | null => {
   for (const comment of comments) {
     if (comment.id === commentId) return comment
@@ -986,189 +843,62 @@ onMounted(async () => {
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-[1fr_3fr] gap-6">
-      <aside class="rounded-2xl border border-earth-100/10 bg-earth-900/40 p-4 space-y-5">
-        <div>
-          <label class="text-sm text-earth-100 block mb-2">Rendezés</label>
-          <select v-model="filters.sort" class="w-full rounded-lg bg-earth-800/80 px-3 py-2 text-earth-50 border border-earth-100/10">
-            <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="text-sm text-earth-100 block mb-2">Keresés</label>
-          <input
-            v-model="filters.search"
-            type="text"
-            class="w-full rounded-lg bg-earth-800/80 px-3 py-2 text-earth-50 border border-earth-100/10"
-            placeholder="Cím vagy leírás..."
-          />
-        </div>
-
-        <div>
-          <label class="text-sm text-earth-100 block mb-2">Maximum életkor (nap)</label>
-          <input v-model.number="filters.maxAgeDays" type="range" min="0" max="365" class="w-full" />
-          <p class="text-xs text-earth-300 mt-1">{{ filters.maxAgeDays }} nap</p>
-        </div>
-
-        <div>
-          <p class="text-sm text-earth-100 mb-2">Szerepkör szűrő</p>
-          <div class="space-y-2 max-h-40 overflow-y-auto">
-            <label v-for="role in roles" :key="role.id" class="flex items-center gap-2 text-earth-200 text-sm">
-              <input
-                type="checkbox"
-                :checked="selectedRoleSet.has(role.id)"
-                @change="toggleRole(role.id)"
-              />
-              {{ role.name }}
-            </label>
-          </div>
-        </div>
-
-        <div>
-          <p class="text-sm text-earth-100 mb-2">Címkék</p>
-          <div class="flex flex-wrap gap-2 max-h-44 overflow-y-auto">
-            <button
-              v-for="tag in allTags"
-              :key="tag"
-              type="button"
-              @click="toggleTag(tag)"
-              class="px-2.5 py-1 rounded-full text-xs border transition-colors"
-              :class="selectedTagSet.has(tag.toLowerCase()) ? 'bg-green-500/25 border-green-400 text-green-100' : 'bg-earth-800 border-earth-100/10 text-earth-200'"
-            >
-              {{ tag }}
-            </button>
-          </div>
-        </div>
-
-        <div v-if="isAdmin">
-          <label class="flex items-center gap-2 text-earth-200 text-sm">
-            <input v-model="showDeleted" type="checkbox" />
-            Törölt elemek megjelenítése
-          </label>
-        </div>
-      </aside>
+      <ForumFiltersSidebar
+        :sort-value="filters.sort"
+        :search-value="filters.search"
+        :max-age-days-value="filters.maxAgeDays"
+        :sort-options="sortOptions"
+        :roles="roles"
+        :all-tags="allTags"
+        :selected-role-set="selectedRoleSet"
+        :selected-tag-set="selectedTagSet"
+        :is-admin="isAdmin"
+        :show-deleted="showDeleted"
+        @update:sort-value="filters.sort = $event"
+        @update:search-value="filters.search = $event"
+        @update:max-age-days-value="filters.maxAgeDays = $event"
+        @toggle-role="toggleRole"
+        @toggle-tag="toggleTag"
+        @update:show-deleted="showDeleted = $event"
+      />
 
       <section class="space-y-4">
-        <div class="rounded-2xl border border-earth-100/10 bg-earth-900/40 p-4">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="text-lg font-semibold text-earth-50">Új bejegyzés</h3>
-            <button type="button" @click="showCreateForm = !showCreateForm" class="text-sm text-green-300 hover:text-green-200">
-              {{ showCreateForm ? 'Bezárás' : 'Megnyitás' }}
-            </button>
-          </div>
+        <ForumCreatePostPanel
+          :show-create-form="showCreateForm"
+          :title-value="createForm.title"
+          :description-value="createForm.description"
+          :tag-input-value="createForm.tagInput"
+          :create-tags="createTags"
+          :selected-gallery-item="selectedGalleryItem"
+          :saving-post="savingPost"
+          :show-tag-suggestions="showTagSuggestions"
+          :filtered-tag-suggestions="filteredTagSuggestions"
+          @update:title-value="createForm.title = $event"
+          @update:description-value="createForm.description = $event"
+          @update:tag-input-value="createForm.tagInput = $event"
+          @toggle-form="showCreateForm = !showCreateForm"
+          @open-gallery-picker="openGalleryPicker"
+          @clear-selected-gallery-item="clearSelectedGalleryItem"
+          @add-tag="addCreateTag"
+          @remove-tag="removeCreateTag"
+          @select-tag-suggestion="selectCreateTagSuggestion"
+          @handle-tag-input="handleCreateTagInput"
+          @update:show-tag-suggestions="showTagSuggestions = $event"
+          @submit="submitCreatePost"
+        />
 
-          <div v-if="showCreateForm" class="space-y-3">
-            <input v-model="createForm.title" type="text" placeholder="Cím"
-              class="w-full rounded-lg bg-earth-800/80 px-3 py-2 text-earth-50 border border-earth-100/10" />
-            <textarea v-model="createForm.description" rows="4" placeholder="Leírás"
-              class="w-full rounded-lg bg-earth-800/80 px-3 py-2 text-earth-50 border border-earth-100/10" />
-
-            <div class="rounded-lg border border-earth-100/10 bg-earth-800/60 p-3 space-y-2">
-              <p class="text-sm text-earth-200">Csatolt saját galéria kép (opcionális)</p>
-              <p v-if="selectedGalleryItem" class="text-sm text-earth-100">
-                Kiválasztva: <span class="font-semibold">{{ selectedGalleryItem.title }}</span>
-              </p>
-              <p v-else class="text-sm text-earth-300">Nincs kép kiválasztva</p>
-              <div class="flex flex-wrap gap-2">
-                <button type="button" class="px-3 py-2 rounded-lg bg-earth-700 text-earth-100" @click="openGalleryPicker">Kép választó megnyitása</button>
-                <button v-if="selectedGalleryItem" type="button" class="px-3 py-2 rounded-lg bg-red-700/80 text-red-100" @click="clearSelectedGalleryItem">Kiválasztás törlése</button>
-              </div>
-            </div>
-
-            <div class="relative flex gap-2">
-              <div class="flex-1">
-                <input
-                  v-model="createForm.tagInput"
-                  type="text"
-                  placeholder="Címke"
-                  class="w-full rounded-lg bg-earth-800/80 px-3 py-2 text-earth-50 border border-earth-100/10"
-                  @keydown.enter.prevent="addCreateTag"
-                  @focus="showTagSuggestions = true"
-                  @blur="showTagSuggestions = false"
-                  @input="handleCreateTagInput"
-                />
-                <ul
-                  v-if="showTagSuggestions && filteredTagSuggestions.length"
-                  class="absolute left-0 right-0 top-11 z-20 rounded-lg border border-earth-600 bg-earth-800 shadow-xl overflow-hidden max-h-44 overflow-y-auto"
-                >
-                  <li
-                    v-for="suggestion in filteredTagSuggestions"
-                    :key="suggestion"
-                    class="px-3 py-2 text-sm text-earth-100 hover:bg-earth-700 cursor-pointer"
-                    @mousedown.prevent="selectCreateTagSuggestion(suggestion)"
-                  >
-                    {{ suggestion }}
-                  </li>
-                </ul>
-              </div>
-              <button type="button" @click="addCreateTag" class="px-3 py-2 rounded-lg bg-earth-700 text-earth-100">Hozzáad</button>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <button
-                v-for="tag in createTags"
-                :key="tag"
-                type="button"
-                class="px-2.5 py-1 rounded-full text-xs bg-green-500/20 border border-green-400 text-green-100"
-                @click="removeCreateTag(tag)"
-              >
-                {{ tag }} ×
-              </button>
-            </div>
-
-            <button type="button" @click="submitCreatePost" :disabled="savingPost"
-              class="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white disabled:opacity-60">
-              {{ savingPost ? 'Mentés...' : 'Létrehozás' }}
-            </button>
-          </div>
-        </div>
-
-        <article
+        <ForumFeedPostCard
           v-for="post in feedItems"
           :key="post.id"
-          class="rounded-2xl border border-earth-100/10 bg-earth-900/40 overflow-hidden"
-        >
-          <div class="flex flex-col md:flex-row">
-            <div v-if="post.attachedImageUrl" class="md:w-56 h-44 md:h-auto shrink-0">
-              <img :src="getFullImageUrl(post.attachedImageUrl)" class="w-full h-full object-cover" alt="Forum kép" />
-            </div>
-            <div class="flex-1 p-4 space-y-3">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <h3 class="text-lg font-semibold text-earth-50">{{ post.title }}</h3>
-                  <p class="text-xs text-earth-300">
-                    {{ post.authorName }} · {{ post.authorRoleName || 'Szerepkör nélkül' }} · {{ formatDateTime(post.createdAtUtc) }}
-                  </p>
-                </div>
-                <div class="flex gap-2">
-                  <span v-if="post.isPinned" class="text-xs px-2 py-1 rounded bg-amber-500/20 text-amber-200">Pinned</span>
-                  <span v-if="post.isLocked" class="text-xs px-2 py-1 rounded bg-red-500/20 text-red-200">Locked</span>
-                </div>
-              </div>
-
-              <p class="text-earth-200/90">{{ excerpt(post.description) }}</p>
-
-              <div class="flex flex-wrap gap-2">
-                <span v-for="tag in post.tags" :key="tag" class="text-xs px-2 py-1 rounded-full bg-earth-800 border border-earth-100/10 text-earth-200">
-                  {{ tag }}
-                </span>
-              </div>
-
-              <div class="flex items-center justify-between gap-3 pt-2">
-                <div class="text-xs text-earth-300 flex gap-4">
-                  <span>👍 {{ post.likesCount }}</span>
-                  <span>👎 {{ post.dislikesCount }}</span>
-                  <span>💬 {{ post.commentsCount }}</span>
-                </div>
-                <div class="flex items-center gap-2">
-                  <button type="button" class="px-3 py-1.5 rounded-lg text-sm bg-earth-700 text-earth-100" @click="openDetail(post.id)">Megnyitás</button>
-                  <button v-if="post.canEdit" type="button" class="px-3 py-1.5 rounded-lg text-sm bg-blue-700/80 text-blue-100" @click="openEditPost(post)">Szerkesztés</button>
-                  <button v-if="post.canDelete" type="button" class="px-3 py-1.5 rounded-lg text-sm bg-red-700/80 text-red-100" @click="deletePost(post.id)">Törlés</button>
-                  <button v-if="post.canRestore" type="button" class="px-3 py-1.5 rounded-lg text-sm bg-green-700/80 text-green-100" @click="restorePost(post.id)">Visszaállítás</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </article>
+          :post="post"
+          :get-full-image-url="getFullImageUrl"
+          :excerpt="excerpt"
+          :format-date-time="formatDateTime"
+          @open-detail="openDetail"
+          @open-edit="openEditPost"
+          @delete-post="deletePost"
+          @restore-post="restorePost"
+        />
 
         <div v-if="!feedLoading && !feedItems.length" class="rounded-xl border border-earth-100/10 bg-earth-900/40 p-6 text-earth-200">
           Nincs találat a kiválasztott szűrőkre.
@@ -1184,257 +914,68 @@ onMounted(async () => {
   </InnerPageLayout>
 
   <InnerPageLayout v-else>
-    <button type="button" class="mb-4 text-earth-200 hover:text-earth-50" @click="goBackToList">← Vissza a fórumhoz</button>
-
-    <div v-if="detailLoading" class="rounded-xl border border-earth-100/10 bg-earth-900/40 p-6 text-earth-200">Betöltés...</div>
-
-    <template v-else-if="detail">
-      <article class="rounded-2xl border border-earth-100/10 bg-earth-900/40 overflow-hidden mb-6">
-        <img v-if="detail.attachedImageUrl" :src="getFullImageUrl(detail.attachedImageUrl)" alt="Forum kép" class="w-full h-64 object-cover" />
-        <div class="p-5 space-y-4">
-          <div class="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h1 class="text-2xl font-bold text-earth-50">{{ detail.title }}</h1>
-              <p class="text-sm text-earth-300">
-                {{ detail.authorName }} · {{ detail.authorRoleName || 'Szerepkör nélkül' }}
-              </p>
-            </div>
-            <div class="flex gap-2">
-              <button v-if="detail.canModerate" type="button" class="px-3 py-1 rounded-lg bg-earth-700 text-earth-100" @click="togglePinned(detail.id, !detail.isPinned)">
-                {{ detail.isPinned ? 'Unpin' : 'Pin' }}
-              </button>
-              <button v-if="detail.canModerate" type="button" class="px-3 py-1 rounded-lg bg-earth-700 text-earth-100" @click="toggleLocked(detail.id, !detail.isLocked)">
-                {{ detail.isLocked ? 'Feloldás' : 'Lezárás' }}
-              </button>
-              <button v-if="detail.canEdit" type="button" class="px-3 py-1 rounded-lg bg-blue-700/80 text-blue-100" @click="openEditPost(detail)">Szerkesztés</button>
-              <button v-if="detail.canDelete" type="button" class="px-3 py-1 rounded-lg bg-red-700/80 text-red-100" @click="deletePost(detail.id)">Törlés</button>
-              <button v-if="detail.canRestore" type="button" class="px-3 py-1 rounded-lg bg-green-700/80 text-green-100" @click="restorePost(detail.id)">Visszaállítás</button>
-            </div>
-          </div>
-
-          <p class="text-earth-100 whitespace-pre-line">{{ detail.description }}</p>
-
-          <div v-if="detail.isLocked && detail.lockReason" class="rounded-lg bg-red-500/20 border border-red-400/40 p-3 text-red-100 text-sm">
-            Lezárás oka: {{ detail.lockReason }}
-          </div>
-
-          <div class="text-xs text-earth-300 grid sm:grid-cols-2 gap-2">
-            <p>Létrehozva: {{ formatDateTime(detail.createdAtUtc) }}</p>
-            <p>Módosítva: {{ formatDateTime(detail.updatedAtUtc || detail.createdAtUtc) }}</p>
-            <p>Utolsó aktivitás: {{ formatDateTime(detail.lastActivityAtUtc) }}</p>
-            <p>Megtekintések: {{ detail.viewCount }}</p>
-          </div>
-
-          <div class="flex flex-wrap gap-2">
-            <span v-for="tag in detail.tags" :key="tag" class="text-xs px-2 py-1 rounded-full bg-earth-800 border border-earth-100/10 text-earth-200">
-              {{ tag }}
-            </span>
-          </div>
-
-          <div class="flex items-center gap-3 pt-1">
-            <button type="button" class="px-3 py-1.5 rounded-lg text-green-100" :class="detail.myReaction === true ? 'bg-green-600' : 'bg-green-700/70'" @click="reactPost(true)">👍 {{ detail.likesCount }}</button>
-            <button type="button" class="px-3 py-1.5 rounded-lg text-red-100" :class="detail.myReaction === false ? 'bg-red-600' : 'bg-red-700/70'" @click="reactPost(false)">👎 {{ detail.dislikesCount }}</button>
-          </div>
-        </div>
-      </article>
-
-      <section class="rounded-2xl border border-earth-100/10 bg-earth-900/40 p-5">
-        <h2 class="text-lg font-semibold text-earth-50 mb-3">Hozzászólások</h2>
-
-        <div class="flex gap-2 mb-4" v-if="!detail.isLocked">
-          <textarea
-            v-model="detailCommentDraft"
-            rows="3"
-            class="flex-1 rounded-lg bg-earth-800/80 px-3 py-2 text-earth-50 border border-earth-100/10"
-            placeholder="Írj hozzászólást..."
-          />
-          <button type="button" class="px-4 py-2 rounded-lg bg-green-600 text-white self-end" @click="submitComment">Küldés</button>
-        </div>
-
-        <div class="space-y-4">
-          <article v-for="comment in detail.comments" :key="comment.id" class="rounded-xl border border-earth-100/10 bg-earth-800/40 p-4">
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <p class="text-sm text-earth-100 font-medium">{{ comment.authorName }} · {{ comment.authorRoleName || 'Szerepkör nélkül' }}</p>
-                <p class="text-xs text-earth-300">{{ formatDateTime(comment.createdAtUtc) }}</p>
-              </div>
-              <div class="flex gap-2">
-                <button type="button" class="text-xs px-2 py-1 rounded text-earth-100" :class="comment.myReaction === true ? 'bg-green-700' : 'bg-earth-700'" @click="reactComment(comment.id, true)">👍 {{ comment.likesCount }}</button>
-                <button type="button" class="text-xs px-2 py-1 rounded text-earth-100" :class="comment.myReaction === false ? 'bg-red-700' : 'bg-earth-700'" @click="reactComment(comment.id, false)">👎 {{ comment.dislikesCount }}</button>
-                <button v-if="comment.canDelete" type="button" class="text-xs px-2 py-1 rounded bg-red-700/80 text-red-100" @click="deleteComment(comment.id)">Törlés</button>
-                <button v-if="comment.canRestore" type="button" class="text-xs px-2 py-1 rounded bg-green-700/80 text-green-100" @click="restoreComment(comment.id)">Visszaállít</button>
-              </div>
-            </div>
-
-            <p class="text-earth-100 mt-2 whitespace-pre-line">{{ comment.message }}</p>
-
-            <div class="mt-3 flex items-center gap-3 text-xs">
-              <button type="button" class="text-earth-300 hover:text-earth-50" @click="toggleReplies(comment.id)">
-                {{ replyVisibility[comment.id] ? 'Válaszok elrejtése' : 'Válaszok megjelenítése' }} ({{ comment.replies.length }})
-              </button>
-              <button v-if="!detail.isLocked" type="button" class="text-green-300 hover:text-green-200" @click="replyingToComment = replyingToComment === comment.id ? null : comment.id">
-                Válasz
-              </button>
-            </div>
-
-            <div v-if="replyingToComment === comment.id && !detail.isLocked" class="mt-3 flex gap-2">
-              <input
-                v-model="replyDraft"
-                type="text"
-                class="flex-1 rounded-lg bg-earth-900/80 px-3 py-2 text-earth-50 border border-earth-100/10"
-                placeholder="Válasz írása..."
-                @keydown.enter.prevent="submitReply(comment.id)"
-              />
-              <button type="button" class="px-3 py-2 rounded-lg bg-green-600 text-white" @click="submitReply(comment.id)">Küld</button>
-            </div>
-
-            <div v-if="replyVisibility[comment.id]" class="mt-3 pl-4 border-l border-earth-100/10 space-y-3">
-              <article v-for="reply in comment.replies" :key="reply.id" class="rounded-lg bg-earth-900/50 border border-earth-100/10 p-3">
-                <div class="flex items-center justify-between gap-2">
-                  <p class="text-sm text-earth-100">{{ reply.authorName }} · {{ reply.authorRoleName || 'Szerepkör nélkül' }}</p>
-                  <p class="text-xs text-earth-300">{{ formatDateTime(reply.createdAtUtc) }}</p>
-                </div>
-                <p class="text-earth-100 mt-2 whitespace-pre-line">{{ reply.message }}</p>
-                <div class="mt-2 flex gap-2">
-                  <button type="button" class="text-xs px-2 py-1 rounded text-earth-100" :class="reply.myReaction === true ? 'bg-green-700' : 'bg-earth-700'" @click="reactComment(reply.id, true)">👍 {{ reply.likesCount }}</button>
-                  <button type="button" class="text-xs px-2 py-1 rounded text-earth-100" :class="reply.myReaction === false ? 'bg-red-700' : 'bg-earth-700'" @click="reactComment(reply.id, false)">👎 {{ reply.dislikesCount }}</button>
-                  <button v-if="reply.canDelete" type="button" class="text-xs px-2 py-1 rounded bg-red-700/80 text-red-100" @click="deleteComment(reply.id)">Törlés</button>
-                  <button v-if="reply.canRestore" type="button" class="text-xs px-2 py-1 rounded bg-green-700/80 text-green-100" @click="restoreComment(reply.id)">Visszaállít</button>
-                </div>
-              </article>
-
-              <button
-                v-if="comment.hasMoreReplies"
-                type="button"
-                class="text-xs text-earth-300 hover:text-earth-100"
-                :disabled="loadingReplies[comment.id]"
-                @click="loadMoreReplies(comment)"
-              >
-                {{ loadingReplies[comment.id] ? 'Betöltés...' : 'További válaszok' }}
-              </button>
-            </div>
-          </article>
-        </div>
-
-        <div class="pt-4 flex justify-center">
-          <button
-            v-if="detail.hasMoreComments"
-            type="button"
-            class="px-4 py-2 rounded-lg bg-earth-700 text-earth-100"
-            :disabled="loadingMoreComments"
-            @click="fetchDetail(true)"
-          >
-            {{ loadingMoreComments ? 'Betöltés...' : 'További hozzászólások' }}
-          </button>
-        </div>
-      </section>
-    </template>
-
-    <div v-else class="rounded-xl border border-earth-100/10 bg-earth-900/40 p-6 text-earth-200">
-      A bejegyzés nem található vagy jelenleg nem betölthető.
-    </div>
+    <ForumDetailPanel
+      :detail="detail"
+      :detail-loading="detailLoading"
+      :detail-comment-draft="detailCommentDraft"
+      :replying-to-comment="replyingToComment"
+      :reply-draft="replyDraft"
+      :reply-visibility="replyVisibility"
+      :loading-replies="loadingReplies"
+      :loading-more-comments="loadingMoreComments"
+      :get-full-image-url="getFullImageUrl"
+      :format-date-time="formatDateTime"
+      @go-back="goBackToList"
+      @toggle-pinned="togglePinned"
+      @toggle-locked="toggleLocked"
+      @open-edit="openEditPost"
+      @delete-post="deletePost"
+      @restore-post="restorePost"
+      @react-post="reactPost"
+      @update:detail-comment-draft="detailCommentDraft = $event"
+      @submit-comment="submitComment"
+      @react-comment="reactComment"
+      @delete-comment="deleteComment"
+      @restore-comment="restoreComment"
+      @toggle-replies="toggleReplies"
+      @toggle-reply-form="replyingToComment = replyingToComment === $event ? null : $event"
+      @update:reply-draft="replyDraft = $event"
+      @submit-reply="submitReply"
+      @load-more-replies="loadMoreReplies"
+      @fetch-more-comments="fetchDetail(true)"
+    />
   </InnerPageLayout>
 
-  <div v-if="pickerOpen" class="fixed inset-0 z-[70] bg-black/60 flex items-center justify-center p-4" @click.self="closeGalleryPicker">
-    <div class="w-full max-w-5xl max-h-[85vh] overflow-hidden rounded-2xl border border-earth-100/10 bg-earth-900/95 shadow-2xl">
-      <div class="flex items-center justify-between px-4 py-3 border-b border-earth-100/10">
-        <h3 class="text-lg font-semibold text-earth-50">Saját galéria képek</h3>
-        <button type="button" class="text-earth-300 hover:text-earth-50" @click="closeGalleryPicker">Bezárás</button>
-      </div>
+  <ForumGalleryPickerModal
+    :open="pickerOpen"
+    :loading="pickerLoading"
+    :items="ownGalleryItems"
+    :selected-item-id="pickerMode === 'edit' ? editSelectedGalleryItemId : selectedGalleryItemId"
+    @close="closeGalleryPicker"
+    @select-item="selectGalleryItem"
+  />
 
-      <div class="p-4 overflow-y-auto max-h-[70vh]">
-        <div v-if="pickerLoading" class="text-earth-200">Képek betöltése...</div>
-        <div v-else-if="!ownGalleryItems.length" class="text-earth-200">Nincs elérhető saját galéria képed.</div>
-        <div v-else class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          <button
-            v-for="item in ownGalleryItems"
-            :key="item.id"
-            type="button"
-            class="group text-left rounded-xl overflow-hidden border border-earth-100/10 bg-earth-800/70 hover:border-green-400/60 transition-colors"
-            :class="selectedGalleryItemId === item.id ? 'ring-2 ring-green-400' : ''"
-            @click="selectGalleryItem(item.id)"
-          >
-            <img :src="item.imageUrl" :alt="item.title" class="w-full h-32 object-cover" />
-            <div class="p-2">
-              <p class="text-sm text-earth-100 truncate">{{ item.title }}</p>
-            </div>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div v-if="editingPostId" class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" @click.self="closeEditPost">
-    <div class="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-earth-100/10 bg-earth-900 p-5 space-y-4 shadow-2xl">
-      <div class="flex items-center justify-between">
-        <h3 class="text-xl font-semibold text-earth-50">Bejegyzés szerkesztése</h3>
-        <button type="button" class="text-earth-300 hover:text-earth-50" @click="closeEditPost">Bezárás</button>
-      </div>
-
-      <input v-model="editForm.title" type="text" placeholder="Cím"
-        class="w-full rounded-lg bg-earth-800/80 px-3 py-2 text-earth-50 border border-earth-100/10" />
-      <textarea v-model="editForm.description" rows="5" placeholder="Leírás"
-        class="w-full rounded-lg bg-earth-800/80 px-3 py-2 text-earth-50 border border-earth-100/10" />
-
-      <div class="rounded-lg border border-earth-100/10 bg-earth-800/60 p-3 space-y-2">
-        <p class="text-sm text-earth-200">Csatolt saját galéria kép (opcionális)</p>
-        <p v-if="selectedEditGalleryItem" class="text-sm text-earth-100">
-          Kiválasztva: <span class="font-semibold">{{ selectedEditGalleryItem.title }}</span>
-        </p>
-        <p v-else class="text-sm text-earth-300">Nincs kép kiválasztva</p>
-        <div class="flex flex-wrap gap-2">
-          <button type="button" class="px-3 py-2 rounded-lg bg-earth-700 text-earth-100" @click="openEditGalleryPicker">Kép választó megnyitása</button>
-          <button v-if="selectedEditGalleryItem" type="button" class="px-3 py-2 rounded-lg bg-red-700/80 text-red-100" @click="clearEditSelectedGalleryItem">Kiválasztás törlése</button>
-        </div>
-      </div>
-
-      <div class="relative flex gap-2">
-        <div class="flex-1">
-          <input
-            v-model="editForm.tagInput"
-            type="text"
-            placeholder="Címke"
-            class="w-full rounded-lg bg-earth-800/80 px-3 py-2 text-earth-50 border border-earth-100/10"
-            @keydown.enter.prevent="addEditTag"
-            @focus="editShowTagSuggestions = true"
-            @blur="editShowTagSuggestions = false"
-            @input="handleEditTagInput"
-          />
-          <ul
-            v-if="editShowTagSuggestions && filteredEditTagSuggestions.length"
-            class="absolute left-0 right-0 top-11 z-20 rounded-lg border border-earth-600 bg-earth-800 shadow-xl overflow-hidden max-h-44 overflow-y-auto"
-          >
-            <li
-              v-for="suggestion in filteredEditTagSuggestions"
-              :key="suggestion"
-              class="px-3 py-2 text-sm text-earth-100 hover:bg-earth-700 cursor-pointer"
-              @mousedown.prevent="selectEditTagSuggestion(suggestion)"
-            >
-              {{ suggestion }}
-            </li>
-          </ul>
-        </div>
-        <button type="button" @click="addEditTag" class="px-3 py-2 rounded-lg bg-earth-700 text-earth-100">Hozzáad</button>
-      </div>
-
-      <div class="flex flex-wrap gap-2">
-        <button
-          v-for="tag in editTags"
-          :key="tag"
-          type="button"
-          class="px-2.5 py-1 rounded-full text-xs bg-blue-500/20 border border-blue-400 text-blue-100"
-          @click="removeEditTag(tag)"
-        >
-          {{ tag }} ×
-        </button>
-      </div>
-
-      <div class="flex items-center justify-end gap-2 pt-2">
-        <button type="button" class="px-4 py-2 rounded-lg bg-earth-700 text-earth-100" @click="closeEditPost">Mégse</button>
-        <button type="button" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-60" :disabled="editSaving" @click="submitEditPost">
-          {{ editSaving ? 'Mentés...' : 'Mentés' }}
-        </button>
-      </div>
-    </div>
-  </div>
+  <ForumEditPostModal
+    :editing-post-id="editingPostId"
+    :title-value="editForm.title"
+    :description-value="editForm.description"
+    :tag-input-value="editForm.tagInput"
+    :edit-tags="editTags"
+    :edit-saving="editSaving"
+    :edit-show-tag-suggestions="editShowTagSuggestions"
+    :filtered-edit-tag-suggestions="filteredEditTagSuggestions"
+    :selected-edit-gallery-item="selectedEditGalleryItem"
+    @update:title-value="editForm.title = $event"
+    @update:description-value="editForm.description = $event"
+    @update:tag-input-value="editForm.tagInput = $event"
+    @close="closeEditPost"
+    @open-gallery-picker="openEditGalleryPicker"
+    @clear-selected-gallery-item="clearEditSelectedGalleryItem"
+    @add-tag="addEditTag"
+    @remove-tag="removeEditTag"
+    @select-tag-suggestion="selectEditTagSuggestion"
+    @handle-tag-input="handleEditTagInput"
+    @update:edit-show-tag-suggestions="editShowTagSuggestions = $event"
+    @submit="submitEditPost"
+  />
 </template>

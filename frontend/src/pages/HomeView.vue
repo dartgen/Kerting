@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import GardenerSlider from '@/components/GardenerSlider.vue';
 import LatestWorks from '@/components/LatestWorks.vue';
-import profile from '@/pages/ProfileManagementView.vue'
 import { motion } from 'motion-v';
 
 const MotionDiv = motion.div;

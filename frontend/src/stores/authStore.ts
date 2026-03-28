@@ -44,7 +44,7 @@ export const useAuthStore = defineStore('auth', () => {
   // --- INICIALIZÁLÁS ---
   if (token.value) {
     decodeUserFromToken(token.value);
-    fetchUserProfile(); // Oldalfrissítéskor rögtön lekérjük a képet is
+    void fetchUserProfile(); // Oldalfrissítéskor rögtön lekérjük a képet is
   }
 
   // --- MŰVELETEK (Actions) ---
@@ -78,7 +78,7 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = null;
     felhasznalo.value = null;
     profilAdatok.value = null;
-    router.push('/');
+    void router.push('/');
   };
 
   return {

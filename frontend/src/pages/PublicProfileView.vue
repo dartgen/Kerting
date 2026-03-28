@@ -257,6 +257,9 @@ interface PublicProfileViewState {
   IMGString: string;
   ertekeles: number;
   ertekelesSzam: number;
+  facebook?: string;
+  instagram?: string;
+  tiktok?: string;
 }
 
 const route = useRoute();
@@ -338,7 +341,7 @@ const adatokBetoltese = async () => {
   } catch (error) {
     console.error("Betöltési hiba:", error);
     toastStore.addToast('Nem sikerült betölteni a profilt!', 4000, 'error');
-    router.push('/');
+    await router.push('/');
   } finally {
     isLoading.value = false;
   }

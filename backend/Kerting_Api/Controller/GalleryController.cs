@@ -1,4 +1,5 @@
 using Kerting_Api.Interface;
+using Kerting_Api.Model.Gallery;
 using Libary.Model.User;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
@@ -147,12 +148,21 @@ namespace Kerting_Api.Controller
         }
 
         [HttpPost("{id}/comment")]
-        public async Task<IActionResult> AddComment(int id, [FromBody] string message)
+        public async Task<IActionResult> AddComment(int id, [FromBody] CommentRequest request)
         {
             try
             {
-                var comment = await _galleryService.AddCommentAsync(id, GetCurrentUserId(), message);
-                return Ok(comment);
+                var comment = await _galleryService.AddCommentAsync(id, GetCurrentUserId(), request.Message);
+                var response = new CommentResponse
+                {
+                    Id = comment.Id,
+                    GalleryItemId = comment.GalleryItemId,
+                    UserId = comment.UserId,
+                    Message = comment.Message,
+                    CreatedAtUtc = comment.CreatedAtUtc,
+                    IsDeleted = comment.IsDeleted
+                };
+                return Ok(response);
             }
             catch (UnauthorizedAccessException ex)
             {
