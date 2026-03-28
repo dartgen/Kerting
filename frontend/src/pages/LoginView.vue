@@ -180,7 +180,7 @@ const felhasznaloNevEllenorzes = async () => {
   if (!regFelhasznaloNev.value.trim()) return;
   try {
     const data = await authStore.checkUsername(regFelhasznaloNev.value);
-    isNevFoglalt.value = data.isTaken;
+    isNevFoglalt.value = Boolean(data.isTaken);
   } catch { console.error("Hiba"); }
 };
 

@@ -1,22 +1,18 @@
 import apiClient from './axios';
-
-// 1. Kiegészített interfész a profilképnek
-export interface ProfilAdatokDTO {
-  vezetekNev: string;
-  keresztNev: string;
-  email: string;
-  telepules: string;
-  rolam: string;
-  roleId: number;
-  telefon: string;
-  cimkek: string[];
-  IMGString?: string; // Opcionális, mert nem biztos, hogy mindenkinek van képe
-}
+import type {
+  CheckUsernameResponse,
+  FirstLoginResponse,
+  LoginResponse,
+  PublicProfileResponse,
+  RoleDto,
+  UpdateProfilePayload,
+  UserProfileResponse
+} from '@/types/auth';
 
 export const authService = {
   // Bejelentkezés és Regisztráció
   bejelentkezes(felhasznaloNev: string, jelszo: string) {
-    return apiClient.post('/Login', {
+    return apiClient.post<LoginResponse>('/Login', {
       username: felhasznaloNev,
       password: jelszo,
     });
@@ -41,22 +37,22 @@ export const authService = {
 
   // Szerepkörök és Címkék (Tagek) lekérése
   getRoles() {
-    return apiClient.get('/GetRoles');
+    return apiClient.get<RoleDto[]>('/GetRoles');
   },
   GetCimekek() {
-    return apiClient.get('/ActivityTag');
+    return apiClient.get<string[]>('/ActivityTag');
   },
 
   // Felhasználói validációk
   checkUsername(username: string) {
-    return apiClient.get(`/CheckUsername?username=${username}`);
+    return apiClient.get<CheckUsernameResponse>(`/CheckUsername?username=${username}`);
   },
   isFirstLogin(id: string) {
-    return apiClient.post(`/${id}/first-login`);
+    return apiClient.post<FirstLoginResponse>(`/${id}/first-login`);
   },
 
-  // PROFIL KEZELÉS (Frissítve a kép és címkék elküldésével)
-  updateProfile(profilAdatok: ProfilAdatokDTO) {
+  // PROFIL KEZELÉS
+  updateProfile(profilAdatok: UpdateProfilePayload) {
     return apiClient.put('/UpdateMyProfile', {
       vezetekNev: profilAdatok.vezetekNev,
       keresztNev: profilAdatok.keresztNev,
@@ -65,18 +61,21 @@ export const authService = {
       telepules: profilAdatok.telepules,
       rolam: profilAdatok.rolam,
       roleId: profilAdatok.roleId,
-      cimkek: profilAdatok.cimkek,      // Bekötve!
-      imgString: profilAdatok.IMGString // Bekötve! (C#-ban kisbetűvel várjuk)
+      cimkek: profilAdatok.cimkek,
+      imgString: profilAdatok.IMGString,
+      facebook: profilAdatok.facebook,
+      instagram: profilAdatok.instagram,
+      tiktok: profilAdatok.tiktok
     });
   },
 
   // Saját profil lekérése (Tokenből azonosít a backend)
   getProfile() {
-    return apiClient.get('/GetMyProfile');
+    return apiClient.get<UserProfileResponse>('/GetMyProfile');
   },
 
-  // ÚJ: Publikus profil lekérése ID alapján (Más profiljának megtekintése)
+  // Publikus profil lekérése ID alapján
   getPublicProfile(id: string | number) {
-    return apiClient.get(`/GetPublicProfile/${id}`);
+    return apiClient.get<PublicProfileResponse>(`/GetPublicProfile/${id}`);
   }
 };

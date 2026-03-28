@@ -3,19 +3,12 @@ import { ref, computed } from 'vue';
 import { authService } from '@/services/authService';
 import router from '@/router';
 import { jwtDecode } from 'jwt-decode';
-
-// 1. Definiáljuk a tokenünk felépítését
-interface MyTokenPayload {
-  sub: string;
-  Id: string;
-  exp?: number;
-  jti?: string;
-}
+import type { AuthenticatedUser, TokenPayload, UserProfileResponse } from '@/types/auth';
 
 export const useAuthStore = defineStore('auth', () => {
   // --- ÁLLAPOT (State) ---
-  const felhasznalo = ref<{ id: string; felhasznaloNev: string } | null>(null);
-  const profilAdatok = ref<any | null>(null);
+  const felhasznalo = ref<AuthenticatedUser | null>(null);
+  const profilAdatok = ref<UserProfileResponse | null>(null);
   const token = ref<string | null>(authService.getToken());
   const isLoading = ref(false);
   const authError = ref<string | null>(null);
@@ -28,7 +21,7 @@ export const useAuthStore = defineStore('auth', () => {
   // --- SEGÉDFÜGGVÉNYEK ---
   const decodeUserFromToken = (t: string) => {
     try {
-      const decoded = jwtDecode<MyTokenPayload>(t);
+      const decoded = jwtDecode<TokenPayload>(t);
       felhasznalo.value = {
         felhasznaloNev: decoded.sub,
         id: decoded.Id

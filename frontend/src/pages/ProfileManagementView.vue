@@ -232,6 +232,16 @@ import ProfileUploader from '@/components/ProfileUploader.vue';
 import { useAuthStore } from '@/stores/authStore.ts';
 import { authService } from '@/services/authService';
 import { useToastStore } from '@/stores/toast';
+import type { RoleDto, UpdateProfilePayload } from '@/types/auth';
+
+type SocialPlatform = 'facebook' | 'instagram' | 'tiktok';
+
+interface ProfileManagementForm extends UpdateProfilePayload {
+  IMGString: string;
+  facebook: string;
+  instagram: string;
+  tiktok: string;
+}
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -239,10 +249,10 @@ const toastStore = useToastStore();
 
 const isLoading = ref(false);
 const telefonHiba = ref(false);
-const roles = ref<{ id: number, name: string }[]>([]);
+const roles = ref<RoleDto[]>([]);
 
 // Reaktív adatok kiegészítve a közösségi média mezőkkel
-const profilAdatok = reactive({
+const profilAdatok = reactive<ProfileManagementForm>({
   vezetekNev: '',
   keresztNev: '',
   email: '',
@@ -251,7 +261,7 @@ const profilAdatok = reactive({
   roleId: 2,
   rolam: '',
   IMGString: '',
-  cimkek: [] as string[],
+  cimkek: [],
   facebook: '',
   instagram: '',
   tiktok: ''
@@ -259,7 +269,7 @@ const profilAdatok = reactive({
 
 // Modal állapota és változói
 const isModalOpen = ref(false);
-const currentSocial = ref<'facebook' | 'instagram' | 'tiktok' | ''>('');
+const currentSocial = ref<SocialPlatform | ''>('');
 const tempUrl = ref('');
 
 // Címke kezelés adatai
