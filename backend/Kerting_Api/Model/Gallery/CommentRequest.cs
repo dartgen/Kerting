@@ -1,3 +1,5 @@
+using System;
+
 namespace Kerting_Api.Model.Gallery
 {
     public class CommentRequest

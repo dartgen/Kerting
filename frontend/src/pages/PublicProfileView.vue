@@ -248,6 +248,9 @@ interface PublicProfileViewState {
   IMGString: string;
   ertekeles: number;
   ertekelesSzam: number;
+  facebook?: string;
+  instagram?: string;
+  tiktok?: string;
 }
 
 const route = useRoute();
