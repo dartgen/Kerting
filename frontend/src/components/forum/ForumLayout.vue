@@ -4,7 +4,9 @@ import { useRoute, useRouter } from 'vue-router'
 import InnerPageLayout from '@/components/ui/InnerPageLayout.vue'
 import PageTitle from '@/components/ui/PageTitle.vue'
 import { forumService, type ForumSort } from '@/services/forumService'
+import api from '@/services/axios'
 import { authService } from '@/services/authService'
+import type { RoleDto } from '@/types/auth'
 import { useAuthStore } from '@/stores/authStore'
 import { useToastStore } from '@/stores/toast'
 
@@ -109,7 +111,7 @@ const isDetailMode = computed(() => props.mode === 'detail')
 const isForumListRoute = computed(() => route.name === 'forum' && !isDetailMode.value)
 const isAdmin = computed(() => authStore.profilAdatok?.roleId === 1)
 
-const roles = ref<Array<{ id: number; name: string }>>([])
+const roles = ref<RoleDto[]>([])
 const allTags = ref<string[]>([])
 
 const filters = reactive({
@@ -205,11 +207,23 @@ const parseIntQuery = (value: unknown, fallback: number) => {
 
 const normalizeText = (value: string) => value.trim()
 
+const getApiOrigin = () => {
+  const baseURL = String(api.defaults.baseURL || '').trim()
+  if (!baseURL) return window.location.origin
+
+  try {
+    return new URL(baseURL, window.location.origin).origin
+  } catch {
+    return window.location.origin
+  }
+}
+
 const getFullImageUrl = (url?: string | null) => {
   if (!url) return ''
   if (url.startsWith('http')) return url
-  const baseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace('/api', '') || 'https://localhost:44351'
-  return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
+
+  const origin = getApiOrigin()
+  return `${origin}${url.startsWith('/') ? '' : '/'}${url}`
 }
 
 const excerpt = (text: string, maxLength = 220) => {
@@ -243,9 +257,8 @@ const getCurrentUserId = () => {
 }
 
 const getCurrentUserName = () => {
-  const profile = authStore.profilAdatok || {}
-  const vezetekNev = String(profile.vezetekNev || '').trim()
-  const keresztNev = String(profile.keresztNev || '').trim()
+  const vezetekNev = String(authStore.profilAdatok?.vezetekNev || '').trim()
+  const keresztNev = String(authStore.profilAdatok?.keresztNev || '').trim()
   const fullName = `${vezetekNev} ${keresztNev}`.trim()
   if (fullName) return fullName
   return String(authStore.felhasznalo?.felhasznaloNev || 'Te')
@@ -340,7 +353,7 @@ const syncQueryFromFilters = () => {
 
 const loadMeta = async () => {
   const [roleRes, tagRes] = await Promise.all([authService.getRoles(), authService.GetCimekek()])
-  roles.value = (roleRes.data || []).map((role: { id: number; name: string }) => ({
+  roles.value = (roleRes.data || []).map(role => ({
     id: role.id,
     name: (role.name || '').trim()
   }))

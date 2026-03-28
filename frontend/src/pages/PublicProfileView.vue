@@ -235,16 +235,30 @@ import { useRoute, useRouter } from 'vue-router';
 import { authService } from '@/services/authService';
 import { useToastStore } from '@/stores/toast';
 import api from '@/services/axios'
+import type { PublicProfileResponse, RoleDto } from '@/types/auth';
+
+interface PublicProfileViewState {
+  vezetekNev: string;
+  keresztNev: string;
+  email: string;
+  telefon: string;
+  telepules: string;
+  roleId: number;
+  rolam: string;
+  IMGString: string;
+  ertekeles: number;
+  ertekelesSzam: number;
+}
 
 const route = useRoute();
 const router = useRouter();
 const toastStore = useToastStore();
 
 const isLoading = ref(true);
-const roles = ref<{ id: number, name: string }[]>([]);
+const roles = ref<RoleDto[]>([]);
 const activeTab = ref('profil');
 
-const profilAdatok = reactive({
+const profilAdatok = reactive<PublicProfileViewState>({
   vezetekNev: '',
   keresztNev: '',
   email: '',
@@ -292,7 +306,7 @@ const adatokBetoltese = async () => {
     roles.value = rolesRes.data;
 
     const profileRes = await authService.getPublicProfile(userId);
-    const d = profileRes.data;
+    const d: PublicProfileResponse = profileRes.data;
 
     profilAdatok.IMGString = d.imgString || '';
     profilAdatok.vezetekNev = d.vezetekNev || '';
@@ -310,7 +324,7 @@ const adatokBetoltese = async () => {
     profilAdatok.ertekeles = d.ertekeles || 4.8;
     profilAdatok.ertekelesSzam = d.ertekelesSzam || 12;
     if (d.cimkek && Array.isArray(d.cimkek)) {
-      cimkek.value = d.cimkek.map((c: string) => c.trim());
+      cimkek.value = d.cimkek.map(c => c.trim());
     }
   } catch (error) {
     console.error("Betöltési hiba:", error);
@@ -349,7 +363,7 @@ const getImageUrl = (fileName: string) => {
   if (!axiosBaseUrl) return null;
 
   const origin = new URL(axiosBaseUrl).origin;
-  return `${origin}/resources/profiles/${fileName}`;
+  return `${origin}/resources/Profiles/${fileName}`;
 }
 </script>
 

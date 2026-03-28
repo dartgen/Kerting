@@ -160,9 +160,9 @@ namespace Kerting_Api.Service
                     AuthorRoleName = x.RoleName,
                     ProfileImageUrl = string.IsNullOrWhiteSpace(x.User.IMGString)
                         ? null
-                        : $"/resources/profiles/{x.User.IMGString}",
+                        : $"/resources/Profiles/{x.User.IMGString}",
                     AttachedImageUrl = x.Post.AttachedGalleryItemId.HasValue && x.Post.AttachedGalleryItem != null
-                        ? $"/resources/gallery/{x.Post.AttachedGalleryItemId}{x.Post.AttachedGalleryItem.FileExtension}"
+                        ? $"/resources/Gallery/{x.Post.AttachedGalleryItemId}{x.Post.AttachedGalleryItem.FileExtension}"
                         : null,
                     LikesCount = x.Likes,
                     DislikesCount = x.Dislikes,
@@ -312,9 +312,9 @@ namespace Kerting_Api.Service
                 AuthorRoleName = (postRow.Role?.Name ?? string.Empty).Trim(),
                 ProfileImageUrl = string.IsNullOrWhiteSpace(postRow.User.IMGString)
                     ? null
-                    : $"/resources/profiles/{postRow.User.IMGString}",
+                    : $"/resources/Profiles/{postRow.User.IMGString}",
                 AttachedImageUrl = postRow.Post.AttachedGalleryItemId.HasValue && postRow.Post.AttachedGalleryItem != null
-                    ? $"/resources/gallery/{postRow.Post.AttachedGalleryItemId}{postRow.Post.AttachedGalleryItem.FileExtension}"
+                    ? $"/resources/Gallery/{postRow.Post.AttachedGalleryItemId}{postRow.Post.AttachedGalleryItem.FileExtension}"
                     : null,
                 LikesCount = postRow.Post.Reactions.Count(r => r.IsLike),
                 DislikesCount = postRow.Post.Reactions.Count(r => !r.IsLike),
@@ -426,7 +426,7 @@ namespace Kerting_Api.Service
                     AuthorRoleName = (x.Role?.Name ?? string.Empty).Trim(),
                     ProfileImageUrl = string.IsNullOrWhiteSpace(x.User.IMGString)
                         ? null
-                        : $"/resources/profiles/{x.User.IMGString}",
+                        : $"/resources/Profiles/{x.User.IMGString}",
                     LikesCount = reactionMap.TryGetValue(x.Comment.Id, out var reaction) ? reaction.Likes : 0,
                     DislikesCount = reactionMap.TryGetValue(x.Comment.Id, out reaction) ? reaction.Dislikes : 0,
                     MyReaction = myCommentReactions.TryGetValue(x.Comment.Id, out var myReaction) ? myReaction : null,
@@ -837,7 +837,7 @@ namespace Kerting_Api.Service
                 AuthorRoleName = (roleName ?? string.Empty).Trim(),
                 ProfileImageUrl = string.IsNullOrWhiteSpace(user.IMGString)
                     ? null
-                    : $"/resources/profiles/{user.IMGString}",
+                    : $"/resources/Profiles/{user.IMGString}",
                 LikesCount = reactionMap.TryGetValue(comment.Id, out var reaction) ? reaction.Likes : 0,
                 DislikesCount = reactionMap.TryGetValue(comment.Id, out reaction) ? reaction.Dislikes : 0,
                 MyReaction = myCommentReactions.TryGetValue(comment.Id, out var myReaction) ? myReaction : null,
@@ -864,7 +864,7 @@ namespace Kerting_Api.Service
                         AuthorRoleName = (replyRole ?? string.Empty).Trim(),
                         ProfileImageUrl = string.IsNullOrWhiteSpace(replyUser.IMGString)
                             ? null
-                            : $"/resources/profiles/{replyUser.IMGString}",
+                            : $"/resources/Profiles/{replyUser.IMGString}",
                         LikesCount = reactionMap.TryGetValue(replyComment.Id, out var replyReaction) ? replyReaction.Likes : 0,
                         DislikesCount = reactionMap.TryGetValue(replyComment.Id, out replyReaction) ? replyReaction.Dislikes : 0,
                         MyReaction = myCommentReactions.TryGetValue(replyComment.Id, out var replyMyReaction) ? replyMyReaction : null,

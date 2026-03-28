@@ -198,11 +198,11 @@ namespace Kerting_Api.Service
                         i.Description,
                         i.IsPublished,
                         i.IsDeleted,
-                        ImageUrl = $"/resources/gallery/{i.Id}{i.FileExtension}",
+                        ImageUrl = $"/resources/Gallery/{i.Id}{i.FileExtension}",
                         UploaderName = u.VezetekNev.IsNullOrEmpty() || u.KeresztNev.IsNullOrEmpty() ? i.Login.Username : $"{u.VezetekNev} {u.KeresztNev}",
                         ProfileImageUrl = string.IsNullOrWhiteSpace(u.IMGString)
                             ? null
-                            : $"/resources/profiles/{u.IMGString}",
+                            : $"/resources/Profiles/{u.IMGString}",
                         i.CreatedAtUtc,
                         LikesCount = i.Reactions.Count(r => r.IsLike),
                         DislikesCount = i.Reactions.Count(r => !r.IsLike),
@@ -243,11 +243,11 @@ namespace Kerting_Api.Service
                         i.Description,
                         i.IsPublished,
                         i.IsDeleted,
-                        ImageUrl = $"/resources/gallery/{i.Id}{i.FileExtension}",
+                        ImageUrl = $"/resources/Gallery/{i.Id}{i.FileExtension}",
                         UploaderName = i.Login.Username,
                         ProfileImageUrl = string.IsNullOrWhiteSpace(u.IMGString)
                             ? null
-                            : $"/resources/profiles/{u.IMGString}",
+                            : $"/resources/Profiles/{u.IMGString}",
                         i.CreatedAtUtc,
                         LikesCount = i.Reactions.Count(r => r.IsLike),
                         DislikesCount = i.Reactions.Count(r => !r.IsLike),
@@ -299,7 +299,7 @@ namespace Kerting_Api.Service
                             (currentUserId.Value == c.UserId || currentUserId.Value == item.Item.UserId || isAdmin),
                         ProfileImageUrl = string.IsNullOrWhiteSpace(u.IMGString)
                             ? null
-                            : $"/resources/profiles/{u.IMGString}"
+                            : $"/resources/Profiles/{u.IMGString}"
                     })
                 .OrderByDescending(c => c.CreatedAtUtc)
                 .ToListAsync();
@@ -330,11 +330,11 @@ namespace Kerting_Api.Service
                 CanEdit = currentUserId.HasValue && currentUserId.Value == item.Item.UserId,
                 CanDelete = currentUserId.HasValue && (currentUserId.Value == item.Item.UserId || isAdmin),
                 CanPublishToggle = currentUserId.HasValue && currentUserId.Value == item.Item.UserId,
-                ImageUrl = $"/resources/gallery/{item.Item.Id}{item.Item.FileExtension}",
+                ImageUrl = $"/resources/Gallery/{item.Item.Id}{item.Item.FileExtension}",
                 UploaderName = item.Item.Login.Username,
                 ProfileImageUrl = string.IsNullOrWhiteSpace(item.User.IMGString)
                     ? null
-                    : $"/resources/profiles/{item.User.IMGString}",
+                    : $"/resources/Profiles/{item.User.IMGString}",
                 LikesCount = likesCount,
                 DislikesCount = dislikesCount,
                 MyReaction = myReaction,

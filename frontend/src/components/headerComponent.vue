@@ -180,7 +180,7 @@ const userProfileImage = computed(() => {
   if (!axiosBaseUrl) return null;
   try {
     const origin = new URL(axiosBaseUrl).origin;
-    return `${origin}/resources/profiles/${fileName}`;
+    return `${origin}/resources/Profiles/${fileName}`;
   } catch (e) {
     console.error("URL generálási hiba:", e);
     return null;
