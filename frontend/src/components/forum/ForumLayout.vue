@@ -56,6 +56,7 @@ const feedItems = ref<ForumFeedItem[]>([])
 const feedPage = ref(1)
 const feedHasMore = ref(false)
 const feedLoading = ref(false)
+const reactingPostIds = ref<Record<number, boolean>>({})
 
 const showCreateForm = ref(false)
 const createForm = reactive({
@@ -261,7 +262,20 @@ const fetchFeed = async (append = false) => {
       includeDeleted: isAdmin.value && showDeleted.value
     })
 
-    const incoming = (data.items || []) as ForumFeedItem[]
+    const incoming = ((data.items || []) as Array<Record<string, unknown>>).map((item) => {
+      const likesCount = Number(item.likesCount ?? item.LikesCount ?? 0)
+      const dislikesCount = Number(item.dislikesCount ?? item.DislikesCount ?? 0)
+      const commentsCount = Number(item.commentsCount ?? item.CommentsCount ?? 0)
+      const myReactionRaw = (item.myReaction ?? item.MyReaction) as boolean | null | undefined
+
+      return {
+        ...(item as unknown as ForumFeedItem),
+        likesCount: Number.isFinite(likesCount) ? likesCount : 0,
+        dislikesCount: Number.isFinite(dislikesCount) ? dislikesCount : 0,
+        commentsCount: Number.isFinite(commentsCount) ? commentsCount : 0,
+        myReaction: myReactionRaw === true ? true : myReactionRaw === false ? false : null
+      }
+    })
     feedItems.value = append ? [...feedItems.value, ...incoming] : incoming
     feedPage.value = pageToLoad
     feedHasMore.value = Boolean(data.hasMore)
@@ -667,6 +681,48 @@ const reactPost = async (isLike: boolean) => {
   }
 }
 
+const reactPostPreview = async (payload: { postId: number; isLike: boolean }) => {
+  if (reactingPostIds.value[payload.postId]) return
+
+  const targetPost = feedItems.value.find(item => item.id === payload.postId)
+  if (!targetPost) return
+
+  const previous = {
+    myReaction: targetPost.myReaction,
+    likesCount: targetPost.likesCount,
+    dislikesCount: targetPost.dislikesCount
+  }
+
+  const delta = applyReactionDelta(previous.myReaction, payload.isLike)
+  targetPost.myReaction = delta.nextReaction
+  targetPost.likesCount = Math.max(0, targetPost.likesCount + delta.likesDelta)
+  targetPost.dislikesCount = Math.max(0, targetPost.dislikesCount + delta.dislikesDelta)
+  reactingPostIds.value[payload.postId] = true
+
+  try {
+    await forumService.reactPost(payload.postId, payload.isLike)
+    const { data } = await forumService.getPostById(payload.postId, {
+      commentCursor: 0,
+      commentPageSize: 1,
+      replyPageSize: 1,
+      includeDeleted: isAdmin.value && showDeleted.value
+    })
+
+    targetPost.likesCount = Number(data?.likesCount ?? targetPost.likesCount)
+    targetPost.dislikesCount = Number(data?.dislikesCount ?? targetPost.dislikesCount)
+    const syncedReaction = data?.myReaction as boolean | null | undefined
+    targetPost.myReaction = syncedReaction === true ? true : syncedReaction === false ? false : null
+  } catch (error) {
+    targetPost.myReaction = previous.myReaction
+    targetPost.likesCount = previous.likesCount
+    targetPost.dislikesCount = previous.dislikesCount
+    console.error('Preview post reakció hiba', error)
+    toastStore.addToast('A reakció mentése nem sikerült.', 3500, 'error')
+  } finally {
+    reactingPostIds.value[payload.postId] = false
+  }
+}
+
 const reactComment = async (commentId: number, isLike: boolean) => {
   if (!detail.value) return
 
@@ -891,10 +947,13 @@ onMounted(async () => {
           v-for="post in feedItems"
           :key="post.id"
           :post="post"
+          :is-authenticated="authStore.isAuthenticated"
+          :is-reacting="Boolean(reactingPostIds[post.id])"
           :get-full-image-url="getFullImageUrl"
           :excerpt="excerpt"
           :format-date-time="formatDateTime"
           @open-detail="openDetail"
+          @react-post-preview="reactPostPreview"
           @open-edit="openEditPost"
           @delete-post="deletePost"
           @restore-post="restorePost"
