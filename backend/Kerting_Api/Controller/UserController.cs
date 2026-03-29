@@ -139,13 +139,15 @@ namespace Kerting_Api.Controller
             var roles = await _context.Role.ToListAsync();
             return Ok(roles);
         }
-
+        [Authorize]
         [HttpGet("GetPublicProfile/{id}")]
         // Ez a végpont publikus, NEM kell rá [Authorize]!
         public async Task<IActionResult> GetPublicProfile(int id)
         {
             // 1. Kikeresjük a felhasználót az Id alapján
             var user = await _context.User.FindAsync(id);
+            if (user == null) return NotFound("Felhasználó nem található.");
+
             // 2. LEKÉRDEZZÜK A CÍMKÉKET
             var userCimkek = await _context.UserActivityTag
                 .Where(uat => uat.USerId == id)
@@ -157,43 +159,56 @@ namespace Kerting_Api.Controller
                 )
                 .ToListAsync();
 
-            // --- MASZKOLÁSI LOGIKA KEZDETE ---
+            // 3. ÉRTÉKELÉSEK KISZÁMOLÁSA (ÚJ RÉSZ)
+            // Csak azokat a review-kat nézzük, amiknek VAN csillaga (Rating != null) és nem töröltek
+            var reviewsQuery = _context.UserReview
+                .Where(r => r.TargetUserId == id && r.ParentReviewId == null && !r.IsDeleted && r.Rating != null);
 
-            // Telefon maszkolása (Csak az utolsó 4 számjegy látszik)
+            var ertekelesSzam = await reviewsQuery.CountAsync();
+            double ertekeles = 0;
+
+            if (ertekelesSzam > 0)
+            {
+                // Átlag kiszámítása
+                ertekeles = await reviewsQuery.AverageAsync(r => (double)r.Rating!.Value);
+                // Kerekítés 1 tizedesjegyre (opcionális, de szebb a frontendnek)
+                ertekeles = Math.Round(ertekeles, 1);
+            }
+
+            // --- MASZKOLÁSI LOGIKA KEZDETE ---
+            // (Ide jön a te eredeti telefon és email maszkoló kódod változatlanul...)
+
             string displayTelefon = user.Telefon;
             if (user.TelefonPublikus != true && !string.IsNullOrEmpty(user.Telefon))
             {
                 displayTelefon = new string('*', user.Telefon.Length - 4) + user.Telefon.Substring(user.Telefon.Length - 4);
             }
 
-            // Email maszkolása (Szokásos kitakarás: elso2betu***@domain.com)
             string displayEmail = user.Email;
             if (user.EmailPublikus != true && !string.IsNullOrEmpty(user.Email))
             {
                 int atIndex = user.Email.IndexOf('@');
                 string localPart = user.Email.Substring(0, atIndex);
-                string domainPart = user.Email.Substring(atIndex); // Tartalmazza a @-ot is
+                string domainPart = user.Email.Substring(atIndex);
 
                 if (localPart.Length > 2)
                 {
-                    // Pld: valaki@anya.hu -> va***@anya.hu
                     displayEmail = localPart.Substring(0, 2) + "***" + domainPart;
                 }
                 else
                 {
-                    // Ha nagyon rövid a név, pld: a@anya.hu -> a***@anya.hu
                     displayEmail = localPart.Substring(0, 1) + "***" + domainPart;
                 }
             }
             // --- MASZKOLÁSI LOGIKA VÉGE ---
 
-            // 3. ADATVÉDELEM
+            // 4. ADATVÉDELEM ÉS VISSZATÉRÉS
             var publicProfile = new
             {
                 user.VezetekNev,
                 user.KeresztNev,
-                Email = displayEmail,       // A maszkolt (vagy publikus) emailt adjuk át
-                Telefon = displayTelefon,   // A maszkolt (vagy publikus) telefont adjuk át
+                Email = displayEmail,
+                Telefon = displayTelefon,
                 user.Telepules,
                 user.RoleId,
                 user.IMGString,
@@ -203,7 +218,9 @@ namespace Kerting_Api.Controller
                 user.Tiktok,
                 user.EmailPublikus,
                 user.TelefonPublikus,
-                Cimkek = userCimkek
+                Cimkek = userCimkek,
+                Ertekeles = ertekeles,         // <-- ÚJ MEZŐ (Átlag)
+                ErtekelesSzam = ertekelesSzam  // <-- ÚJ MEZŐ (Darabszám)
             };
 
             return Ok(publicProfile);

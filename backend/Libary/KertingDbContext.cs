@@ -17,6 +17,8 @@ namespace Libary
         public DbSet<Login> Login { get; set; }
         public DbSet<Role> Role { get; set; }
         public DbSet<User> User { get; set; }
+        public DbSet<UserReview> UserReview { get; set; }
+        public DbSet<UserReviewReaction> UserReviewReaction { get; set; }
         public DbSet<UserActivityTag> UserActivityTag { get; set; }
         public DbSet<ActivityTag> ActivityTag { get; set; }
         public DbSet<GalleryItem> GalleryItem { get; set; }

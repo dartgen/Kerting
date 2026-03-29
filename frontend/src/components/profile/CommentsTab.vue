@@ -48,35 +48,27 @@
     </div>
 
     <div class="space-y-4 mt-2">
-      <h3 class="text-lg font-semibold text-earth-50 mb-4 px-1 border-b border-earth-100/10 pb-2">Korábbi értékelések ({{ ertekelesekLista.length }})</h3>
+      <h3 class="text-lg font-semibold text-earth-50 mb-4 px-1 border-b border-earth-100/10 pb-2">
+        Korábbi értékelések ({{ ertekelesekLista.length }})
+      </h3>
 
-      <article v-for="ertekeles in ertekelesekLista" :key="ertekeles.id" class="rounded-xl border border-earth-100/10 bg-earth-800/40 p-4 transition-all hover:bg-earth-800/60">
-
-        <div class="flex items-start justify-between gap-3 border-b border-earth-100/5 pb-3 mb-3">
-          <div>
-            <p class="text-sm text-earth-100 font-bold">{{ ertekeles.szerzoNev }}</p>
-            <p class="text-xs text-earth-300/70 mt-0.5">{{ ertekeles.datum }}</p>
-          </div>
-
-          <div class="flex items-center text-yellow-400 drop-shadow-sm">
-            <svg v-for="i in 5" :key="i" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" :fill="ertekeles.pontszam >= i ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="1.5" class="w-4 h-4">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
-            </svg>
-          </div>
-        </div>
-
-        <p class="text-earth-100 mt-2 whitespace-pre-line text-sm leading-relaxed">{{ ertekeles.uzenet }}</p>
-
-        <div class="mt-4 flex gap-2">
-          <button type="button" class="text-xs px-2.5 py-1.5 rounded-lg bg-earth-900/50 text-earth-200 border border-earth-100/10 hover:bg-earth-700 hover:text-white transition-colors flex items-center gap-1">
-            👍 {{ ertekeles.likes }}
-          </button>
-          <button type="button" class="text-xs px-2.5 py-1.5 rounded-lg bg-earth-900/50 text-earth-200 border border-earth-100/10 hover:bg-earth-700 hover:text-white transition-colors flex items-center gap-1">
-            👎 {{ ertekeles.dislikes }}
-          </button>
-        </div>
-
-      </article>
+      <UserReviewItem
+        v-for="ertekeles in ertekelesekLista"
+        :key="ertekeles.id"
+        :review="ertekeles"
+        :is-locked="false"
+        :replying-to-review-id="replyingToReviewId"
+        :reply-draft="replyDrafts[ertekeles.id] || ''"
+        :reply-visible="visibleReplies.has(ertekeles.id)"
+        :replies-loading="false"
+        :format-date-time="formatDateTime"
+        @react-review="handleReactReview"
+        @delete-review="handleDeleteReview"
+        @toggle-replies="handleToggleReplies"
+        @toggle-reply-form="handleToggleReplyForm"
+        @update-reply-draft="(val) => handleUpdateReplyDraft(ertekeles.id, val)"
+        @submit-reply="handleSubmitReply"
+      />
 
       <div v-if="ertekelesekLista.length === 0" class="text-center text-earth-300/70 py-10 bg-earth-900/20 rounded-xl border border-earth-100/5">
         <i class="fa-solid fa-star-half-stroke text-3xl mb-3 opacity-50"></i>
@@ -88,8 +80,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import { useToastStore } from '@/stores/toast';
+import UserReviewItem from './UserReviewItem.vue';
+import type { UserReview } from './UserReviewItem.vue';
 
 const props = defineProps<{
   userId: string;
@@ -97,41 +91,28 @@ const props = defineProps<{
 
 const toastStore = useToastStore();
 
-interface Ertekeles {
-  id: number;
-  szerzoNev: string;
-  datum: string;
-  uzenet: string;
-  pontszam: number;
-  likes: number;
-  dislikes: number;
-}
-
+// --- Űrlap állapota ---
 const ujErtekelesSzoveg = ref('');
 const ujErtekelesPont = ref(0);
 const hoverPont = ref(0);
 
-const ertekelesekLista = ref<Ertekeles[]>([
-  {
-    id: 1,
-    szerzoNev: 'Kovács Péter',
-    datum: '2026. 03. 28. 14:20',
-    uzenet: 'Nagyon pontos és precíz volt. Csak ajánlani tudom a munkáját, legközelebb is őt hívom!',
-    pontszam: 5,
-    likes: 3,
-    dislikes: 0
-  },
-  {
-    id: 2,
-    szerzoNev: 'Nagy Anna',
-    datum: '2026. 03. 25. 09:15',
-    uzenet: 'Korrekt hozzáállás, de egy kicsit csúszott a megbeszélt határidővel.',
-    pontszam: 4,
-    likes: 1,
-    dislikes: 0
-  }
-]);
+// --- Válaszok állapota ---
+const replyingToReviewId = ref<number | null>(null);
+const replyDrafts = reactive<Record<number, string>>({});
+const visibleReplies = reactive(new Set<number>());
 
+// --- Lista állapota ---
+// A mock adatokat frissítettem, hogy illeszkedjenek a UserReview interfészhez
+const ertekelesekLista = ref<UserReview[]>();
+
+// --- Dátum formázó függvény (amit átadunk a gyereknek) ---
+const formatDateTime = (raw?: string | null) => {
+  if (!raw) return '';
+  const date = new Date(raw);
+  return date.toLocaleString('hu-HU', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+};
+
+// --- Fő értékelés küldése ---
 const ertekelesKuldese = async () => {
   if (ujErtekelesPont.value === 0) {
     toastStore.addToast('Kérlek válassz pontszámot (csillagot)!', 3000, 'warning');
@@ -142,20 +123,22 @@ const ertekelesKuldese = async () => {
     return;
   }
 
-  // Ide jöhet majd az API hívás a props.userId felhasználásával:
-  // await api.post(`/profil/ertekeles/${props.userId}`, { pont: ujErtekelesPont.value, uzenet: ujErtekelesSzoveg.value });
+  // API HÍVÁS HELYE...
 
   const ujId = Date.now();
-  const ma = new Date().toLocaleString('hu-HU', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 
   ertekelesekLista.value.unshift({
     id: ujId,
-    szerzoNev: 'Én (teszt felh.)',
-    datum: ma,
-    uzenet: ujErtekelesSzoveg.value,
-    pontszam: ujErtekelesPont.value,
-    likes: 0,
-    dislikes: 0
+    authorName: '',
+    createdAtUtc: new Date().toISOString(),
+    message: ujErtekelesSzoveg.value,
+    rating: ujErtekelesPont.value,
+    likesCount: 0,
+    dislikesCount: 0,
+    myReaction: null,
+    canDelete: true,
+    canRestore: false,
+    replies: []
   });
 
   ujErtekelesSzoveg.value = '';
@@ -163,9 +146,83 @@ const ertekelesKuldese = async () => {
   toastStore.addToast('Értékelés sikeresen elküldve!', 3000, 'success');
 };
 
+// --- Gyerek komponensből érkező események (Emits) kezelése ---
+
+const handleReactReview = (reviewId: number, isLike: boolean) => {
+  const review = ertekelesekLista.value.find(r => r.id === reviewId);
+  if (review) {
+    // Ha ugyanarra nyomott rá, akkor levesszük a reakciót
+    if (review.myReaction === isLike) {
+      review.myReaction = null;
+      isLike ? review.likesCount-- : review.dislikesCount--;
+    } else {
+      // Ha másikon volt, azt csökkentjük
+      if (review.myReaction === true) review.likesCount--;
+      if (review.myReaction === false) review.dislikesCount--;
+
+      // Új reakció beállítása
+      review.myReaction = isLike;
+      isLike ? review.likesCount++ : review.dislikesCount++;
+    }
+    // Ide jön az API hívás (mentés adatbázisba)
+  }
+};
+
+const handleDeleteReview = (reviewId: number) => {
+  // Példa lokális törlésre
+  ertekelesekLista.value = ertekelesekLista.value.filter(r => r.id !== reviewId);
+  toastStore.addToast('Értékelés törölve', 3000, 'success');
+};
+
+const handleToggleReplies = (reviewId: number) => {
+  if (visibleReplies.has(reviewId)) {
+    visibleReplies.delete(reviewId);
+  } else {
+    visibleReplies.add(reviewId);
+  }
+};
+
+const handleToggleReplyForm = (reviewId: number) => {
+  if (replyingToReviewId.value === reviewId) {
+    replyingToReviewId.value = null; // Bezárás
+  } else {
+    replyingToReviewId.value = reviewId; // Megnyitás
+    visibleReplies.add(reviewId); // Automatikusan nyissa le a korábbi válaszokat is
+  }
+};
+
+const handleUpdateReplyDraft = (reviewId: number, text: string) => {
+  replyDrafts[reviewId] = text;
+};
+
+const handleSubmitReply = (reviewId: number) => {
+  const text = replyDrafts[reviewId];
+  if (!text || !text.trim()) return;
+
+  const review = ertekelesekLista.value.find(r => r.id === reviewId);
+  if (review) {
+    if (!review.replies) review.replies = [];
+    review.replies.push({
+      id: Date.now(),
+      authorName: 'Én',
+      message: text,
+      createdAtUtc: new Date().toISOString(),
+      likesCount: 0,
+      dislikesCount: 0,
+      myReaction: null,
+      canDelete: true,
+      canRestore: false
+    });
+
+    // Mező ürítése és bezárása
+    replyDrafts[reviewId] = '';
+    replyingToReviewId.value = null;
+    toastStore.addToast('Válasz elküldve!', 3000, 'success');
+  }
+};
+
 onMounted(() => {
-  // Itt töltheted be API-ból az értékeléseket a jövőben:
-  // if(props.userId) { ... }
+  // Inicializálás, API hívás
 });
 </script>
 
