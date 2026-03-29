@@ -83,6 +83,9 @@
                   <RouterLink to="/profile/gallery" class="block px-4 py-2 text-sm text-earth-50 hover:bg-earth-700/50 transition-colors" @click="profileMenuOpen = false">
                     <i class="fa-regular fa-user mr-2 text-earth-200"></i> Saját Galéria
                   </RouterLink>
+                  <RouterLink to="/chat" class="block px-4 py-2 text-sm text-earth-50 hover:bg-earth-700/50 transition-colors" @click="profileMenuOpen = false">
+                    <i class="fa-regular fa-user mr-2 text-earth-200"></i> Csevegés
+                  </RouterLink>
                   <RouterLink
                     v-if="isAdmin"
                     to="/admin/featured-users"
@@ -135,6 +138,7 @@
                 <div class="text-xs font-bold text-earth-400 uppercase tracking-widest">Fiók</div>
                 <RouterLink to="/profile" class="nav-link text-lg" @click="mobileMenuOpen = false">Profilom</RouterLink>
                 <RouterLink to="/profile/gallery" class="nav-link text-lg" @click="mobileMenuOpen = false">Saját Galéria</RouterLink>
+                <RouterLink to="/chat" class="nav-link text-lg" @click="mobileMenuOpen = false">Csevegés</RouterLink>
                 <RouterLink v-if="isAdmin" to="/admin/featured-users" class="nav-link text-lg" @click="mobileMenuOpen = false">Kiemelt felhasználók</RouterLink>
                 <RouterLink to="/settings" class="nav-link text-lg" @click="mobileMenuOpen = false">Beállítások</RouterLink>
                 <button @click="handleKijelentkezes" class="font-bold text-lg text-red-400 hover:text-red-300 transition-colors pt-2">

@@ -1,14 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Libary.Model.Auth;
+﻿using Libary.Model.Auth;
+using Libary.Model.Chat;
+using Libary.Model.Forum;
+using Libary.Model.Gallery;
+using Libary.Model.Tag;
 using Libary.Model.User;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Libary.Model.Tag;
-using Libary.Model.Gallery;
-using Libary.Model.Forum;
 
 namespace Libary
 {
@@ -30,6 +31,9 @@ namespace Libary
         public DbSet<ForumPostReaction> ForumPostReaction { get; set; }
         public DbSet<ForumCommentReaction> ForumCommentReaction { get; set; }
         public DbSet<ForumPostTag> ForumPostTag { get; set; }
+        public DbSet<Conversation> Conversations { get; set; }
+        public DbSet<ConversationParticipant> ConversationParticipants { get; set; }
+        public DbSet<Message> Messages { get; set; }
 
         public KertingDbContext(DbContextOptions options) : base(options)
         {
@@ -276,6 +280,17 @@ namespace Libary
                 entity.HasIndex(x => x.TagId)
                     .HasDatabaseName("IX_ForumPostTag_TagId");
             });
+
+            // Beállítjuk a ConversationParticipant összetett kulcsát
+            modelBuilder.Entity<ConversationParticipant>()
+                .HasKey(cp => new { cp.ConversationId, cp.UserId });
+
+            // 2. A kaszkádolt törlés megakadályozása (Hogy ne kapj SQL Server hibát)
+            modelBuilder.Entity<Message>()
+                .HasOne(m => m.Sender)
+                .WithMany() 
+                .HasForeignKey(m => m.SenderId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

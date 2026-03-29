@@ -78,6 +78,15 @@ const router = createRouter({
       }
     },
     {
+      path: '/chat',
+      name: 'chat',
+      component: () => import('../pages/ChatView.vue'),
+      meta: {
+        title: `${pre} Chat`,
+        requiresAuth: true
+      }
+    },
+    {
       path: '/forum',
       name: 'forum',
       component: () => import('../pages/ForumView.vue'),
