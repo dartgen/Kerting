@@ -1,11 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { authService } from '@/services/authService'
 
 export interface Professional {
   id: number
   name: string
   desc: string
-  image?: string // Lehetséges jövőbeli mező
+  image?: string
+  ertekeles: number
+  ertekelesSzam: number
 }
 
 export interface Work {
@@ -16,33 +19,34 @@ export interface Work {
 }
 
 export const useGardenStore = defineStore('garden', () => {
-  const professionals = ref<Professional[]>([
-    {
-      id: 1,
-      name: 'Kovács Péter',
-      desc: 'Szakértő kertész, aki több mint 15 éves tapasztalattal rendelkezik a tájépítészetben. Szenvedélye a fenntartható kertek tervezése.',
-    },
-    {
-      id: 2,
-      name: 'Nagy Anna',
-      desc: 'Virágkötő és dísznövény-szakértő. Különleges érzéke van a színek harmóniájához és a szezonális növénykombinációkhoz.',
-    },
-    {
-      id: 3,
-      name: 'Szabó Gábor',
-      desc: 'Fametszésre és gyümölcsfák gondozására specializálódott. Precíz munkavégzéséről és a fák egészségének megőrzéséről ismert.',
-    },
-    {
-      id: 4,
-      name: 'Tóth Éva',
-      desc: 'Kerttervező mérnök, modern és minimalista kertek megálmodója. Az innovatív megoldások híve.',
-    },
-    {
-      id: 5,
-      name: 'Kiss László',
-      desc: 'Öntözőrendszerek telepítésének mestere. Garantálja, hogy kertje mindig megfelelően hidratált legyen, víztakarékos módon.',
+  const professionals = ref<Professional[]>([])
+  const featuredLoading = ref(false)
+  const featuredError = ref<string | null>(null)
+
+  const loadFeaturedProfessionals = async () => {
+    featuredLoading.value = true
+    featuredError.value = null
+
+    try {
+      const response = await authService.getFeaturedCarouselProfiles()
+      professionals.value = response.data
+        .map((item) => ({
+          id: item.userId,
+          name: item.name,
+          desc: item.bio,
+          image: item.imgString,
+          ertekeles: item.ertekeles ?? 0,
+          ertekelesSzam: item.ertekelesSzam ?? 0,
+        }))
+        .filter((item) => item.name.trim().length > 0 && item.desc.trim().length > 0)
+    } catch (error) {
+      console.error('Nem sikerült betölteni a kiemelt felhasználókat:', error)
+      featuredError.value = 'Nem sikerült betölteni a kiemelt szakembereket.'
+      professionals.value = []
+    } finally {
+      featuredLoading.value = false
     }
-  ])
+  }
 
   const works = ref<Work[]>([
     {
@@ -74,7 +78,10 @@ export const useGardenStore = defineStore('garden', () => {
 
   return {
     professionals,
-    works
+    works,
+    featuredLoading,
+    featuredError,
+    loadFeaturedProfessionals,
   }
 })
 

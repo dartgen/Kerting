@@ -104,18 +104,34 @@ const router = createRouter({
         requiresAuth: true
       }
     },
+    {
+      path: '/admin/featured-users',
+      name: 'admin-featured-users',
+      component: () => import('../pages/AdminFeaturedUsersView.vue'),
+      meta: {
+        title: `${pre} Kiemelt felhasználók`,
+        requiresAuth: true,
+        requiresAdmin: true,
+      }
+    },
   ],
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   document.title = to.meta.title as string;
 
   const authStore = useAuthStore();
+
+  if (authStore.isAuthenticated && !authStore.profilAdatok) {
+    await authStore.fetchUserProfile();
+  }
 
   // 2. KIBŐVÍTETT LOGIKA AZ ÚTVONAL ŐRBEN
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     // Védett oldal, de NINCS bejelentkezve -> irány a login
     next({ name: 'login' });
+  } else if (to.meta.requiresAdmin && authStore.profilAdatok?.roleId !== 1) {
+    next({ name: 'home' });
   } else if (to.meta.requiresGuest && authStore.isAuthenticated) {
     // Vendég oldal (pl. login, regisztráció), de MÁR be van jelentkezve -> irány a főoldal (vagy profil)
     next({ name: 'home' });

@@ -1,6 +1,9 @@
 import apiClient from './axios';
 import type {
   CheckUsernameResponse,
+  FeaturedAdminDataResponse,
+  FeaturedCarouselProfile,
+  FeaturedSlotAssignment,
   FirstLoginResponse,
   LoginResponse,
   PublicProfileResponse,
@@ -79,5 +82,20 @@ export const authService = {
   // Publikus profil lekérése ID alapján
   getPublicProfile(id: string | number) {
     return apiClient.get<PublicProfileResponse>(`/GetPublicProfile/${id}`);
+  },
+
+  // Kiemelt felhasználók a főoldali carouselhez
+  getFeaturedCarouselProfiles() {
+    return apiClient.get<FeaturedCarouselProfile[]>('/featured-users');
+  },
+
+  // Admin képernyőhöz: slot kiosztások + választható felhasználók
+  getFeaturedAdminData() {
+    return apiClient.get<FeaturedAdminDataResponse>('/featured-users/admin/data');
+  },
+
+  // Admin mentés: pontosan 5 rendezett slot
+  updateFeaturedSlots(assignments: FeaturedSlotAssignment[]) {
+    return apiClient.put('/featured-users/admin/slots', assignments);
   }
 };

@@ -103,7 +103,7 @@ const visibleReplies = reactive(new Set<number>());
 
 // --- Lista állapota ---
 // A mock adatokat frissítettem, hogy illeszkedjenek a UserReview interfészhez
-const ertekelesekLista = ref<UserReview[]>();
+const ertekelesekLista = ref<UserReview[]>([]);
 
 // --- Dátum formázó függvény (amit átadunk a gyereknek) ---
 const formatDateTime = (raw?: string | null) => {
@@ -138,6 +138,7 @@ const ertekelesKuldese = async () => {
     myReaction: null,
     canDelete: true,
     canRestore: false,
+    isDeleted: false,
     replies: []
   });
 
@@ -211,7 +212,8 @@ const handleSubmitReply = (reviewId: number) => {
       dislikesCount: 0,
       myReaction: null,
       canDelete: true,
-      canRestore: false
+      canRestore: false,
+      isDeleted: false
     });
 
     // Mező ürítése és bezárása

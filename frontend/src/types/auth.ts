@@ -52,7 +52,7 @@ export interface ProfileBaseFields {
   telefonPublikus : boolean;
 }
 
-export interface UserProfileResponse extends ProfileBaseFields, ProfileSocialLinks {
+export interface UserProfileResponse extends ProfileBaseFields {
   imgString?: string;
   roleName?: string;
 }
@@ -62,6 +62,31 @@ export interface PublicProfileResponse extends UserProfileResponse {
   ertekelesSzam?: number;
 }
 
-export interface UpdateProfilePayload extends ProfileBaseFields, ProfileSocialLinks {
+export interface FeaturedCarouselProfile {
+  slotNo: number;
+  userId: number;
+  name: string;
+  bio: string;
+  imgString?: string;
+  ertekeles: number;
+  ertekelesSzam: number;
+}
+
+export interface FeaturedSlotAssignment {
+  slotNo: number;
+  userId: number;
+}
+
+export interface FeaturedAdminUserOption {
+  id: number;
+  name: string;
+}
+
+export interface FeaturedAdminDataResponse {
+  slots: FeaturedSlotAssignment[];
+  users: FeaturedAdminUserOption[];
+}
+
+export interface UpdateProfilePayload extends ProfileBaseFields {
   IMGString?: string;
 }
