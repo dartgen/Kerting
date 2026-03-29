@@ -23,6 +23,15 @@ const router = createRouter({
       }
     },
     {
+      path: '/gallery/:id',
+      name: 'gallery-detail',
+      component: () => import('../pages/GalleryDetailView.vue'),
+      meta: {
+        title: `${pre} Galléria részletek`,
+        requiresAuth: true
+      }
+    },
+    {
       path: '/profile',
       name: 'profile',
       component: () => import('../pages/ProfileManagementView.vue'),

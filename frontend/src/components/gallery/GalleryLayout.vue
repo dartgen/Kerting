@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { motion, AnimatePresence } from 'motion-v'
+import { useRoute, useRouter } from 'vue-router'
 import api from '@/services/axios'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -67,8 +68,11 @@ interface GalleryDetailCommentDto {
 interface GalleryDetailDto {
   id: number
   userId: number
+  imageUrl?: string
   title?: string
   description?: string
+  uploaderName?: string
+  createdAtUtc?: string
   profileImageUrl?: string | null
   likesCount?: number
   dislikesCount?: number
@@ -86,10 +90,14 @@ const props = withDefaults(defineProps<{
   mode?: 'main' | 'own'
   title?: string
   subtitle?: string
+  detailOnly?: boolean
+  openItemId?: number | null
 }>(), {
   mode: 'main',
   title: 'Galéria',
-  subtitle: 'Inspirálódj más kertekből és munkafolyamatokból.'
+  subtitle: 'Inspirálódj más kertekből és munkafolyamatokból.',
+  detailOnly: false,
+  openItemId: null
 })
 
 const galleryItems = ref<GalleryItem[]>([])
@@ -101,15 +109,19 @@ const isSavingItem = ref(false)
 const isEditingItem = ref(false)
 const editTitle = ref('')
 const editDescription = ref('')
+const detailLoadError = ref('')
 
 const MotionDiv = motion.div
 const authStore = useAuthStore()
+const router = useRouter()
+const route = useRoute()
 const previewCardId = ref<number | null>(null)
 const expandedCardId = ref<number | null>(null)
 const isDesktopInteraction = ref(false)
 
 const isOwnMode = computed(() => props.mode === 'own')
 const isAdmin = computed(() => authStore.profilAdatok?.roleId === 1)
+const hideCardOverlayText = computed(() => Boolean(props.userId) && isDesktopInteraction.value && !props.detailOnly)
 
 const expandedCard = computed(() => galleryItems.value.find((item) => item.id === expandedCardId.value) ?? null)
 
@@ -121,8 +133,53 @@ const syncEditorFromExpanded = () => {
   editDescription.value = expandedCard.value.description
 }
 
+const mapDetailToGalleryItem = (data: GalleryDetailDto, existingItem?: GalleryItem): GalleryItem | null => {
+  const imageUrl = data.imageUrl
+    ? getFullImageUrl(data.imageUrl)
+    : existingItem?.imageUrl
+
+  const uploaderName = data.uploaderName ?? existingItem?.uploaderName
+  if (!imageUrl || !uploaderName) return null
+
+  return {
+    id: data.id,
+    userId: data.userId ?? existingItem?.userId ?? 0,
+    imageUrl,
+    title: data.title ?? existingItem?.title ?? '',
+    description: data.description ?? existingItem?.description ?? '',
+    uploaderName,
+    uploaderAvatarUrl: data.profileImageUrl
+      ? getFullImageUrl(data.profileImageUrl)
+      : existingItem?.uploaderAvatarUrl ?? `https://i.pravatar.cc/96?u=${data.id}`,
+    uploadedAt: data.createdAtUtc
+      ? new Date(data.createdAtUtc).toLocaleDateString()
+      : existingItem?.uploadedAt ?? '',
+    likesCount: data.likesCount ?? existingItem?.likesCount ?? 0,
+    dislikesCount: data.dislikesCount ?? existingItem?.dislikesCount ?? 0,
+    myReaction: data.myReaction ?? existingItem?.myReaction ?? null,
+    isPublished: data.isPublished ?? existingItem?.isPublished ?? true,
+    isDeleted: data.isDeleted ?? existingItem?.isDeleted ?? false,
+    canEdit: data.canEdit ?? existingItem?.canEdit ?? false,
+    canDelete: data.canDelete ?? existingItem?.canDelete ?? false,
+    canPublishToggle: data.canPublishToggle ?? existingItem?.canPublishToggle ?? false,
+    comments: data.comments?.map((c) => ({
+      id: c.id,
+      userId: c.userId,
+      userName: c.userName,
+      avatarUrl: c.profileImageUrl
+        ? getFullImageUrl(c.profileImageUrl)
+        : `https://i.pravatar.cc/72?u=${c.id}`,
+      message: c.message,
+      createdAt: new Date(c.createdAtUtc).toLocaleDateString(),
+      isDeleted: c.isDeleted ?? false,
+      canDelete: c.canDelete ?? false
+    })) || []
+  }
+}
+
 const openExpandedCard = async (id: number) => {
   commentSubmitError.value = ''
+  detailLoadError.value = ''
   try {
     const { data } = await api.get<GalleryDetailDto>(`/Gallery/${id}`, {
       params: {
@@ -134,58 +191,67 @@ const openExpandedCard = async (id: number) => {
     if (itemIndex !== -1) {
       const existingItem = galleryItems.value[itemIndex]
       if (existingItem) {
-        galleryItems.value[itemIndex] = {
-          id: existingItem.id,
-          userId: data.userId ?? existingItem.userId,
-          imageUrl: existingItem.imageUrl,
-          title: data.title ?? existingItem.title,
-          description: data.description ?? existingItem.description,
-          uploaderName: existingItem.uploaderName,
-          uploaderAvatarUrl: data.profileImageUrl
-            ? getFullImageUrl(data.profileImageUrl)
-            : existingItem.uploaderAvatarUrl,
-          uploadedAt: existingItem.uploadedAt,
-          likesCount: data.likesCount ?? existingItem.likesCount,
-          dislikesCount: data.dislikesCount ?? existingItem.dislikesCount,
-          myReaction: data.myReaction ?? null,
-          isPublished: data.isPublished ?? existingItem.isPublished,
-          isDeleted: data.isDeleted ?? existingItem.isDeleted,
-          canEdit: data.canEdit ?? existingItem.canEdit,
-          canDelete: data.canDelete ?? existingItem.canDelete,
-          canPublishToggle: data.canPublishToggle ?? existingItem.canPublishToggle,
-          comments: data.comments?.map((c) => ({
-            id: c.id,
-            userId: c.userId,
-            userName: c.userName,
-            avatarUrl: c.profileImageUrl
-              ? getFullImageUrl(c.profileImageUrl)
-              : `https://i.pravatar.cc/72?u=${c.id}`,
-            message: c.message,
-            createdAt: new Date(c.createdAtUtc).toLocaleDateString(),
-            isDeleted: c.isDeleted ?? false,
-            canDelete: c.canDelete ?? false
-          })) || []
+        const mapped = mapDetailToGalleryItem(data, existingItem)
+        if (mapped) {
+          galleryItems.value[itemIndex] = mapped
         }
       }
+    } else {
+      const mapped = mapDetailToGalleryItem(data)
+      if (mapped) {
+        galleryItems.value = [mapped]
+      }
     }
+
+    if (!galleryItems.value.some(item => item.id === id)) {
+      detailLoadError.value = 'A galéria elem nem elérhető.'
+      return
+    }
+
+    expandedCardId.value = id
+    isEditingItem.value = false
+    syncEditorFromExpanded()
   } catch (err) {
     console.error('Hiba a részletek lekérésekor', err)
+    detailLoadError.value = 'A galéria elem nem elérhető.'
   }
-  expandedCardId.value = id
-  isEditingItem.value = false
-  syncEditorFromExpanded()
 }
 
-const handleCardClick = async (id: number) => {
-  if (expandedCardId.value) return
-
-  if (isDesktopInteraction.value) {
+const openDetailRoute = async (id: number) => {
+  if (props.detailOnly) {
     await openExpandedCard(id)
     return
   }
 
+  const query: Record<string, string> = {
+    from: route.fullPath
+  }
+
+  if (props.mode) {
+    query.mode = props.mode
+  }
+  if (props.userId) {
+    query.userId = props.userId
+  }
+
+  await router.push({
+    name: 'gallery-detail',
+    params: { id },
+    query
+  })
+}
+
+const handleCardClick = async (id: number) => {
+  if (props.detailOnly) return
+  if (expandedCardId.value) return
+
+  if (isDesktopInteraction.value) {
+    await openDetailRoute(id)
+    return
+  }
+
   if (previewCardId.value === id) {
-    await openExpandedCard(id)
+    await openDetailRoute(id)
     return
   }
 
@@ -193,6 +259,22 @@ const handleCardClick = async (id: number) => {
 }
 
 const closeExpandedCard = () => {
+  if (props.detailOnly) {
+    const from = typeof route.query.from === 'string' ? route.query.from : ''
+    if (from && from !== route.fullPath) {
+      router.push(from)
+      return
+    }
+
+    if (window.history.length > 1) {
+      router.back()
+      return
+    }
+
+    router.push('/gallery')
+    return
+  }
+
   expandedCardId.value = null
   previewCardId.value = null
   commentDraft.value = ''
@@ -267,7 +349,9 @@ const saveItemMetadata = async () => {
       description: editDescription.value
     })
     isEditingItem.value = false
-    await fetchFeed()
+    if (!props.detailOnly) {
+      await fetchFeed()
+    }
     await openExpandedCard(itemId)
   } catch (err) {
     console.error('Hiba a bejegyzés mentésekor', err)
@@ -281,7 +365,9 @@ const setPublishState = async (isPublished: boolean) => {
   const itemId = expandedCard.value.id
   try {
     await api.patch(`/Gallery/${itemId}/publish`, null, { params: { isPublished } })
-    await fetchFeed()
+    if (!props.detailOnly) {
+      await fetchFeed()
+    }
     await openExpandedCard(itemId)
   } catch (err) {
     console.error('Hiba publikáció állításakor', err)
@@ -295,7 +381,9 @@ const restoreItem = async () => {
   const itemId = expandedCard.value.id
   try {
     await api.patch(`/Gallery/${itemId}/restore`)
-    await fetchFeed()
+    if (!props.detailOnly) {
+      await fetchFeed()
+    }
     await openExpandedCard(itemId)
   } catch (err) {
     console.error('Hiba publikáció visszaállításakor', err)
@@ -308,8 +396,12 @@ const softDeleteItem = async () => {
 
   try {
     await api.delete(`/Gallery/${expandedCard.value.id}`)
-    closeExpandedCard()
-    await fetchFeed()
+    if (props.detailOnly) {
+      closeExpandedCard()
+    } else {
+      closeExpandedCard()
+      await fetchFeed()
+    }
   } catch (err) {
     console.error('Hiba publikáció törlésekor', err)
   }
@@ -385,10 +477,20 @@ const fetchFeed = async () => {
 }
 
 onMounted(() => {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
-  mediaQuery = window.matchMedia(desktopQuery)
-  syncInteractionMode()
-  mediaQuery.addEventListener('change', syncInteractionMode)
+  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+    mediaQuery = window.matchMedia(desktopQuery)
+    syncInteractionMode()
+    mediaQuery.addEventListener('change', syncInteractionMode)
+  }
+
+  if (props.detailOnly) {
+    if (props.openItemId) {
+      openExpandedCard(props.openItemId)
+    } else {
+      detailLoadError.value = 'Érvénytelen galéria azonosító.'
+    }
+    return
+  }
 
   fetchFeed()
 })
@@ -402,8 +504,24 @@ watch(isDesktopInteraction, (value) => {
 })
 
 watch(showDeleted, async () => {
+  if (props.detailOnly) {
+    if (props.openItemId) {
+      await openExpandedCard(props.openItemId)
+    }
+    return
+  }
+
   closeExpandedCard()
   await fetchFeed()
+})
+
+watch(() => props.openItemId, async (nextId) => {
+  if (!props.detailOnly) return
+  if (!nextId) {
+    detailLoadError.value = 'Érvénytelen galéria azonosító.'
+    return
+  }
+  await openExpandedCard(nextId)
 })
 
 watch(expandedCard, () => {
@@ -420,7 +538,7 @@ watch(expandedCard, () => {
       class="w-full h-full min-h-0 bg-earth-900/70 backdrop-blur-lg border border-earth-100/20 rounded-2xl sm:rounded-3xl px-3 py-4 sm:px-5 sm:py-6 lg:px-6 shadow-[0_20px_50px_rgba(0,0,0,0.35)] overscroll-contain"
       :class="expandedCard ? 'overflow-y-auto lg:overflow-hidden' : 'overflow-y-auto'"
     >
-      <div v-if="!expandedCard" class="mb-5 sm:mb-6 pb-3 sm:pb-4 border-b border-earth-100/15 text-center">
+      <div v-if="!expandedCard && !detailOnly" class="mb-5 sm:mb-6 pb-3 sm:pb-4 border-b border-earth-100/15 text-center">
         <h1 class="text-2xl sm:text-3xl md:text-4xl font-serif text-earth-50">{{ title }}</h1>
         <p class="mt-2 text-sm sm:text-base text-earth-200/90">
           {{ subtitle }}
@@ -706,7 +824,7 @@ watch(expandedCard, () => {
         </MotionDiv>
 
         <MotionDiv
-          v-else
+          v-else-if="!detailOnly"
           key="grid-view"
           :initial="{ opacity: 0 }"
           :animate="{ opacity: 1 }"
@@ -751,6 +869,7 @@ watch(expandedCard, () => {
               ]"
             >
               <div
+                v-if="!hideCardOverlayText"
                 class="absolute inset-0 flex items-center justify-center px-4 text-center opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-250"
                 :class="isCardPreviewed(item.id) ? 'opacity-100' : ''"
               >
@@ -761,6 +880,7 @@ watch(expandedCard, () => {
               </div>
 
               <div
+                v-if="!hideCardOverlayText"
                 class="absolute inset-0 flex items-end p-3 sm:p-4 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-250"
                 :class="isCardPreviewed(item.id) ? 'opacity-100' : ''"
               >
@@ -784,6 +904,20 @@ watch(expandedCard, () => {
               </div>
             </div>
           </MotionDiv>
+        </MotionDiv>
+
+        <MotionDiv
+          v-else
+          key="detail-loading"
+          :initial="{ opacity: 0 }"
+          :animate="{ opacity: 1 }"
+          :exit="{ opacity: 0 }"
+          class="min-h-[320px] flex items-center justify-center text-center"
+        >
+          <div>
+            <i v-if="!detailLoadError" class="fa-solid fa-spinner fa-spin text-3xl text-green-400"></i>
+            <p class="mt-3 text-sm text-earth-100/80">{{ detailLoadError || 'Galéria elem betöltése...' }}</p>
+          </div>
         </MotionDiv>
       </AnimatePresence>
     </MotionDiv>

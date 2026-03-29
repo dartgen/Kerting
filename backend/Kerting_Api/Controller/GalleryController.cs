@@ -36,10 +36,15 @@ namespace Kerting_Api.Controller
         }
 
         [HttpGet("feed")]
-        [AllowAnonymous] // A feedet bárki láthatja
         public async Task<IActionResult> GetFeed([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] bool includeDeleted = false)
         {
             return Ok(await _galleryService.GetGalleryFeedAsync(page, pageSize, TryGetCurrentUserId(), includeDeleted));
+        }
+
+        [HttpGet("user/{userId}")]
+        public async Task<IActionResult> GetUserFeed(int userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] bool includeDeleted = false)
+        {
+            return Ok(await _galleryService.GetUserGalleryFeedAsync(userId, page, pageSize, TryGetCurrentUserId(), includeDeleted));
         }
 
         [HttpGet("mine")]
@@ -50,7 +55,6 @@ namespace Kerting_Api.Controller
         }
 
         [HttpGet("{id}")]
-        [AllowAnonymous]
         public async Task<IActionResult> GetById(int id, [FromQuery] bool includeDeleted = false)
         {
             var item = await _galleryService.GetGalleryItemByIdAsync(id, TryGetCurrentUserId(), includeDeleted);

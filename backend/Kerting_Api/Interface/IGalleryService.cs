@@ -15,6 +15,7 @@ namespace Kerting_Api.Interface
         Task<bool> SetPublishStateAsync(int itemId, int userId, bool isPublished);
         Task<List<object>> GetGalleryFeedAsync(int page = 1, int pageSize = 20, int? currentUserId = null, bool includeDeleted = false);
         Task<List<object>> GetOwnGalleryFeedAsync(int ownerUserId, int page = 1, int pageSize = 20, int? currentUserId = null, bool includeDeleted = false);
+        Task<List<object>> GetUserGalleryFeedAsync(int userId, int page = 1, int pageSize = 20, int? currentUserId = null, bool includeDeleted = false);
         Task<object?> GetGalleryItemByIdAsync(int itemId, int? currentUserId = null, bool includeDeleted = false);
 
         // Profilkép
