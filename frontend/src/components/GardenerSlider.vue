@@ -94,7 +94,7 @@ onUnmounted(() => {
       <MotionDiv
         v-for="(pro, index) in cards"
         :key="pro.id"
-        class="absolute md:relative flex flex-col items-center bg-earth-950/85 backdrop-blur-md rounded-2xl shadow-2xl p-3 md:p-6 w-[180px] md:w-[240px] lg:w-[280px] h-[250px] md:h-[330px] lg:h-[390px] shrink-0 border border-earth-200/15"
+        class="absolute md:relative flex flex-col items-center bg-earth-950/85 backdrop-blur-md rounded-2xl shadow-[0_16px_36px_rgba(23,18,13,0.55)] p-3 md:p-6 w-[180px] md:w-[240px] lg:w-[280px] h-[250px] md:h-[330px] lg:h-[390px] shrink-0 border border-earth-300/35 ring-1 ring-earth-500/20"
         :style="{ order: getCardOrder(index) }"
         layout
         :initial="false"
