@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ForumFeedItem } from '@/types/forum'
+import { useRouter } from 'vue-router'
 
 const props = defineProps<{
   post: ForumFeedItem
@@ -17,6 +18,16 @@ const emit = defineEmits<{
   (e: 'delete-post', postId: number): void
   (e: 'restore-post', postId: number): void
 }>()
+
+const router = useRouter()
+
+const openPublicProfile = (userId: number) => {
+  if (!userId) return
+  router.push({
+    name: 'public-profile',
+    params: { id: userId }
+  })
+}
 </script>
 
 <template>
@@ -33,9 +44,28 @@ const emit = defineEmits<{
         <div class="flex items-start justify-between gap-3">
           <div>
             <h3 class="text-lg font-semibold text-earth-50 cursor-pointer hover:text-earth-100" @click="emit('open-detail', props.post.id)">{{ props.post.title }}</h3>
-            <p class="text-xs text-earth-300">
-              {{ props.post.authorName }} · {{ props.post.authorRoleName || 'Szerepkör nélkül' }} · {{ props.formatDateTime(props.post.createdAtUtc) }}
-            </p>
+            <div class="mt-1 flex items-center gap-2 text-xs text-earth-300">
+              <button
+                type="button"
+                class="inline-flex cursor-pointer"
+                :aria-label="`${props.post.authorName} profil megnyitása`"
+                @click.stop="openPublicProfile(props.post.userId)"
+              >
+                <img
+                  :src="props.post.profileImageUrl ? props.getFullImageUrl(props.post.profileImageUrl) : `https://i.pravatar.cc/64?u=${props.post.userId}`"
+                  :alt="`${props.post.authorName} profilképe`"
+                  class="w-6 h-6 rounded-full object-cover border border-earth-100/25"
+                />
+              </button>
+              <button
+                type="button"
+                class="hover:text-earth-100 cursor-pointer"
+                @click.stop="openPublicProfile(props.post.userId)"
+              >
+                {{ props.post.authorName }}
+              </button>
+              <span>· {{ props.post.authorRoleName || 'Szerepkör nélkül' }} · {{ props.formatDateTime(props.post.createdAtUtc) }}</span>
+            </div>
           </div>
           <div class="flex gap-2">
             <span v-if="props.post.isPinned" class="text-xs px-2 py-1 rounded bg-amber-500/20 text-amber-200">Pinned</span>

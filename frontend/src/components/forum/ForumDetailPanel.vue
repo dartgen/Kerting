@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import ForumCommentItem from '@/components/forum/ForumCommentItem.vue'
 import type { ForumComment, ForumDetail } from '@/types/forum'
+import { useRouter } from 'vue-router'
 
 const props = defineProps<{
   detail: ForumDetail | null
@@ -35,6 +36,16 @@ const emit = defineEmits<{
   (e: 'load-more-replies', comment: ForumComment): void
   (e: 'fetch-more-comments'): void
 }>()
+
+const router = useRouter()
+
+const openPublicProfile = (userId: number) => {
+  if (!userId) return
+  router.push({
+    name: 'public-profile',
+    params: { id: userId }
+  })
+}
 </script>
 
 <template>
@@ -49,9 +60,28 @@ const emit = defineEmits<{
         <div class="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 class="text-2xl font-bold text-earth-50">{{ props.detail.title }}</h1>
-            <p class="text-sm text-earth-300">
-              {{ props.detail.authorName }} · {{ props.detail.authorRoleName || 'Szerepkör nélkül' }}
-            </p>
+            <div class="mt-1 flex items-center gap-2 text-sm text-earth-300">
+              <button
+                type="button"
+                class="inline-flex cursor-pointer"
+                :aria-label="`${props.detail.authorName} profil megnyitása`"
+                @click.stop="openPublicProfile(props.detail.userId)"
+              >
+                <img
+                  :src="props.detail.profileImageUrl ? props.getFullImageUrl(props.detail.profileImageUrl) : `https://i.pravatar.cc/80?u=${props.detail.userId}`"
+                  :alt="`${props.detail.authorName} profilképe`"
+                  class="w-7 h-7 rounded-full object-cover border border-earth-100/25"
+                />
+              </button>
+              <button
+                type="button"
+                class="hover:text-earth-100 cursor-pointer"
+                @click.stop="openPublicProfile(props.detail.userId)"
+              >
+                {{ props.detail.authorName }}
+              </button>
+              <span>· {{ props.detail.authorRoleName || 'Szerepkör nélkül' }}</span>
+            </div>
           </div>
           <div class="flex gap-2">
             <button v-if="props.detail.canModerate" type="button" class="px-3 py-1 rounded-lg bg-earth-700 text-earth-100" @click="emit('toggle-pinned', props.detail.id, !props.detail.isPinned)">
@@ -128,6 +158,7 @@ const emit = defineEmits<{
           :reply-draft="props.replyDraft"
           :reply-visible="Boolean(props.replyVisibility[comment.id])"
           :replies-loading="Boolean(props.loadingReplies[comment.id])"
+          :get-full-image-url="props.getFullImageUrl"
           :format-date-time="props.formatDateTime"
           @react-comment="(commentId, isLike) => emit('react-comment', commentId, isLike)"
           @delete-comment="emit('delete-comment', $event)"

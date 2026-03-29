@@ -433,6 +433,14 @@ const getFullImageUrl = (url: string) => {
   return `${origin}${url.startsWith('/') ? '' : '/'}${url}`
 }
 
+const openPublicProfile = (userId: number) => {
+  if (!userId) return
+  router.push({
+    name: 'public-profile',
+    params: { id: userId }
+  })
+}
+
 const endpoint = computed(() => {
   // Ha kapunk userId-t (pl. a Profil oldalról), akkor annak a usernek a képeit töltjük le
   if (props.userId) {
@@ -597,13 +605,26 @@ watch(expandedCard, () => {
             >
               <div class="flex items-center justify-between gap-3 pb-3 border-b border-earth-100/10">
                 <div class="flex items-center gap-3">
-                  <img
-                    :src="expandedCard.uploaderAvatarUrl"
-                    :alt="`${expandedCard.uploaderName} profilképe`"
-                    class="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border border-earth-100/25"
-                  />
+                  <button
+                    type="button"
+                    class="inline-flex cursor-pointer"
+                    :aria-label="`${expandedCard.uploaderName} profil megnyitása`"
+                    @click.stop="openPublicProfile(expandedCard.userId)"
+                  >
+                    <img
+                      :src="expandedCard.uploaderAvatarUrl"
+                      :alt="`${expandedCard.uploaderName} profilképe`"
+                      class="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border border-earth-100/25"
+                    />
+                  </button>
                   <div>
-                    <p class="text-earth-100 font-semibold text-sm sm:text-base">{{ expandedCard.uploaderName }}</p>
+                    <button
+                      type="button"
+                      class="text-earth-100 font-semibold text-sm sm:text-base hover:text-earth-50 cursor-pointer"
+                      @click.stop="openPublicProfile(expandedCard.userId)"
+                    >
+                      {{ expandedCard.uploaderName }}
+                    </button>
                     <p class="text-earth-200/70 text-xs">Feltöltő</p>
                   </div>
                 </div>
@@ -747,12 +768,25 @@ watch(expandedCard, () => {
                   >
                     <div class="flex items-center justify-between gap-2">
                       <div class="flex items-center gap-2">
-                        <img
-                          :src="comment.avatarUrl"
-                          :alt="`${comment.userName} profilképe`"
-                          class="w-8 h-8 rounded-full object-cover border border-earth-100/20"
-                        />
-                        <span class="text-earth-100 text-xs sm:text-sm font-medium">{{ comment.userName }}</span>
+                        <button
+                          type="button"
+                          class="inline-flex cursor-pointer"
+                          :aria-label="`${comment.userName} profil megnyitása`"
+                          @click.stop="openPublicProfile(comment.userId)"
+                        >
+                          <img
+                            :src="comment.avatarUrl"
+                            :alt="`${comment.userName} profilképe`"
+                            class="w-8 h-8 rounded-full object-cover border border-earth-100/20"
+                          />
+                        </button>
+                        <button
+                          type="button"
+                          class="text-earth-100 text-xs sm:text-sm font-medium hover:text-earth-50 cursor-pointer"
+                          @click.stop="openPublicProfile(comment.userId)"
+                        >
+                          {{ comment.userName }}
+                        </button>
                         <span
                           v-if="comment.isDeleted"
                           class="rounded-full border border-red-300/70 bg-red-700/70 px-2 py-0.5 text-[10px] font-semibold text-white"
@@ -849,6 +883,22 @@ watch(expandedCard, () => {
             @keyup.enter.stop="handleCardClick(item.id)"
             @keyup.space.prevent.stop="handleCardClick(item.id)"
           >
+            <div class="absolute top-2 left-2 z-10">
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 rounded-full border border-earth-100/25 bg-black/45 px-2 py-1 text-[10px] sm:text-xs text-earth-50 hover:bg-black/60 cursor-pointer"
+                :aria-label="`${item.uploaderName} profil megnyitása`"
+                @click.stop="openPublicProfile(item.userId)"
+              >
+                <img
+                  :src="item.uploaderAvatarUrl"
+                  :alt="`${item.uploaderName} profilképe`"
+                  class="w-5 h-5 rounded-full object-cover border border-earth-100/25"
+                />
+                <span class="max-w-[110px] truncate">{{ item.uploaderName }}</span>
+              </button>
+            </div>
+
             <img
               :src="item.imageUrl"
               :alt="item.description"

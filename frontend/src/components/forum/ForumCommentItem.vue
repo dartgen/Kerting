@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ForumComment } from '@/types/forum'
+import { useRouter } from 'vue-router'
 
 const props = defineProps<{
   comment: ForumComment
@@ -8,6 +9,7 @@ const props = defineProps<{
   replyDraft: string
   replyVisible: boolean
   repliesLoading: boolean
+  getFullImageUrl: (url?: string | null) => string
   formatDateTime: (raw?: string | null) => string
 }>()
 
@@ -21,14 +23,50 @@ const emit = defineEmits<{
   (e: 'submit-reply', commentId: number): void
   (e: 'load-more-replies', comment: ForumComment): void
 }>()
+
+const router = useRouter()
+
+const openPublicProfile = (userId: number) => {
+  if (!userId) return
+  router.push({
+    name: 'public-profile',
+    params: { id: userId }
+  })
+}
+
+const getAvatarUrl = (comment: ForumComment) => {
+  if (comment.profileImageUrl) return props.getFullImageUrl(comment.profileImageUrl)
+  return `https://i.pravatar.cc/72?u=${comment.userId}`
+}
 </script>
 
 <template>
   <article class="rounded-xl border border-earth-100/10 bg-earth-800/40 p-4">
     <div class="flex items-center justify-between gap-3">
-      <div>
-        <p class="text-sm text-earth-100 font-medium">{{ props.comment.authorName }} · {{ props.comment.authorRoleName || 'Szerepkör nélkül' }}</p>
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          class="inline-flex cursor-pointer"
+          :aria-label="`${props.comment.authorName} profil megnyitása`"
+          @click.stop="openPublicProfile(props.comment.userId)"
+        >
+          <img
+            :src="getAvatarUrl(props.comment)"
+            :alt="`${props.comment.authorName} profilképe`"
+            class="w-8 h-8 rounded-full object-cover border border-earth-100/25"
+          />
+        </button>
+        <div>
+          <button
+            type="button"
+            class="text-sm text-earth-100 font-medium hover:text-earth-50 cursor-pointer"
+            @click.stop="openPublicProfile(props.comment.userId)"
+          >
+            {{ props.comment.authorName }}
+          </button>
+          <span class="text-sm text-earth-100"> · {{ props.comment.authorRoleName || 'Szerepkör nélkül' }}</span>
         <p class="text-xs text-earth-300">{{ props.formatDateTime(props.comment.createdAtUtc) }}</p>
+        </div>
       </div>
       <div class="flex gap-2">
         <button type="button" class="text-xs px-2 py-1 rounded text-earth-100 inline-flex items-center gap-1" :class="props.comment.myReaction === true ? 'bg-green-700' : 'bg-earth-700'" @click="emit('react-comment', props.comment.id, true)">
@@ -76,7 +114,30 @@ const emit = defineEmits<{
     <div v-if="props.replyVisible" class="mt-3 pl-4 border-l border-earth-100/10 space-y-3">
       <article v-for="reply in props.comment.replies" :key="reply.id" class="rounded-lg bg-earth-900/50 border border-earth-100/10 p-3">
         <div class="flex items-center justify-between gap-2">
-          <p class="text-sm text-earth-100">{{ reply.authorName }} · {{ reply.authorRoleName || 'Szerepkör nélkül' }}</p>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              class="inline-flex cursor-pointer"
+              :aria-label="`${reply.authorName} profil megnyitása`"
+              @click.stop="openPublicProfile(reply.userId)"
+            >
+              <img
+                :src="getAvatarUrl(reply)"
+                :alt="`${reply.authorName} profilképe`"
+                class="w-7 h-7 rounded-full object-cover border border-earth-100/25"
+              />
+            </button>
+            <div>
+              <button
+                type="button"
+                class="text-sm text-earth-100 hover:text-earth-50 cursor-pointer"
+                @click.stop="openPublicProfile(reply.userId)"
+              >
+                {{ reply.authorName }}
+              </button>
+              <span class="text-sm text-earth-100"> · {{ reply.authorRoleName || 'Szerepkör nélkül' }}</span>
+            </div>
+          </div>
           <p class="text-xs text-earth-300">{{ props.formatDateTime(reply.createdAtUtc) }}</p>
         </div>
         <p class="text-earth-100 mt-2 whitespace-pre-line">{{ reply.message }}</p>
