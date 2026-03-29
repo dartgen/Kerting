@@ -102,7 +102,8 @@ const handleFileUpload = async (event: Event) => {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
 
-    const newFileName = response.data.fileName || response.data
+    // JAVÍTOTT KÓD:
+    const newFileName = response.data.url || response.data
     imageTimestamp.value = Date.now()
 
     // 3. Frissítjük a szülőt. Ekkor a watch lefut, de a 'justUploaded' megvédi a böngészős előnézetet!
