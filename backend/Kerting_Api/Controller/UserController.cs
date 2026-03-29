@@ -139,7 +139,7 @@ namespace Kerting_Api.Controller
             var roles = await _context.Role.ToListAsync();
             return Ok(roles);
         }
-        [AllowAnonymous]
+        [Authorize]
         [HttpGet("GetPublicProfile/{id}")]
         // Ez a végpont publikus, NEM kell rá [Authorize]!
         public async Task<IActionResult> GetPublicProfile(int id)
