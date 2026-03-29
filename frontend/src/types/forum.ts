@@ -10,6 +10,7 @@ export interface ForumFeedItem {
   viewCount: number
   likesCount: number
   dislikesCount: number
+  myReaction?: boolean | null
   netScore: number
   commentsCount: number
   isDeleted: boolean

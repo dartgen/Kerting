@@ -86,8 +86,20 @@ const emit = defineEmits<{
         </div>
 
         <div class="flex items-center gap-3 pt-1">
-          <button type="button" class="px-3 py-1.5 rounded-lg text-green-100" :class="props.detail.myReaction === true ? 'bg-green-600' : 'bg-green-700/70'" @click="emit('react-post', true)">👍 {{ props.detail.likesCount }}</button>
-          <button type="button" class="px-3 py-1.5 rounded-lg text-red-100" :class="props.detail.myReaction === false ? 'bg-red-600' : 'bg-red-700/70'" @click="emit('react-post', false)">👎 {{ props.detail.dislikesCount }}</button>
+          <button type="button" class="px-3 py-1.5 rounded-lg text-green-100 inline-flex items-center gap-1.5" :class="props.detail.myReaction === true ? 'bg-green-600' : 'bg-green-700/70'" @click="emit('react-post', true)">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="9" width="4" height="12" rx="1.25" />
+              <path d="M14.5 9.5V5.9c0-1-.52-1.92-1.37-2.41l-3.4 5.92a2.2 2.2 0 0 0-.3 1.1V19a2 2 0 0 0 2 2h5.84a2 2 0 0 0 1.97-1.65l1.02-6a2 2 0 0 0-1.97-2.35H14.5Z" />
+            </svg>
+            {{ props.detail.likesCount }}
+          </button>
+          <button type="button" class="px-3 py-1.5 rounded-lg text-red-100 inline-flex items-center gap-1.5" :class="props.detail.myReaction === false ? 'bg-red-600' : 'bg-red-700/70'" @click="emit('react-post', false)">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="4" height="12" rx="1.25" />
+              <path d="M14.5 14.5v3.6c0 1-.52 1.92-1.37 2.41l-3.4-5.92a2.2 2.2 0 0 1-.3-1.1V5a2 2 0 0 1 2-2h5.84a2 2 0 0 1 1.97 1.65l1.02 6a2 2 0 0 1-1.97 2.35H14.5Z" />
+            </svg>
+            {{ props.detail.dislikesCount }}
+          </button>
         </div>
       </div>
     </article>
