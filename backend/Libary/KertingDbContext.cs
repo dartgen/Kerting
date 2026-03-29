@@ -17,6 +17,7 @@ namespace Libary
         public DbSet<Login> Login { get; set; }
         public DbSet<Role> Role { get; set; }
         public DbSet<User> User { get; set; }
+        public DbSet<FeaturedUserSlot> FeaturedUserSlot { get; set; }
         public DbSet<UserReview> UserReview { get; set; }
         public DbSet<UserReviewReaction> UserReviewReaction { get; set; }
         public DbSet<UserActivityTag> UserActivityTag { get; set; }
@@ -101,6 +102,26 @@ namespace Libary
 
             modelBuilder.Entity<UserActivityTag>()
             .HasKey(uat => new { uat.USerId, uat.TagId });
+
+            modelBuilder.Entity<FeaturedUserSlot>(entity =>
+            {
+                entity.ToTable("FeaturedUserSlot", "dbo");
+                entity.HasKey(x => x.SlotNo);
+
+                entity.Property(x => x.SlotNo).ValueGeneratedNever();
+                entity.Property(x => x.CreatedAtUtc).HasDefaultValueSql("SYSUTCDATETIME()");
+                entity.Property(x => x.UpdatedAtUtc).HasDefaultValueSql("SYSUTCDATETIME()");
+
+                entity.HasOne(x => x.User)
+                    .WithMany()
+                    .HasForeignKey(x => x.UserId)
+                    .HasConstraintName("FK_FeaturedUserSlot_User_UserId")
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(x => x.UserId)
+                    .IsUnique()
+                    .HasDatabaseName("UX_FeaturedUserSlot_UserId");
+            });
 
             modelBuilder.Entity<GalleryReaction>(entity =>
             {

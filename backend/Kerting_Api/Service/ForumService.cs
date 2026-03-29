@@ -45,6 +45,7 @@ namespace Kerting_Api.Service
             var query = _context.ForumPost
                 .AsNoTracking()
                 .Include(p => p.Reactions)
+                .Include(p => p.Comments)
                 .Include(p => p.PostTags)
                     .ThenInclude(pt => pt.ActivityTag)
                 .Include(p => p.AttachedGalleryItem)
@@ -166,6 +167,12 @@ namespace Kerting_Api.Service
                         : null,
                     LikesCount = x.Likes,
                     DislikesCount = x.Dislikes,
+                    MyReaction = currentUserId.HasValue
+                        ? x.Post.Reactions
+                            .Where(r => r.UserId == currentUserId.Value)
+                            .Select(r => (bool?)r.IsLike)
+                            .FirstOrDefault()
+                        : null,
                     NetScore = x.NetScore,
                     CommentsCount = x.Post.Comments.Count(c => canSeeDeleted || !c.IsDeleted),
                     Tags = x.Tags,

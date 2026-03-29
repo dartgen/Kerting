@@ -259,6 +259,51 @@ namespace Kerting_Api.Service
                 .ToListAsync<object>();
         }
 
+        public async Task<List<object>> GetUserGalleryFeedAsync(int userId, int page = 1, int pageSize = 20, int? currentUserId = null, bool includeDeleted = false)
+        {
+            if (!currentUserId.HasValue) return new List<object>();
+
+            var isAdmin = await IsAdminAsync(currentUserId.Value);
+            var isOwner = currentUserId.Value == userId;
+            var canSeeUnpublished = isAdmin || isOwner;
+            var canSeeDeleted = includeDeleted && isAdmin;
+
+            return await _context.GalleryItem
+                .Include(i => i.Login)
+                .Where(i => i.UserId == userId)
+                .Where(i => canSeeDeleted || !i.IsDeleted)
+                .Where(i => canSeeUnpublished || i.IsPublished)
+                .OrderByDescending(i => i.CreatedAtUtc)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Join(
+                    _context.User,
+                    i => i.UserId,
+                    u => u.Id,
+                    (i, u) => new
+                    {
+                        i.Id,
+                        i.UserId,
+                        i.Title,
+                        i.Description,
+                        i.IsPublished,
+                        i.IsDeleted,
+                        ImageUrl = $"/resources/Gallery/{i.Id}{i.FileExtension}",
+                        UploaderName = u.VezetekNev.IsNullOrEmpty() || u.KeresztNev.IsNullOrEmpty() ? i.Login.Username : $"{u.VezetekNev} {u.KeresztNev}",
+                        ProfileImageUrl = string.IsNullOrWhiteSpace(u.IMGString)
+                            ? null
+                            : $"/resources/Profiles/{u.IMGString}",
+                        i.CreatedAtUtc,
+                        LikesCount = i.Reactions.Count(r => r.IsLike),
+                        DislikesCount = i.Reactions.Count(r => !r.IsLike),
+                        CommentsCount = i.Comments.Count(c => canSeeDeleted || !c.IsDeleted),
+                        CanEdit = i.UserId == currentUserId.Value,
+                        CanDelete = i.UserId == currentUserId.Value || isAdmin,
+                        CanPublishToggle = i.UserId == currentUserId.Value
+                    })
+                .ToListAsync<object>();
+        }
+
         public async Task<object?> GetGalleryItemByIdAsync(int itemId, int? currentUserId = null, bool includeDeleted = false)
         {
             var item = await _context.GalleryItem
