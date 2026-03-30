@@ -31,7 +31,7 @@
                ]">
             <div class="relative flex-shrink-0">
               <div class="w-12 h-12 rounded-full border border-earth-200/20 overflow-hidden bg-earth-800 shadow-md">
-                <img v-if="chat.avatar" :src="getImageUrl(chat.avatar)" class="w-full h-full object-cover">
+                <img v-if="chat.avatar" :src="getImageUrl(chat.avatar)" @error="chat.avatar = ''" class="w-full h-full object-cover">
                 <div v-else class="w-full h-full flex items-center justify-center text-earth-400">
                   <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
                 </div>
@@ -57,7 +57,7 @@
                 <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" /></svg>
               </button>
               <div class="w-10 h-10 rounded-full border border-earth-200/30 overflow-hidden bg-earth-800 shadow-sm">
-                <img v-if="aktualisChat?.avatar" :src="getImageUrl(aktualisChat?.avatar)" class="w-full h-full object-cover" />
+                <img v-if="aktualisChat?.avatar" :src="getImageUrl(aktualisChat?.avatar)" @error="aktualisChat.avatar = ''" class="w-full h-full object-cover" />
                 <div v-else class="w-full h-full flex items-center justify-center text-earth-400">
                   <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
                 </div>
@@ -88,7 +88,13 @@
                     ? 'bg-green-600/20 border border-green-500/30 text-earth-50 rounded-tr-none shadow-green-900/10'
                     : 'bg-earth-800/80 border border-earth-200/20 text-earth-100 rounded-tl-none shadow-black/20'
                 ]">
-                  <p class="leading-relaxed whitespace-pre-wrap break-all">{{ msg.szoveg }}</p>
+
+                  <div v-if="msg.imageUrl" class="mb-2">
+                    <img :src="getChatImageUrl(msg.imageUrl)" alt="Kép" class="max-w-full h-auto max-h-64 rounded-xl object-contain border border-earth-200/20 cursor-pointer" />
+                  </div>
+
+                  <p v-if="!msg.imageUrl || msg.szoveg !== 'Fénykép'" class="leading-relaxed whitespace-pre-wrap break-all">{{ msg.szoveg }}</p>
+
                   <div class="text-[9px] mt-1.5 opacity-40 font-mono text-right">{{ msg.ido }}</div>
                 </div>
               </div>
@@ -96,7 +102,17 @@
           </div>
 
           <div class="p-4 bg-earth-900/40 border-t border-earth-200/20">
-            <form @submit.prevent="uzenetKuldese" class="flex items-center gap-3 max-w-5xl mx-auto">
+            <form @submit.prevent="uzenetKuldese" class="flex items-center gap-2 max-w-5xl mx-auto">
+
+              <input type="file" ref="kepInput" @change="kepKivalasztva" accept="image/*" class="hidden" />
+
+              <button type="button" @click="triggerKepFeltoltes" :disabled="kuldesFolyamatban"
+                      class="p-3.5 text-earth-300 hover:text-green-400 bg-earth-50/5 hover:bg-earth-50/10 border border-earth-200/30 rounded-xl transition-all disabled:opacity-50 shrink-0">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </button>
+
               <div class="relative flex-1">
                 <input
                   ref="uzenetInput"
@@ -106,8 +122,9 @@
                   class="w-full bg-earth-50/5 border border-earth-200/30 rounded-xl py-3.5 px-5 text-earth-50 focus:outline-none focus:ring-2 focus:ring-green-500/50 transition-all placeholder-earth-200/30 shadow-inner disabled:opacity-50"
                 />
               </div>
+
               <button type="submit" :disabled="!ujUzenet.trim() || kuldesFolyamatban"
-                      class="p-3.5 bg-green-500/90 hover:bg-green-400 text-white rounded-xl shadow-lg shadow-green-900/20 transition-all disabled:opacity-30 disabled:grayscale flex items-center justify-center">
+                      class="p-3.5 bg-green-500/90 hover:bg-green-400 text-white rounded-xl shadow-lg shadow-green-900/20 transition-all disabled:opacity-30 disabled:grayscale flex items-center justify-center shrink-0">
                 <i v-if="kuldesFolyamatban" class="fa-solid fa-spinner fa-spin w-5 h-5 flex items-center justify-center"></i>
                 <svg v-else class="w-5 h-5 fill-current rotate-45" viewBox="0 0 20 20">
                   <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
@@ -155,6 +172,7 @@ interface ChatMessage {
   ido: string;
   sajat: boolean;
   senderName?: string;
+  imageUrl?: string;
 }
 
 const route = useRoute();
@@ -170,9 +188,9 @@ const toltesLista = ref(false);
 const toltesUzenetek = ref(false);
 const kuldesFolyamatban = ref(false);
 
-// DOM Referenciák
 const uzenetekKontener = ref<HTMLElement | null>(null);
-const uzenetInput = ref<HTMLInputElement | null>(null); // ÚJ: Input referencia
+const uzenetInput = ref<HTMLInputElement | null>(null);
+const kepInput = ref<HTMLInputElement | null>(null);
 
 const aktualisChat = computed(() => beszelgetesek.value.find(c => c.id === aktivChatId.value));
 
@@ -181,6 +199,12 @@ const getImageUrl = (fileName: string | null | undefined) => {
   const axiosBaseUrl = api.defaults.baseURL;
   if (!axiosBaseUrl) return null;
   return `${new URL(axiosBaseUrl).origin}/resources/Profiles/${fileName}`;
+};
+
+const getChatImageUrl = (fileName: string) => {
+  const axiosBaseUrl = api.defaults.baseURL;
+  if (!axiosBaseUrl) return null;
+  return `${new URL(axiosBaseUrl).origin}/resources/ChatImages/${fileName}`;
 };
 
 const gorgetesLegalulra = async () => {
@@ -254,11 +278,47 @@ const uzenetKuldese = async () => {
   } finally {
     kuldesFolyamatban.value = false;
 
-    // ÚJ: Fókusz visszaállítása az inputra
     await nextTick();
     if (uzenetInput.value) {
       uzenetInput.value.focus();
     }
+  }
+};
+
+const triggerKepFeltoltes = () => {
+  if (kepInput.value) {
+    kepInput.value.click();
+  }
+};
+
+const kepKivalasztva = async (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+  if (!file || !aktivChatId.value) return;
+
+  kuldesFolyamatban.value = true;
+  try {
+    const response = await chatService.sendImage(aktivChatId.value, file);
+
+    uzenetek.value.push(response.data);
+
+    const chatIndex = beszelgetesek.value.findIndex(c => c.id === aktivChatId.value);
+    if (chatIndex !== -1) {
+      beszelgetesek.value[chatIndex].utolsoUzenet = "Fénykép";
+      beszelgetesek.value[chatIndex].utolsoIdo = response.data.ido;
+      const chatItem = beszelgetesek.value.splice(chatIndex, 1)[0];
+      beszelgetesek.value.unshift(chatItem);
+    }
+
+    gorgetesLegalulra();
+  } catch (error) {
+    console.error('Kép feltöltési hiba:', error);
+    toastStore.addToast('Nem sikerült elküldeni a képet.', 4000, 'error');
+  } finally {
+    kuldesFolyamatban.value = false;
+    if (kepInput.value) kepInput.value.value = '';
+    await nextTick();
+    if (uzenetInput.value) uzenetInput.value.focus();
   }
 };
 
@@ -273,34 +333,27 @@ const bezaras = () => {
   aktivChatId.value = null;
 };
 
-// --- ÁTDOLGOZOTT ONMOUNTED ---
 onMounted(async () => {
-  // 1. Először betöltjük a normál listát
   await loadConversations();
 
-  // 2. Megnézzük, jött-e átirányítás a profilról
   const targetId = route.query.targetId;
 
   if (targetId) {
     try {
       toltesLista.value = true;
-      // Lekérjük az API-tól a közös szobát (vagy létrehozza, ha még nincs)
       const response = await chatService.getOrCreateConversation(Number(targetId));
       const ujChatId = response.data;
 
-      // Ha ez a szoba teljesen új, akkor még nincs benne a bal oldali listában
       const letezoChat = beszelgetesek.value.find(c => c.id === ujChatId);
       if (!letezoChat) {
-        await loadConversations(); // Újra letöltjük, hogy megjelenjen a listában
+        await loadConversations();
       }
 
-      // 3. Kiválasztjuk a szobát, amitől középen megnyílik a chat!
       aktivChatId.value = ujChatId;
 
     } catch (error: any) {
       console.error("Hiba a beszélgetés megnyitásakor:", error);
 
-      // ÚJ RÉSZ: Ellenőrizzük a 400-as (BadRequest) hibát a backendtől
       if (error.response && error.response.status === 400) {
         toastStore.addToast('Saját magaddal nem indíthatsz beszélgetést!', 4000, 'warning');
       } else {
@@ -308,8 +361,6 @@ onMounted(async () => {
       }
     } finally {
       toltesLista.value = false;
-      // Ezt áttettük a finally blokkba, hogy hiba esetén is letörölje a paramétert,
-      // így oldalfrissítésnél nem próbálja meg újra és újra megnyitni.
       router.replace({ query: {} });
     }
   }

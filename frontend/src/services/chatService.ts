@@ -17,6 +17,7 @@ export interface ChatMessage {
   ido: string;
   sajat: boolean;
   senderName?: string;
+  imageUrl?: string; // ÚJ: Opcionális kép URL tulajdonság
 }
 
 export interface SendMessagePayload {
@@ -24,15 +25,13 @@ export interface SendMessagePayload {
   content: string;
 }
 
-// Add hozzá ezt az egy függvényt a chatService objektumhoz:
 export const chatService = {
-  // ... (a meglévő 3 metódusod marad)
-
-  // ÚJ: Beszélgetés lekérése vagy létrehozása
+  // Beszélgetés lekérése vagy létrehozása (Profilról indításhoz)
   getOrCreateConversation(targetUserId: number) {
     return apiClient.post<number>(`/Chat/get-or-create/${targetUserId}`);
   },
-  // Beszélgetések listájának lekérése
+
+  // Beszélgetések listájának lekérése a bal oldali sávhoz
   getConversations() {
     return apiClient.get<ChatListItem[]>('/Chat/list');
   },
@@ -42,8 +41,22 @@ export const chatService = {
     return apiClient.get<ChatMessage[]>(`/Chat/${conversationId}/messages`);
   },
 
-  // Új üzenet küldése
+  // Új szöveges üzenet küldése
   sendMessage(payload: SendMessagePayload) {
     return apiClient.post<ChatMessage>('/Chat/send', payload);
+  },
+
+  // ÚJ: Kép küldése (Itt javítottuk a Multipart headert!)
+  sendImage(conversationId: number, file: File) {
+    const formData = new FormData();
+    formData.append('conversationId', conversationId.toString());
+    formData.append('image', file);
+
+    // Kényszerítjük az axióst, hogy fájlként küldje el, ne JSON-ként!
+    return apiClient.post<ChatMessage>('/Chat/send-image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
   }
 };

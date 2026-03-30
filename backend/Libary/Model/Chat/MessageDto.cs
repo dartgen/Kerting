@@ -13,5 +13,6 @@ namespace Libary.Model.Chat
         public string Ido { get; set; }
         public bool Sajat { get; set; } // true, ha a bejelentkezett felhasználó küldte
         public string SenderName { get; set; } // Csoportos chatnél fontos
+        public string? ImageUrl { get; set; } 
     }
 }
