@@ -218,12 +218,12 @@ const handleReactReview = async (reviewId: number, isLike: boolean) => {
   const previousReaction = target.myReaction;
   if (target.myReaction === isLike) {
     target.myReaction = null;
-    isLike ? target.likesCount-- : target.dislikesCount--;
+    (isLike ? target.likesCount-- : target.dislikesCount--);
   } else {
     if (target.myReaction === true) target.likesCount--;
     if (target.myReaction === false) target.dislikesCount--;
     target.myReaction = isLike;
-    isLike ? target.likesCount++ : target.dislikesCount++;
+    (isLike ? target.likesCount++ : target.dislikesCount++);
   }
 
   try {
