@@ -26,8 +26,8 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <aside class="rounded-2xl border border-earth-100/10 bg-earth-900/40 p-4 space-y-5">
-    <div>
+  <aside class="rounded-2xl border border-earth-100/10 bg-earth-900/40 p-4 flex flex-col gap-5 sticky top-24 h-[calc(100vh-8rem)]">
+    <div class="flex-shrink-0">
       <label class="text-sm text-earth-100 block mb-2">Rendezés</label>
       <select
         :value="props.sortValue"
@@ -38,7 +38,7 @@ const emit = defineEmits<{
       </select>
     </div>
 
-    <div>
+    <div class="flex-shrink-0">
       <label class="text-sm text-earth-100 block mb-2">Keresés</label>
       <input
         :value="props.searchValue"
@@ -49,7 +49,7 @@ const emit = defineEmits<{
       />
     </div>
 
-    <div>
+    <div class="flex-shrink-0">
       <label class="text-sm text-earth-100 block mb-2">Létrehozva ennyi napon belül</label>
       <input
         :value="props.maxAgeDaysValue"
@@ -62,7 +62,7 @@ const emit = defineEmits<{
       <p class="text-xs text-earth-300 mt-1">{{ props.maxAgeDaysValue }} nap</p>
     </div>
 
-    <div>
+    <div class="flex-shrink-0">
       <p class="text-sm text-earth-100 mb-2">Szerepkör szűrő</p>
       <div class="space-y-2 max-h-40 overflow-y-auto">
         <label v-for="role in props.roles" :key="role.id" class="flex items-center gap-2 text-earth-200 text-sm">
@@ -76,9 +76,9 @@ const emit = defineEmits<{
       </div>
     </div>
 
-    <div>
-      <p class="text-sm text-earth-100 mb-2">Címkék</p>
-      <div class="flex flex-wrap gap-2 max-h-44 overflow-y-auto">
+    <div class="flex-1 flex flex-col min-h-0">
+      <p class="text-sm text-earth-100 mb-2 flex-shrink-0">Címkék</p>
+      <div class="flex flex-wrap gap-2 flex-1 overflow-y-auto content-start">
         <button
           v-for="tag in props.allTags"
           :key="tag"
@@ -92,7 +92,7 @@ const emit = defineEmits<{
       </div>
     </div>
 
-    <div v-if="props.isAdmin">
+    <div v-if="props.isAdmin" class="flex-shrink-0">
       <label class="flex items-center gap-2 text-earth-200 text-sm">
         <input
           :checked="props.showDeleted"
