@@ -1,5 +1,6 @@
 ﻿using Libary;
 using Libary.Model.Tag;
+using Libary.Model.Auth; // ÚJ: Hozzáadva a Login modell miatt!
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -33,7 +34,7 @@ namespace Kerting_Api.Controller
             // 2. KIKERESÉS A TOKENBŐL KAPOTT ID ALAPJÁN (Ezt már nem tudja meghamisítani)
             var existingUser = await _context.User.FindAsync(loggedInUserId);
 
-            if (existingUser == null) // nem lehetséges eset de igy nem kiabál a visual studio
+            if (existingUser == null)
             {
                 return NotFound("Felhasználó nem található.");
             }
@@ -77,7 +78,7 @@ namespace Kerting_Api.Controller
                     }
 
                     // D) Létrehozzuk a kapcsolatot az aktuális User és a Tag között
-                    var newConnection = new UserActivityTag 
+                    var newConnection = new UserActivityTag
                     {
                         USerId = loggedInUserId,
                         TagId = tag.Id
@@ -124,11 +125,34 @@ namespace Kerting_Api.Controller
                 )
                 .ToListAsync();
 
-            // 4. Belerakjuk a lekérdezett string listát a User objektumba
-            userProfile.Cimkek = userCimkek;
+            // ÚJ: Lekérdezzük a Login táblából a felhasználónevet (hogy a saját profilon is meglegyen)
+            var username = await _context.Set<Login>()
+                .Where(l => l.Id == loggedInUserId)
+                .Select(l => l.Username)
+                .FirstOrDefaultAsync();
 
-            // 5. Visszaadjuk a teljes User objektumot a frontendnek (JSON formátumban, immár a címkékkel együtt!)
-            return Ok(userProfile);
+            // Létrehozunk egy anonim objektumot a válaszhoz, amiben a Username is benne van
+            var myProfileResponse = new
+            {
+                userProfile.Id,
+                userProfile.VezetekNev,
+                userProfile.KeresztNev,
+                userProfile.Telefon,
+                userProfile.Email,
+                userProfile.Telepules,
+                userProfile.RoleId,
+                userProfile.IMGString,
+                userProfile.Rolam,
+                userProfile.Facebook,
+                userProfile.Instagram,
+                userProfile.Tiktok,
+                userProfile.EmailPublikus,
+                userProfile.TelefonPublikus,
+                Cimkek = userCimkek,
+                Username = username // <-- Ezt adjuk át a Vue-nak
+            };
+
+            return Ok(myProfileResponse);
         }
 
         [Authorize]
@@ -139,6 +163,7 @@ namespace Kerting_Api.Controller
             var roles = await _context.Role.ToListAsync();
             return Ok(roles);
         }
+
         [Authorize]
         [HttpGet("GetPublicProfile/{id}")]
         // Ez a végpont publikus, NEM kell rá [Authorize]!
@@ -159,8 +184,7 @@ namespace Kerting_Api.Controller
                 )
                 .ToListAsync();
 
-            // 3. ÉRTÉKELÉSEK KISZÁMOLÁSA (ÚJ RÉSZ)
-            // Csak azokat a review-kat nézzük, amiknek VAN csillaga (Rating != null) és nem töröltek
+            // 3. ÉRTÉKELÉSEK KISZÁMOLÁSA
             var reviewsQuery = _context.UserReview
                 .Where(r => r.TargetUserId == id && r.ParentReviewId == null && !r.IsDeleted && r.Rating != null);
 
@@ -169,15 +193,11 @@ namespace Kerting_Api.Controller
 
             if (ertekelesSzam > 0)
             {
-                // Átlag kiszámítása
                 ertekeles = await reviewsQuery.AverageAsync(r => (double)r.Rating!.Value);
-                // Kerekítés 1 tizedesjegyre (opcionális, de szebb a frontendnek)
                 ertekeles = Math.Round(ertekeles, 1);
             }
 
             // --- MASZKOLÁSI LOGIKA KEZDETE ---
-            // (Ide jön a te eredeti telefon és email maszkoló kódod változatlanul...)
-
             string displayTelefon = user.Telefon;
             if (user.TelefonPublikus != true && !string.IsNullOrEmpty(user.Telefon))
             {
@@ -202,6 +222,12 @@ namespace Kerting_Api.Controller
             }
             // --- MASZKOLÁSI LOGIKA VÉGE ---
 
+            // ÚJ: Lekérdezzük a Login táblából a felhasználónevet
+            var username = await _context.Set<Login>()
+                .Where(l => l.Id == id)
+                .Select(l => l.Username)
+                .FirstOrDefaultAsync();
+
             // 4. ADATVÉDELEM ÉS VISSZATÉRÉS
             var publicProfile = new
             {
@@ -219,8 +245,9 @@ namespace Kerting_Api.Controller
                 user.EmailPublikus,
                 user.TelefonPublikus,
                 Cimkek = userCimkek,
-                Ertekeles = ertekeles,         // <-- ÚJ MEZŐ (Átlag)
-                ErtekelesSzam = ertekelesSzam  // <-- ÚJ MEZŐ (Darabszám)
+                Ertekeles = ertekeles,
+                ErtekelesSzam = ertekelesSzam,
+                Username = username // <-- ÚJ: Hozzáadjuk a visszatérési objektumhoz
             };
 
             return Ok(publicProfile);

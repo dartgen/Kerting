@@ -91,7 +91,11 @@
             </div>
 
             <div class="w-28 h-28 sm:w-32 sm:h-32 shrink-0 rounded-full border-4 border-earth-200/30 shadow-xl overflow-hidden bg-earth-800 z-20">
-              <img :src="getImageUrl(profilAdatok.IMGString) || '/default-avatar.png'" alt="Profilkép" class="w-full h-full object-cover">
+              <img
+                :src="getImageUrl(profilAdatok.IMGString) || '/default-avatar.png'"
+                @error="profilAdatok.IMGString = ''"
+                alt="Profilkép"
+                class="w-full h-full object-cover">
             </div>
           </div>
 
@@ -123,7 +127,6 @@ import { useToastStore } from '@/stores/toast';
 import api from '@/services/axios';
 import type { PublicProfileResponse, RoleDto } from '@/types/auth';
 
-// A KISZERVEZETT KOMPONENSEK IMPORTÁLÁSA
 import ProfileTab from '@/components/profile/ProfileTab.vue';
 import GalleryComponent from '@/components/gallery/GalleryLayout.vue';
 import CommentsTab from '@/components/profile/UserReviewsList.vue';
@@ -142,6 +145,7 @@ interface PublicProfileViewState {
   facebook?: string;
   instagram?: string;
   tiktok?: string;
+  username?: string;
 }
 
 const route = useRoute();
@@ -155,12 +159,13 @@ const cimkek = ref<string[]>([]);
 
 const profilAdatok = reactive<PublicProfileViewState>({
   vezetekNev: '', keresztNev: '', email: '', telefon: '', telepules: '', roleId: 0, rolam: '',
-  IMGString: '', ertekeles: 0, ertekelesSzam: 0, facebook: '', instagram: '', tiktok: ''
+  IMGString: '', ertekeles: 0, ertekelesSzam: 0, facebook: '', instagram: '', tiktok: '',
+  username: ''
 });
 
 const teljesNev = computed(() => {
-  if (!profilAdatok.vezetekNev && !profilAdatok.keresztNev) return '';
-  return `${profilAdatok.vezetekNev} ${profilAdatok.keresztNev}`.trim();
+  const nev = `${profilAdatok.vezetekNev} ${profilAdatok.keresztNev}`.trim();
+  return nev ? nev : profilAdatok.username;
 });
 
 const roleNev = computed(() => {
@@ -168,7 +173,6 @@ const roleNev = computed(() => {
   return role ? role.name : '';
 });
 
-// Menügomb stílus
 const getTabClass = (tabName: string) => {
   const baseClass = 'text-left px-4 py-3 rounded-xl transition-all font-medium flex items-center gap-3';
   return activeTab.value === tabName
@@ -176,14 +180,10 @@ const getTabClass = (tabName: string) => {
     : `${baseClass} text-earth-100 hover:bg-earth-50/5 hover:text-earth-50 border border-transparent`;
 };
 
-// --- ÚJ: Üzenet küldése logika ---
 const uzenetKuldeseNyitas = () => {
   const targetUserId = route.params.id;
-
-  // Átirányítás a Chat nézetre, query paraméterben átadva a cél felhasználó ID-ját.
-  // (Ellenőrizd, hogy a routeredben a chat oldal 'chat' néven van-e regisztrálva, vagy írd át a path-t pl: path: '/chat')
   router.push({
-    name: 'chat', // VAGY path: '/chat'
+    name: 'chat',
     query: { targetId: targetUserId }
   });
 };
@@ -210,18 +210,19 @@ const adatokBetoltese = async () => {
     roles.value = rolesRes.data;
 
     const profileRes = await authService.getPublicProfile(userId);
-    const d: PublicProfileResponse = profileRes.data;
+    const d: any = profileRes.data;
 
     Object.assign(profilAdatok, {
       IMGString: d.imgString || '', vezetekNev: d.vezetekNev || '', keresztNev: d.keresztNev || '',
       email: d.email || '', telefon: d.telefon || '', telepules: d.telepules || '',
       rolam: d.rolam || '', roleId: d.roleId || 0, facebook: d.facebook || '',
       instagram: d.instagram || '', tiktok: d.tiktok || '', ertekeles: d.ertekeles || 0,
-      ertekelesSzam: d.ertekelesSzam || 0
+      ertekelesSzam: d.ertekelesSzam || 0,
+      username: d.username || d.felhasznaloNev || ''
     });
 
     if (d.cimkek && Array.isArray(d.cimkek)) {
-      cimkek.value = d.cimkek.map(c => c.trim());
+      cimkek.value = d.cimkek.map((c: string) => c.trim());
     }
   } catch (error) {
     console.error("Betöltési hiba:", error);

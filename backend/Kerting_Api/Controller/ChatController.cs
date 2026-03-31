@@ -1,5 +1,6 @@
 ﻿using Libary;
 using Libary.Model.Chat;
+using Libary.Model.Auth; // ÚJ: Ez kell a Login modell eléréséhez!
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -34,8 +35,6 @@ namespace Kerting_Api.Controller
             var userId = GetCurrentUserId();
 
             var rawConversations = await _context.Conversations
-                .Include(c => c.Participants)
-                    .ThenInclude(p => p.User)
                 .Where(c => c.Participants.Any(p => p.UserId == userId))
                 .OrderByDescending(c => c.LastMessageAt)
                 .Select(c => new
@@ -44,7 +43,18 @@ namespace Kerting_Api.Controller
                     c.IsGroup,
                     c.Title,
                     c.GroupImage,
-                    Participants = c.Participants,
+
+                    // ÚJ TRÜKK: Közvetlenül az SQL-ben lekérdezzük a Username-t a Login táblából!
+                    Participants = c.Participants.Select(p => new
+                    {
+                        p.UserId,
+                        p.User,
+                        Username = _context.Set<Login>()
+                                           .Where(l => l.Id == p.UserId)
+                                           .Select(l => l.Username)
+                                           .FirstOrDefault()
+                    }),
+
                     LastMessage = _context.Messages
                         .Where(m => m.ConversationId == c.Id)
                         .OrderByDescending(m => m.CreatedAt)
@@ -54,20 +64,34 @@ namespace Kerting_Api.Controller
                 })
                 .ToListAsync();
 
-            var dtos = rawConversations.Select(c => new ChatListItemDto
+            var dtos = rawConversations.Select(c =>
             {
-                Id = c.Id,
-                IsGroup = c.IsGroup,
-                Nev = c.IsGroup
-                    ? (c.Title ?? "Ismeretlen csoport")
-                    : (c.Participants.FirstOrDefault(p => p.UserId != userId)?.User.VezetekNev + " " +
-                       c.Participants.FirstOrDefault(p => p.UserId != userId)?.User.KeresztNev).Trim(),
-                Avatar = c.IsGroup
-                    ? (c.GroupImage ?? "")
-                    : (c.Participants.FirstOrDefault(p => p.UserId != userId)?.User.IMGString ?? ""),
-                UtolsoUzenet = c.LastMessage != null ? c.LastMessage.Content : "Nincs üzenet",
-                UtolsoIdo = c.LastMessage != null ? c.LastMessage.CreatedAt.ToString("HH:mm") : "",
-                Olvasatlan = c.UnreadCount > 0
+                // Kikeressük a partnert az új, bővített listából
+                var partner = c.Participants.FirstOrDefault(p => p.UserId != userId);
+                string megjelenitendoNev = "";
+
+                if (partner != null && partner.User != null)
+                {
+                    string teljesNev = (partner.User.VezetekNev + " " + partner.User.KeresztNev).Trim();
+
+                    // Ha a teljesNév üres, bevetjük a Login táblából kihúzott Username-t
+                    megjelenitendoNev = string.IsNullOrWhiteSpace(teljesNev)
+                        ? (partner.Username ?? "Ismeretlen felhasználó")
+                        : teljesNev;
+                }
+
+                return new ChatListItemDto
+                {
+                    Id = c.Id,
+                    IsGroup = c.IsGroup,
+                    Nev = c.IsGroup ? (c.Title ?? "Ismeretlen csoport") : megjelenitendoNev,
+                    Avatar = c.IsGroup
+                        ? (c.GroupImage ?? "")
+                        : (partner?.User?.IMGString ?? ""),
+                    UtolsoUzenet = c.LastMessage != null ? c.LastMessage.Content : "Nincs üzenet",
+                    UtolsoIdo = c.LastMessage != null ? c.LastMessage.CreatedAt.ToString("s") : "",
+                    Olvasatlan = c.UnreadCount > 0
+                };
             }).ToList();
 
             return Ok(dtos);
@@ -92,9 +116,13 @@ namespace Kerting_Api.Controller
                     Id = m.Id,
                     Szoveg = m.Content,
                     ImageUrl = m.ImageUrl,
-                    Ido = m.CreatedAt.ToString("HH:mm"),
+                    Ido = m.CreatedAt.ToString("s"),
                     Sajat = m.SenderId == userId,
-                    SenderName = m.Sender.KeresztNev
+
+                    // ÚJ TRÜKK IDE IS: Ha nincs keresztnév, on-the-fly kikeresi a Login-ból a nevet
+                    SenderName = string.IsNullOrWhiteSpace(m.Sender.KeresztNev)
+                        ? _context.Set<Login>().Where(l => l.Id == m.SenderId).Select(l => l.Username).FirstOrDefault()
+                        : m.Sender.KeresztNev
                 })
                 .ToListAsync();
 
@@ -147,7 +175,7 @@ namespace Kerting_Api.Controller
             {
                 Id = newMessage.Id,
                 Szoveg = newMessage.Content,
-                Ido = newMessage.CreatedAt.ToString("HH:mm"),
+                Ido = newMessage.CreatedAt.ToString("s"),
                 Sajat = true
             });
         }
@@ -206,7 +234,6 @@ namespace Kerting_Api.Controller
             if (!isParticipant) return Forbid("Nincs jogosultságod ide írni.");
             if (image == null || image.Length == 0) return BadRequest("Nincs kiválasztva kép.");
 
-            // A képmentés pontosan a 'Resources/ChatImages' mappába kerül!
             string uploadsFolder = Path.Combine(_env.ContentRootPath, "Resources", "ChatImages");
 
             if (!Directory.Exists(uploadsFolder))
@@ -214,7 +241,8 @@ namespace Kerting_Api.Controller
                 Directory.CreateDirectory(uploadsFolder);
             }
 
-            string uniqueFileName = Guid.NewGuid().ToString() + "_" + image.FileName;
+            string extension = Path.GetExtension(image.FileName);
+            string uniqueFileName = Guid.NewGuid().ToString() + extension;
             string filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
             using (var fileStream = new FileStream(filePath, FileMode.Create))
@@ -244,7 +272,7 @@ namespace Kerting_Api.Controller
                 Id = newMessage.Id,
                 Szoveg = newMessage.Content,
                 ImageUrl = newMessage.ImageUrl,
-                Ido = newMessage.CreatedAt.ToString("HH:mm"),
+                Ido = newMessage.CreatedAt.ToString("s"),
                 Sajat = true
             });
         }

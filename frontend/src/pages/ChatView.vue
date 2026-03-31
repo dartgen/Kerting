@@ -40,7 +40,7 @@
             <div class="flex-1 min-w-0">
               <div class="flex justify-between items-baseline">
                 <h3 class="text-earth-50 font-semibold truncate text-sm">{{ chat.nev }}</h3>
-                <span class="text-[10px] text-earth-300/60">{{ chat.utolsoIdo }}</span>
+                <span class="text-[10px] text-earth-300/60">{{ formatumDatum(chat.utolsoIdo, false) }}</span>
               </div>
               <p class="text-xs text-earth-200/60 truncate">{{ chat.utolsoUzenet }}</p>
             </div>
@@ -83,7 +83,7 @@
                 </span>
 
                 <div :class="[
-                  'w-fit max-w-full min-w-[90px] px-4 py-3 rounded-2xl shadow-sm text-sm transition-all',
+                  'w-fit max-w-full min-w-[110px] px-4 py-3 rounded-2xl shadow-sm text-sm transition-all',
                   msg.sajat
                     ? 'bg-green-600/20 border border-green-500/30 text-earth-50 rounded-tr-none shadow-green-900/10'
                     : 'bg-earth-800/80 border border-earth-200/20 text-earth-100 rounded-tl-none shadow-black/20'
@@ -95,7 +95,9 @@
 
                   <p v-if="!msg.imageUrl || msg.szoveg !== 'Fénykép'" class="leading-relaxed whitespace-pre-wrap break-all">{{ msg.szoveg }}</p>
 
-                  <div class="text-[9px] mt-1.5 opacity-40 font-mono text-right">{{ msg.ido }}</div>
+                  <div class="text-[10px] mt-2 opacity-60 font-medium text-right leading-none whitespace-nowrap">
+                    {{ formatumDatum(msg.ido, true) }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -103,9 +105,7 @@
 
           <div class="p-4 bg-earth-900/40 border-t border-earth-200/20">
             <form @submit.prevent="uzenetKuldese" class="flex items-center gap-2 max-w-5xl mx-auto">
-
               <input type="file" ref="kepInput" @change="kepKivalasztva" accept="image/*" class="hidden" />
-
               <button type="button" @click="triggerKepFeltoltes" :disabled="kuldesFolyamatban"
                       class="p-3.5 text-earth-300 hover:text-green-400 bg-earth-50/5 hover:bg-earth-50/10 border border-earth-200/30 rounded-xl transition-all disabled:opacity-50 shrink-0">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -193,6 +193,25 @@ const uzenetInput = ref<HTMLInputElement | null>(null);
 const kepInput = ref<HTMLInputElement | null>(null);
 
 const aktualisChat = computed(() => beszelgetesek.value.find(c => c.id === aktivChatId.value));
+
+const formatumDatum = (dateStr: string, idovel: boolean = false) => {
+  if (!dateStr) return '';
+
+  const d = new Date(dateStr);
+
+  // Ha valamiért mégis érvénytelen lenne, visszaadjuk az eredetit
+  if (isNaN(d.getTime())) return dateStr;
+
+  // Ha a bejövő dátum napja megegyezik a mai nappal
+  const maiNap = d.toDateString() === new Date().toDateString();
+  const ido = d.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' });
+
+  if (maiNap) return ido;
+
+  const datum = d.toLocaleDateString('hu-HU', { year: 'numeric', month: '2-digit', day: '2-digit' });
+
+  return idovel ? `${datum} ${ido}` : datum;
+};
 
 const getImageUrl = (fileName: string | null | undefined) => {
   if (!fileName || fileName.trim() === '') return null;

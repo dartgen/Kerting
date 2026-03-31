@@ -55,6 +55,7 @@ export interface ProfileBaseFields {
 export interface UserProfileResponse extends ProfileBaseFields {
   imgString?: string;
   roleName?: string;
+  username?: string;
 }
 
 export interface PublicProfileResponse extends UserProfileResponse {
