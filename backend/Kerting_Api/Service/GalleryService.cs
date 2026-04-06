@@ -244,7 +244,7 @@ namespace Kerting_Api.Service
                         i.IsPublished,
                         i.IsDeleted,
                         ImageUrl = $"/resources/Gallery/{i.Id}{i.FileExtension}",
-                        UploaderName = i.Login.Username,
+                        UploaderName = u.VezetekNev.IsNullOrEmpty() || u.KeresztNev.IsNullOrEmpty() ? i.Login.Username : $"{u.VezetekNev} {u.KeresztNev}",
                         ProfileImageUrl = string.IsNullOrWhiteSpace(u.IMGString)
                             ? null
                             : $"/resources/Profiles/{u.IMGString}",
