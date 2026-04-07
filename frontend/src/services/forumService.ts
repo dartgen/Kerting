@@ -1,29 +1,5 @@
 import api from './axios'
-
-export type ForumSort = 'latest' | 'oldest' | 'netdesc' | 'netasc'
-
-export interface ForumFeedFilters {
-  page?: number
-  pageSize?: number
-  sort?: ForumSort
-  search?: string
-  maxAgeDays?: number
-  roleIds?: number[]
-  tagNames?: string[]
-  includeDeleted?: boolean
-}
-
-export interface UpsertForumPostPayload {
-  title: string
-  description: string
-  attachedGalleryItemId?: number | null
-  tags?: string[]
-}
-
-export interface AddForumCommentPayload {
-  message: string
-  parentCommentId?: number | null
-}
+import type { ForumSort, ForumFeedFilters, UpsertForumPostPayload, AddForumCommentPayload } from '@/types/forum'
 
 const buildForumFeedQuery = (filters: ForumFeedFilters) => {
   const params = new URLSearchParams()
@@ -125,3 +101,6 @@ export const forumService = {
     return api.post(`/Forum/comment/${commentId}/react`, null, { params: { isLike } })
   }
 }
+
+// Re-export types for convenience
+export type { ForumSort, ForumFeedFilters, UpsertForumPostPayload, AddForumCommentPayload } from '@/types/forum'

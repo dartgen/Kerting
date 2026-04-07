@@ -40,6 +40,13 @@ const isDetailMode = computed(() => props.mode === 'detail')
 const isForumListRoute = computed(() => route.name === 'forum' && !isDetailMode.value)
 const isAdmin = computed(() => authStore.profilAdatok?.roleId === 1)
 
+const showFilters = ref(false)
+
+const shouldShowFilters = computed(() => {
+  // Desktop-on (lg+) mindig látható, mobilon a toggle alapján
+  return true // Kell media query vagy resize listner az érdemesebb módszerre
+})
+
 const roles = ref<RoleDto[]>([])
 const allTags = ref<string[]>([])
 
@@ -898,8 +905,47 @@ onMounted(async () => {
       <p class="text-earth-200/90">Közösségi beszélgetések, tippek és kérdések.</p>
     </div>
 
+    <div class="mb-4 flex lg:hidden">
+      <button
+        @click="showFilters = !showFilters"
+        class="flex items-center gap-2 px-4 py-2 bg-earth-800/80 border border-earth-100/20 rounded-lg text-earth-50 hover:bg-earth-700/80 transition-colors"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+        </svg>
+        {{ showFilters ? 'Szűrők elrejtése' : 'Szűrők megjelenítése' }}
+      </button>
+    </div>
+
+    <Transition name="slide">
+      <div
+        v-if="showFilters"
+        class="mb-4 rounded-2xl border border-earth-100/10 bg-earth-900/40 p-4 flex flex-col gap-5 lg:hidden"
+      >
+        <ForumFiltersSidebar
+          :sort-value="filters.sort"
+          :search-value="filters.search"
+          :max-age-days-value="filters.maxAgeDays"
+          :sort-options="sortOptions"
+          :roles="roles"
+          :all-tags="allTags"
+          :selected-role-set="selectedRoleSet"
+          :selected-tag-set="selectedTagSet"
+          :is-admin="isAdmin"
+          :show-deleted="showDeleted"
+          @update:sort-value="filters.sort = $event; showFilters = false"
+          @update:search-value="filters.search = $event"
+          @update:max-age-days-value="filters.maxAgeDays = $event"
+          @toggle-role="toggleRole"
+          @toggle-tag="toggleTag"
+          @update:show-deleted="showDeleted = $event"
+        />
+      </div>
+    </Transition>
+
     <div class="grid grid-cols-1 lg:grid-cols-[1fr_3fr] gap-6">
       <ForumFiltersSidebar
+        class="hidden lg:block"
         :sort-value="filters.sort"
         :search-value="filters.search"
         :max-age-days-value="filters.maxAgeDays"

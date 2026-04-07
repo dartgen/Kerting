@@ -26,7 +26,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <aside class="rounded-2xl border border-earth-100/10 bg-earth-900/40 p-4 flex flex-col gap-5 sticky top-24 h-[calc(100vh-8rem)]">
+  <aside class="w-full rounded-2xl border border-earth-100/10 bg-earth-900/40 p-4 flex flex-col gap-5 lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)]">
     <div class="flex-shrink-0">
       <label class="text-sm text-earth-100 block mb-2">Rendezés</label>
       <select

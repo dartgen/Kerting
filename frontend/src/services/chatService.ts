@@ -1,29 +1,5 @@
-import apiClient from './axios';
-
-// Ha van külön fájlod a típusoknak (pl. '@/types/chat'), ezeket ki is szervezheted oda!
-export interface ChatListItem {
-  id: number;
-  nev: string;
-  utolsoUzenet: string;
-  utolsoIdo: string;
-  olvasatlan: boolean;
-  avatar: string;
-  isGroup: boolean;
-}
-
-export interface ChatMessage {
-  id: number;
-  szoveg: string;
-  ido: string;
-  sajat: boolean;
-  senderName?: string;
-  imageUrl?: string; // ÚJ: Opcionális kép URL tulajdonság
-}
-
-export interface SendMessagePayload {
-  conversationId: number;
-  content: string;
-}
+import apiClient from './axios'
+import type { ChatListItem, ChatMessage, SendMessagePayload } from '@/types/chat'
 
 export const chatService = {
   // Beszélgetés lekérése vagy létrehozása (Profilról indításhoz)
@@ -60,3 +36,6 @@ export const chatService = {
     });
   }
 };
+
+// Re-export types for convenience
+export type { ChatListItem, ChatMessage, SendMessagePayload } from '@/types/chat'

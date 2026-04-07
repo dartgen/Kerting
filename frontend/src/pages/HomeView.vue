@@ -16,7 +16,7 @@ const MotionDiv = motion.div;
       :transition="{ duration: 0.8, ease: 'easeOut' }"
       class="shrink-0 text-center w-full max-w-4xl px-4 py-3 md:px-6 md:py-4 bg-earth-950/60 backdrop-blur-md rounded-xl border border-earth-400/30 shadow-xl"
     >
-      <h1 class="font-serif text-xl sm:text-2xl md:text-4xl text-earth-100 mb-1 md:mb-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] tracking-wide">
+      <h1 class="font-bold text-xl sm:text-2xl md:text-4xl text-earth-100 mb-1 md:mb-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] tracking-wide">
         Üdvözöljük a Kerting oldalán!
       </h1>
       <p class="text-earth-50 text-[10px] sm:text-xs md:text-sm md:leading-snug font-light">

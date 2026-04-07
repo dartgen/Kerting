@@ -2,7 +2,7 @@
   <div class="flex items-center justify-center w-full h-screen p-0 sm:p-6 bg-earth-950">
     <div class="relative w-full max-w-6xl h-full sm:h-[85vh] flex bg-earth-900/60 backdrop-blur-md border border-earth-100/30 rounded-none sm:rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden">
 
-      <div class="w-full md:w-80 lg:w-96 border-r border-earth-200/20 flex flex-col bg-earth-900/40"
+      <div class="w-full md:w-80 md:flex-shrink-0 lg:w-96 border-r border-earth-200/20 flex flex-col bg-earth-900/40"
            :class="{'hidden md:flex': aktivChatId !== null}">
 
         <div class="p-5 border-b border-earth-200/20">
@@ -31,7 +31,7 @@
                ]">
             <div class="relative flex-shrink-0">
               <div class="w-12 h-12 rounded-full border border-earth-200/20 overflow-hidden bg-earth-800 shadow-md">
-                <img v-if="chat.avatar" :src="getImageUrl(chat.avatar)" @error="chat.avatar = ''" class="w-full h-full object-cover">
+                <img v-if="chat.avatar" v-lazy="getImageUrl(chat.avatar)" @error="chat.avatar = ''" class="w-full h-full object-cover">
                 <div v-else class="w-full h-full flex items-center justify-center text-earth-400">
                   <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
                 </div>
@@ -40,9 +40,9 @@
             <div class="flex-1 min-w-0">
               <div class="flex justify-between items-baseline">
                 <h3 class="text-earth-50 font-semibold truncate text-sm">{{ chat.nev }}</h3>
-                <span class="text-[10px] text-earth-300/60">{{ formatumDatum(chat.utolsoIdo, false) }}</span>
+                <span class="text-[10px] text-earth-300">{{ formatumDatum(chat.utolsoIdo, false) }}</span>
               </div>
-              <p class="text-xs text-earth-200/60 truncate">{{ chat.utolsoUzenet }}</p>
+              <p class="text-xs text-earth-200 truncate">{{ chat.utolsoUzenet }}</p>
             </div>
             <div v-if="chat.olvasatlan" class="w-2 h-2 bg-green-500 rounded-full shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
           </div>
@@ -57,20 +57,20 @@
                 <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" /></svg>
               </button>
               <div class="w-10 h-10 rounded-full border border-earth-200/30 overflow-hidden bg-earth-800 shadow-sm">
-                <img v-if="aktualisChat?.avatar" :src="getImageUrl(aktualisChat?.avatar)" @error="aktualisChat.avatar = ''" class="w-full h-full object-cover" />
+                <img v-if="aktualisChat?.avatar" v-lazy="getImageUrl(aktualisChat?.avatar)" @error="aktualisChat.avatar = ''" class="w-full h-full object-cover" />
                 <div v-else class="w-full h-full flex items-center justify-center text-earth-400">
                   <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
                 </div>
               </div>
               <div>
                 <h2 class="text-earth-50 font-bold leading-tight">{{ aktualisChat?.nev }}</h2>
-                <p class="text-[10px] text-earth-300/50 uppercase tracking-widest font-medium">Beszélgetés</p>
+                <p class="text-[10px] text-earth-300 uppercase tracking-widest font-medium">Beszélgetés</p>
               </div>
             </div>
           </div>
 
           <div ref="uzenetekKontener" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scrollbar bg-earth-900/10">
-            <div v-if="toltesUzenetek" class="w-full text-center text-earth-300/50 py-4">
+            <div v-if="toltesUzenetek" class="w-full text-center text-earth-300 py-4">
               Betöltés...
             </div>
 
@@ -90,7 +90,7 @@
                 ]">
 
                   <div v-if="msg.imageUrl" class="mb-2">
-                    <img :src="getChatImageUrl(msg.imageUrl)" alt="Kép" class="max-w-full h-auto max-h-64 rounded-xl object-contain border border-earth-200/20 cursor-pointer" />
+                    <img v-lazy="getChatImageUrl(msg.imageUrl)" alt="Kép" class="max-w-full h-auto max-h-64 rounded-xl object-contain border border-earth-200/20 cursor-pointer" />
                   </div>
 
                   <p v-if="!msg.imageUrl || msg.szoveg !== 'Fénykép'" class="leading-relaxed whitespace-pre-wrap break-all">{{ msg.szoveg }}</p>
@@ -134,7 +134,7 @@
           </div>
         </template>
 
-        <div v-else class="flex-1 flex flex-col items-center justify-center text-earth-300/30 p-10 text-center">
+        <div v-else class="flex-1 flex flex-col items-center justify-center text-earth-300/50 p-10 text-center">
           <div class="w-24 h-24 mb-6 rounded-full bg-earth-800/30 flex items-center justify-center border border-earth-200/10">
             <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -162,7 +162,7 @@ interface ChatListItem {
   utolsoUzenet: string;
   utolsoIdo: string;
   olvasatlan: boolean;
-  avatar: string;
+  avatar: string | null;
   isGroup: boolean;
 }
 
@@ -214,15 +214,16 @@ const formatumDatum = (dateStr: string, idovel: boolean = false) => {
 };
 
 const getImageUrl = (fileName: string | null | undefined) => {
-  if (!fileName || fileName.trim() === '') return null;
+  if (!fileName || fileName.trim() === '') return undefined;
   const axiosBaseUrl = api.defaults.baseURL;
-  if (!axiosBaseUrl) return null;
+  if (!axiosBaseUrl) return undefined;
   return `${new URL(axiosBaseUrl).origin}/resources/Profiles/${fileName}`;
 };
 
-const getChatImageUrl = (fileName: string) => {
+const getChatImageUrl = (fileName: string | null | undefined) => {
+  if (!fileName || fileName.trim() === '') return undefined;
   const axiosBaseUrl = api.defaults.baseURL;
-  if (!axiosBaseUrl) return null;
+  if (!axiosBaseUrl) return undefined;
   return `${new URL(axiosBaseUrl).origin}/resources/ChatImages/${fileName}`;
 };
 
@@ -254,7 +255,10 @@ const loadMessages = async (chatId: number) => {
 
     const chatIndex = beszelgetesek.value.findIndex(c => c.id === chatId);
     if (chatIndex !== -1) {
-      beszelgetesek.value[chatIndex].olvasatlan = false;
+      const chatItem = beszelgetesek.value[chatIndex];
+      if (chatItem) {
+        chatItem.olvasatlan = false;
+      }
     }
 
     gorgetesLegalulra();
@@ -282,11 +286,16 @@ const uzenetKuldese = async () => {
 
     const chatIndex = beszelgetesek.value.findIndex(c => c.id === aktivChatId.value);
     if (chatIndex !== -1) {
-      beszelgetesek.value[chatIndex].utolsoUzenet = response.data.szoveg;
-      beszelgetesek.value[chatIndex].utolsoIdo = response.data.ido;
+      const chatItem = beszelgetesek.value[chatIndex];
+      if (!chatItem) return;
 
-      const chatItem = beszelgetesek.value.splice(chatIndex, 1)[0];
-      beszelgetesek.value.unshift(chatItem);
+      chatItem.utolsoUzenet = response.data.szoveg;
+      chatItem.utolsoIdo = response.data.ido;
+
+      const moved = beszelgetesek.value.splice(chatIndex, 1)[0];
+      if (moved) {
+        beszelgetesek.value.unshift(moved);
+      }
     }
 
     ujUzenet.value = '';
@@ -323,10 +332,16 @@ const kepKivalasztva = async (event: Event) => {
 
     const chatIndex = beszelgetesek.value.findIndex(c => c.id === aktivChatId.value);
     if (chatIndex !== -1) {
-      beszelgetesek.value[chatIndex].utolsoUzenet = "Fénykép";
-      beszelgetesek.value[chatIndex].utolsoIdo = response.data.ido;
-      const chatItem = beszelgetesek.value.splice(chatIndex, 1)[0];
-      beszelgetesek.value.unshift(chatItem);
+      const chatItem = beszelgetesek.value[chatIndex];
+      if (!chatItem) return;
+
+      chatItem.utolsoUzenet = "Fénykép";
+      chatItem.utolsoIdo = response.data.ido;
+
+      const moved = beszelgetesek.value.splice(chatIndex, 1)[0];
+      if (moved) {
+        beszelgetesek.value.unshift(moved);
+      }
     }
 
     gorgetesLegalulra();
@@ -347,6 +362,12 @@ watch(aktivChatId, (newId) => {
     loadMessages(newId);
   }
 });
+
+// Autoscroll when new messages arrive
+watch(uzenetek, async () => {
+  await nextTick();
+  await gorgetesLegalulra();
+}, { deep: true });
 
 const bezaras = () => {
   aktivChatId.value = null;

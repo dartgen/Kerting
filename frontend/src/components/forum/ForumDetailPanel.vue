@@ -83,16 +83,16 @@ const openPublicProfile = (userId: number) => {
               <span>· {{ props.detail.authorRoleName || 'Szerepkör nélkül' }}</span>
             </div>
           </div>
-          <div class="flex gap-2">
-            <button v-if="props.detail.canModerate" type="button" class="px-3 py-1 rounded-lg bg-earth-700 text-earth-100" @click="emit('toggle-pinned', props.detail.id, !props.detail.isPinned)">
+          <div class="flex flex-wrap gap-2">
+            <button v-if="props.detail.canModerate" type="button" class="px-2 py-1 text-xs sm:px-3 sm:py-1 sm:text-sm rounded-lg bg-earth-700 text-earth-100 font-semibold" @click="emit('toggle-pinned', props.detail.id, !props.detail.isPinned)">
               {{ props.detail.isPinned ? 'Unpin' : 'Pin' }}
             </button>
-            <button v-if="props.detail.canModerate" type="button" class="px-3 py-1 rounded-lg bg-earth-700 text-earth-100" @click="emit('toggle-locked', props.detail.id, !props.detail.isLocked)">
+            <button v-if="props.detail.canModerate" type="button" class="px-2 py-1 text-xs sm:px-3 sm:py-1 sm:text-sm rounded-lg bg-earth-700 text-earth-100 font-semibold" @click="emit('toggle-locked', props.detail.id, !props.detail.isLocked)">
               {{ props.detail.isLocked ? 'Feloldás' : 'Lezárás' }}
             </button>
-            <button v-if="props.detail.canEdit" type="button" class="px-3 py-1 rounded-lg bg-blue-700/80 text-blue-100" @click="emit('open-edit', props.detail)">Szerkesztés</button>
-            <button v-if="props.detail.canDelete" type="button" class="px-3 py-1 rounded-lg bg-red-700/80 text-red-100" @click="emit('delete-post', props.detail.id)">Törlés</button>
-            <button v-if="props.detail.canRestore" type="button" class="px-3 py-1 rounded-lg bg-green-700/80 text-green-100" @click="emit('restore-post', props.detail.id)">Visszaállítás</button>
+            <button v-if="props.detail.canEdit" type="button" class="px-2 py-1 text-xs sm:px-3 sm:py-1 sm:text-sm rounded-lg bg-blue-700/80 text-blue-100 font-semibold" @click="emit('open-edit', props.detail)">Szerkesztés</button>
+            <button v-if="props.detail.canDelete" type="button" class="px-2 py-1 text-xs sm:px-3 sm:py-1 sm:text-sm rounded-lg bg-red-700/80 text-red-100 font-semibold" @click="emit('delete-post', props.detail.id)">Törlés</button>
+            <button v-if="props.detail.canRestore" type="button" class="px-2 py-1 text-xs sm:px-3 sm:py-1 sm:text-sm rounded-lg bg-green-700/80 text-green-100 font-semibold" @click="emit('restore-post', props.detail.id)">Visszaállítás</button>
           </div>
         </div>
 

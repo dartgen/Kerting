@@ -380,6 +380,7 @@ namespace Kerting_Api.Service
                 ProfileImageUrl = string.IsNullOrWhiteSpace(item.User.IMGString)
                     ? null
                     : $"/resources/Profiles/{item.User.IMGString}",
+                CreatedAtUtc = item.Item.CreatedAtUtc,
                 LikesCount = likesCount,
                 DislikesCount = dislikesCount,
                 MyReaction = myReaction,

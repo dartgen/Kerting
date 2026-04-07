@@ -111,11 +111,11 @@ const openPublicProfile = (userId: number) => {
             </button>
             <span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-earth-800 text-earth-200">💬 {{ props.post.commentsCount }}</span>
           </div>
-          <div class="flex items-center gap-2">
-            <button type="button" class="px-3 py-1.5 rounded-lg text-sm bg-earth-700 text-earth-100" @click="emit('open-detail', props.post.id)">Megnyitás</button>
-            <button v-if="props.post.canEdit" type="button" class="px-3 py-1.5 rounded-lg text-sm bg-blue-700/80 text-blue-100" @click="emit('open-edit', props.post)">Szerkesztés</button>
-            <button v-if="props.post.canDelete" type="button" class="px-3 py-1.5 rounded-lg text-sm bg-red-700/80 text-red-100" @click="emit('delete-post', props.post.id)">Törlés</button>
-            <button v-if="props.post.canRestore" type="button" class="px-3 py-1.5 rounded-lg text-sm bg-green-700/80 text-green-100" @click="emit('restore-post', props.post.id)">Visszaállítás</button>
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" class="px-2 py-1 text-xs sm:px-3 sm:py-1.5 sm:text-sm rounded-lg bg-earth-700 text-earth-100" @click="emit('open-detail', props.post.id)">Megnyitás</button>
+            <button v-if="props.post.canEdit" type="button" class="px-2 py-1 text-xs sm:px-3 sm:py-1.5 sm:text-sm rounded-lg bg-blue-700/80 text-blue-100" @click="emit('open-edit', props.post)">Szerkesztés</button>
+            <button v-if="props.post.canDelete" type="button" class="px-2 py-1 text-xs sm:px-3 sm:py-1.5 sm:text-sm rounded-lg bg-red-700/80 text-red-100" @click="emit('delete-post', props.post.id)">Törlés</button>
+            <button v-if="props.post.canRestore" type="button" class="px-2 py-1 text-xs sm:px-3 sm:py-1.5 sm:text-sm rounded-lg bg-green-700/80 text-green-100" @click="emit('restore-post', props.post.id)">Visszaállítás</button>
           </div>
         </div>
       </div>

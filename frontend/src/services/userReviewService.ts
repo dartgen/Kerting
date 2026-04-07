@@ -1,10 +1,5 @@
 import api from './axios'
-
-export interface AddUserReviewPayload {
-  parentReviewId?: number | null
-  rating?: number | null
-  message: string
-}
+import type { AddUserReviewPayload } from '@/types/user-review'
 
 export const userReviewService = {
   getReviews(targetUserId: string | number) {
@@ -28,3 +23,6 @@ export const userReviewService = {
     return api.patch(`/UserReview/${reviewId}/restore`)
   }
 }
+
+// Re-export types for convenience
+export type { AddUserReviewPayload } from '@/types/user-review'

@@ -20,8 +20,8 @@
           </h1>
         </div>
 
-        <div class="px-5 sm:px-8 py-6">
-          <form @submit.prevent="adatokMentese" class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+        <div class="px-4 sm:px-8 py-6">
+          <form @submit.prevent="adatokMentese" class="grid grid-cols-1 md:grid-cols-2 gap-x-4 md:gap-x-8 gap-y-4 md:gap-y-6">
 
             <div class="space-y-6">
               <div class="flex flex-col">
@@ -32,7 +32,7 @@
 
               <div class="flex flex-col">
                 <div class="flex items-center justify-between mb-1 ml-1">
-                  <label class="text-sm font-semibold text-earth-100">E-mail cím</label>
+                  <label for="profile-email" class="text-sm font-semibold text-earth-100">E-mail cím</label>
                   <label class="flex items-center cursor-pointer group">
                     <span class="mr-2 text-xs text-earth-200 group-hover:text-earth-100 transition-colors">Publikus</span>
                     <div class="relative">
@@ -45,14 +45,15 @@
                   <svg class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-earth-200/70 pointer-events-none" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
                   </svg>
-                  <input type="email" v-model="profilAdatok.email" placeholder="example@email.com"
-                         class="w-full bg-earth-50/10 border border-earth-200/30 rounded-lg py-3 pl-11 pr-4 text-earth-50 focus:outline-none focus:ring-2 focus:ring-green-400 transition-all shadow-inner placeholder-earth-200/50">
+                  <input type="email" id="profile-email" v-model="profilAdatok.email" placeholder="example@email.com"
+                         class="w-full bg-earth-50/10 border border-earth-200/30 rounded-lg py-3 pl-11 pr-4 text-earth-50 focus:outline-none focus:ring-2 focus:ring-green-400 transition-all shadow-inner placeholder-earth-200/50"
+                         aria-describedby="email-hint">
                 </div>
               </div>
 
               <div class="flex flex-col">
                 <div class="flex items-center justify-between mb-1 ml-1">
-                  <label class="text-sm font-semibold text-earth-100">Telefonszám</label>
+                  <label for="profile-telefon" class="text-sm font-semibold text-earth-100">Telefonszám</label>
                   <label class="flex items-center cursor-pointer group">
                     <span class="mr-2 text-xs text-earth-200 group-hover:text-earth-100 transition-colors">Publikus</span>
                     <div class="relative">
@@ -65,33 +66,34 @@
                   <svg class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-earth-200/70 pointer-events-none" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-2.896-1.596-5.539-4.239-7.135-7.135l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
                   </svg>
-                  <input type="tel" v-model="profilAdatok.telefon" placeholder="+36301234567"
+                  <input type="tel" id="profile-telefon" v-model="profilAdatok.telefon" placeholder="+36301234567"
                          @input="telefonHiba = false"
                          :class="[
                            'w-full bg-earth-50/10 border rounded-lg py-3 pl-11 pr-4 text-earth-50 focus:outline-none focus:ring-2 transition-all shadow-inner placeholder-earth-200/50',
                            telefonHiba ? 'border-red-500 focus:ring-red-400' : 'border-earth-200/30 focus:ring-green-400'
-                         ]">
+                         ]"
+                         aria-describedby="telefon-error">
                 </div>
-                <span v-if="telefonHiba" class="text-red-400 text-xs mt-1 ml-1">
+                <span v-if="telefonHiba" id="telefon-error" class="text-red-400 text-xs mt-1 ml-1" role="alert">
                   Kérjük, érvényes formátumot adj meg! (Pl.: +36301234567 vagy 06301234567)
                 </span>
               </div>
 
               <div class="flex flex-col">
-                <label class="text-sm font-semibold text-earth-100 mb-1 ml-1">Település</label>
+                <label for="profile-telepules" class="text-sm font-semibold text-earth-100 mb-1 ml-1">Település</label>
                 <div class="relative">
                   <svg class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-earth-200/70 pointer-events-none" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                     <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
                   </svg>
-                  <input type="text" v-model="profilAdatok.telepules" placeholder="Kecskemét"
+                  <input type="text" id="profile-telepules" v-model="profilAdatok.telepules" placeholder="Kecskemét"
                          class="w-full bg-earth-50/10 border border-earth-200/30 rounded-lg py-3 pl-11 pr-4 text-earth-50 focus:outline-none focus:ring-2 focus:ring-green-400 transition-all shadow-inner placeholder-earth-200/50">
                 </div>
               </div>
 
               <div class="flex flex-col">
-                <label class="text-sm font-semibold text-earth-100 mb-1 ml-1">Ki vagy?</label>
-                <select v-model="profilAdatok.roleId"
+                <label for="profile-role" class="text-sm font-semibold text-earth-100 mb-1 ml-1">Ki vagy?</label>
+                <select id="profile-role" v-model="profilAdatok.roleId"
                         :disabled="profilAdatok.roleId === 1"
                         class="w-full bg-earth-50/10 border border-earth-200/30 rounded-lg py-3 px-4 text-earth-50 focus:outline-none focus:ring-2 focus:ring-green-400 transition-all shadow-inner appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                   <option v-for="role in szurtRoles" :key="role.id" :value="role.id" class="bg-earth-800 text-earth-50">
@@ -190,7 +192,7 @@
                         </svg>
                       </div>
                     </span>
-                    <span v-if="cimkek.length === 0" class="text-earth-200/50 text-sm italic mt-1 ml-1">Írd be mivel foglalkozol!</span>
+                    <span v-if="cimkek.length === 0" class="text-earth-200 text-sm italic mt-1 ml-1">Írd be mivel foglalkozol!</span>
                   </div>
                 </div>
               </div>

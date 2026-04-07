@@ -1,4 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import 'tailwindcss';
+
+@layer base {
+  html, body {
+    font-family: 'Inter', sans-serif;
+  }
+
+  *, *::before, *::after {
+    @apply font-sans;
+  }
+}
 
 @theme {
   --color-earth-900: #2c3a29;
@@ -29,7 +40,7 @@
   }
 
   .logo-text {
-    @apply text-xl sm:text-3xl lg:text-4xl font-serif tracking-widest text-earth-50 hover:text-earth-100 transition-all duration-300 pb-1 border-b-2 border-transparent hover:border-earth-200/50 drop-shadow-lg;
+    @apply text-xl sm:text-3xl lg:text-4xl font-bold tracking-widest text-earth-50 hover:text-earth-100 transition-all duration-300 pb-1 border-b-2 border-transparent hover:border-earth-200/50 drop-shadow-lg;
   }
 
   .search-input {
@@ -50,7 +61,7 @@
 
   /* Belső oldalak közös kártya konténere */
   .page-card {
-    @apply w-full h-full min-h-0 bg-earth-900/40 backdrop-blur-lg border border-earth-100/10 rounded-3xl p-6 sm:p-8 shadow-[0_8px_32px_rgba(0,0,0,0.2)] text-earth-50 overflow-y-auto overscroll-contain;
+    @apply w-full h-full min-h-0 bg-earth-900/40 backdrop-blur-lg border border-earth-100/10 rounded-3xl p-6 sm:p-8 shadow-[0_8px_32px_rgba(0,0,0,0.2)] text-earth-50 overflow-y-auto overflow-x-visible overscroll-contain;
   }
 
   .inner-page-shell {
@@ -62,6 +73,15 @@
   }
 
   .page-title {
-    @apply text-3xl md:text-4xl font-serif text-earth-50 mb-6 border-b border-earth-100/10 pb-4;
+    @apply text-3xl md:text-4xl font-bold text-earth-50 mb-6 border-b border-earth-100/10 pb-4 text-center;
+    width: calc(100% + 3rem);
+    margin-left: -1.5rem;
+  }
+  
+  @media (min-width: 640px) {
+    .page-title {
+      width: calc(100% + 4rem);
+      margin-left: -2rem;
+    }
   }
 }

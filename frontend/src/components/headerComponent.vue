@@ -33,7 +33,7 @@
             </div>
           </div>
 
-          <div class="absolute left-1/2 transform -translate-x-1/2 w-[56%] sm:w-auto px-2">
+          <div class="flex-1 px-2 flex items-center justify-center">
             <RouterLink to="/" class="logo-text block text-center truncate"> KERTING </RouterLink>
           </div>
 
@@ -42,11 +42,10 @@
               Bejelentkezés
             </button>
 
-            <div v-else class="relative hidden lg:block">
+            <div v-else class="relative">
               <button
                 @click="profileMenuOpen = !profileMenuOpen"
-                class="btn-profile overflow-hidden flex items-center justify-center border-2 border-white/20 hover:border-white/50 transition-all bg-earth-800 shadow-md relative z-40"
-                style="width: 40px; height: 40px; min-width: 40px; border-radius: 50%;"
+                class="btn-profile h-10 w-10 flex-shrink-0 overflow-hidden flex items-center justify-center border-2 border-white/20 hover:border-white/50 transition-all bg-earth-800 shadow-md relative z-40 rounded-full"
               >
                 <img
                   v-if="userProfileImage"
@@ -60,12 +59,12 @@
                 </svg>
               </button>
 
-              <div v-if="profileMenuOpen" class="fixed inset-0 z-30" @click="profileMenuOpen = false"></div>
+              <div v-if="profileMenuOpen" class="hidden md:block fixed inset-0 z-30" @click="profileMenuOpen = false"></div>
 
               <AnimatePresence>
                 <MotionDiv
                   v-if="profileMenuOpen"
-                  class="absolute right-0 mt-3 w-48 bg-earth-800/95 backdrop-blur-md border border-earth-100/20 rounded-xl shadow-xl py-2 z-50 overflow-hidden"
+                  class="absolute -right-2 md:right-0 mt-3 w-56 md:w-48 bg-earth-800/95 backdrop-blur-md border border-earth-100/20 rounded-xl shadow-xl py-2 z-50 overflow-hidden"
                   :initial="{ opacity: 0, y: -10, scale: 0.95 }"
                   :animate="{ opacity: 1, y: 0, scale: 1 }"
                   :exit="{ opacity: 0, y: -10, scale: 0.95 }"
@@ -179,12 +178,6 @@ const authStore = useAuthStore();
 const router = useRouter();
 const mobileMenuOpen = ref(false);
 const profileMenuOpen = ref(false); // Új állapot a profil menünek
-
-onMounted(() => {
-  if (authStore.isAuthenticated && !authStore.profilAdatok) {
-    authStore.fetchUserProfile();
-  }
-});
 
 const userProfileImage = computed(() => {
   const fileName = authStore.profileImageName;

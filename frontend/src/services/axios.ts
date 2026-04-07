@@ -35,12 +35,18 @@ apiClient.interceptors.response.use(
       // Megnézzük, hogy melyik végpontra ment a kérés.
       // Ha NEM a bejelentkezésre ment, akkor lejárt a tokenünk.
       const requestUrl = error.config.url || '';
-      const isLoginRequest = requestUrl.toLowerCase().includes('/login');
+      const normalizedUrl = requestUrl.toLowerCase();
+      const isLoginRequest = normalizedUrl.includes('/login');
+      const isProfileRequest = normalizedUrl.includes('/getmyprofile');
 
       if (!isLoginRequest) {
         // Csak akkor dobjuk ki a felhasználót és frissítünk, ha ez NEM egy login kísérlet volt
         localStorage.removeItem('userToken');
-        window.location.href = '/login';
+
+        // A profil endpoint 401 lehet természetes (lejárt token oldalbetöltéskor), ilyenkor ne kényszerítsünk redirectet.
+        if (!isProfileRequest && window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
       }
     }
 

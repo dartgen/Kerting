@@ -12,6 +12,7 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(authService.getToken());
   const isLoading = ref(false);
   const authError = ref<string | null>(null);
+  const profileRequest = ref<Promise<void> | null>(null);
 
   // --- SZÁMÍTOTT ADATOK (Getters) ---
   const isAuthenticated = computed(() => !!token.value);
@@ -33,12 +34,46 @@ export const useAuthStore = defineStore('auth', () => {
   };
 
   const fetchUserProfile = async () => {
-    try {
-      const response = await authService.getProfile();
-      profilAdatok.value = response.data;
-    } catch (error) {
-      console.error("Nem sikerült lekérni a profiladatokat:", error);
+    if (!token.value) {
+      profilAdatok.value = null;
+      return;
     }
+
+    if (profileRequest.value) {
+      await profileRequest.value;
+      return;
+    }
+
+    profileRequest.value = (async () => {
+      try {
+        const response = await authService.getProfile();
+        profilAdatok.value = response.data;
+      } catch (error: any) {
+        const status = error?.response?.status;
+        const isCanceled =
+          error?.code === 'ERR_CANCELED' ||
+          error?.name === 'CanceledError' ||
+          String(error?.message || '').toLowerCase().includes('aborted');
+
+        if (status === 401) {
+          authService.kijelentkezes();
+          token.value = null;
+          felhasznalo.value = null;
+          profilAdatok.value = null;
+          return;
+        }
+
+        if (isCanceled) {
+          return;
+        }
+
+        console.error("Nem sikerült lekérni a profiladatokat:", error);
+      } finally {
+        profileRequest.value = null;
+      }
+    })();
+
+    await profileRequest.value;
   };
 
   // --- INICIALIZÁLÁS ---

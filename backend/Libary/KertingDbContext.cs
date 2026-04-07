@@ -4,6 +4,7 @@ using Libary.Model.Forum;
 using Libary.Model.Gallery;
 using Libary.Model.Tag;
 using Libary.Model.User;
+using Libary.Model.Work;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -34,6 +35,13 @@ namespace Libary
         public DbSet<Conversation> Conversations { get; set; }
         public DbSet<ConversationParticipant> ConversationParticipants { get; set; }
         public DbSet<Message> Messages { get; set; }
+
+        public DbSet<Work> Work { get; set; }
+        public DbSet<WorkApplicant> WorkApplicant { get; set; }
+        public DbSet<WorkTodo> WorkTodo { get; set; }
+        public DbSet<WorkImage> WorkImage { get; set; }
+        public DbSet<FeaturedWork> FeaturedWork { get; set; }
+        public DbSet<WorkTag> WorkTag { get; set; }
 
         public KertingDbContext(DbContextOptions options) : base(options)
         {
@@ -106,6 +114,9 @@ namespace Libary
 
             modelBuilder.Entity<UserActivityTag>()
             .HasKey(uat => new { uat.USerId, uat.TagId });
+
+            modelBuilder.Entity<WorkTag>()
+            .HasKey(wt => new { wt.WorkId, wt.TagId });
 
             modelBuilder.Entity<FeaturedUserSlot>(entity =>
             {

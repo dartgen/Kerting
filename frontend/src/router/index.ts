@@ -41,12 +41,12 @@ const router = createRouter({
       }
     },
     {
-      path: '/user/:id', // A :id egy változó, amit a komponensben le tudunk kérdezni
+      path: '/user/:id',
       name: 'public-profile',
       component: () => import('../pages/PublicProfileView.vue'),
       meta: {
         title: `${pre} Felhasználó megtekintése`,
-        requiresAuth: false // Ez fontos, ha azt akarod, hogy vendégek is láthassák!
+        requiresAuth: false
       }
     },
     {
@@ -66,6 +66,33 @@ const router = createRouter({
       component: () => import('../pages/WorksView.vue'),
       meta: {
         title: `${pre} Munkák`,
+        requiresAuth: true,
+      }
+    },
+    {
+      path: '/work/:id',
+      name: 'work-detail',
+      component: () => import('../pages/WorkDetailView.vue'),
+      meta: {
+        title: `${pre} Munka részletei`,
+        requiresAuth: false, // Could be public
+      }
+    },
+    {
+      path: '/work/create',
+      name: 'work-create',
+      component: () => import('../pages/WorkCreateView.vue'),
+      meta: {
+        title: `${pre} Új Munka`,
+        requiresAuth: true,
+      }
+    },
+    {
+      path: '/work/:id/edit',
+      name: 'work-edit',
+      component: () => import('../pages/WorkEditView.vue'),
+      meta: {
+        title: `${pre} Munka Szerkesztése`,
         requiresAuth: true,
       }
     },
@@ -145,7 +172,7 @@ router.beforeEach(async (to, from, next) => {
     // Vendég oldal (pl. login, regisztráció), de MÁR be van jelentkezve -> irány a főoldal (vagy profil)
     next({ name: 'home' });
   } else {
-    // Minden más esetben mehet a dolgára
+    // Minden más esetben mehet
     next();
   }
 });

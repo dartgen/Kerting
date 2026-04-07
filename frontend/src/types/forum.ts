@@ -1,3 +1,30 @@
+// Service DTOs
+export type ForumSort = 'latest' | 'oldest' | 'netdesc' | 'netasc'
+
+export interface ForumFeedFilters {
+  page?: number
+  pageSize?: number
+  sort?: ForumSort
+  search?: string
+  maxAgeDays?: number
+  roleIds?: number[]
+  tagNames?: string[]
+  includeDeleted?: boolean
+}
+
+export interface UpsertForumPostPayload {
+  title: string
+  description: string
+  attachedGalleryItemId?: number | null
+  tags?: string[]
+}
+
+export interface AddForumCommentPayload {
+  message: string
+  parentCommentId?: number | null
+}
+
+// Domain Models
 export interface ForumFeedItem {
   id: number
   userId: number

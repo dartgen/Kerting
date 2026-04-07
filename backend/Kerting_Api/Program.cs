@@ -15,7 +15,10 @@ namespace Kerting_Api
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers().AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+            });
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
@@ -70,6 +73,7 @@ namespace Kerting_Api
             builder.Services.AddScoped(typeof(Interface.GenericInterface<>), typeof(Service.GenericService<>));
             builder.Services.AddScoped<Interface.IGalleryService, Service.GalleryService>();
             builder.Services.AddScoped<Interface.IForumService, Service.ForumService>();
+            builder.Services.AddScoped<Interface.IWorkService, Service.WorkService>();
 
             // 2. JWT KONFIGURÁCIÓ
             var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -105,9 +109,10 @@ namespace Kerting_Api
                 app.UseSwaggerUI();
             }
 
-            app.UseHttpsRedirection();
-
+            app.UseRouting();
             app.UseCors("VueCorsPolicy");
+            
+            app.UseHttpsRedirection();
 
             // 2. UTÁNA jöhetnek a statikus fájlok (kisbetűs RequestPath-el!)
             app.UseStaticFiles(new StaticFileOptions
