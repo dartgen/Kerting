@@ -228,8 +228,22 @@ namespace Kerting_Api.Controller
         [HttpGet("featured")]
         public async Task<IActionResult> GetFeaturedWorks()
         {
-            var featured = await _workService.GetFeaturedWorksAsync();
-            return Ok(featured);
+            try
+            {
+                var featured = await _workService.GetFeaturedWorksAsync();
+                return Ok(featured);
+            }
+            catch (Exception ex)
+            {
+                // If schema is not patched yet, return empty list with warning
+                if (ex.Message.Contains("Invalid object name", StringComparison.OrdinalIgnoreCase))
+                {
+                    Response.Headers.Append("X-FeaturedWork-Warning", "FeaturedWork table is missing. Run sql/work_patch.sql.");
+                    return Ok(new List<object>());
+                }
+
+                return StatusCode(500, new { message = "Kiemelt munkák betöltése sikertelen.", detail = ex.Message });
+            }
         }
 
         [HttpPost("{id}/feature")]

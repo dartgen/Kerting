@@ -2,8 +2,14 @@
   <div class="w-full p-2 sm:p-4">
     <header class="header-card relative z-30">
       <div class="w-full mx-auto px-4 sm:px-6">
-        <div class="flex items-center justify-between h-16 sm:h-20">
-          <div class="flex items-center">
+        <div class="relative h-16 sm:h-20">
+          <!-- Logó középen (abszolút pozíció az egész oldal szélességéhez képest) -->
+          <div class="absolute left-1/2 transform -translate-x-1/2 top-1/2 -translate-y-1/2 h-full flex items-center">
+            <RouterLink to="/" class="logo-text block text-center whitespace-nowrap"> KERTING </RouterLink>
+          </div>
+
+          <!-- Bal oldal: Navigation -->
+          <div class="absolute left-0 top-0 h-full flex items-center">
             <nav class="hidden lg:flex items-center gap-4 xl:gap-6">
               <AnimatePresence>
                 <MotionDiv
@@ -33,11 +39,8 @@
             </div>
           </div>
 
-          <div class="flex-1 px-2 flex items-center justify-center">
-            <RouterLink to="/" class="logo-text block text-center truncate"> KERTING </RouterLink>
-          </div>
-
-          <div class="flex items-center gap-3 sm:gap-5">
+          <!-- Jobb oldal: Bejelentkezés, Profil -->
+          <div class="absolute right-0 top-0 h-full flex items-center gap-3 sm:gap-5">
             <button v-if="!authStore.isAuthenticated" @click="router.push('/login')" class="btn-primary hidden lg:block">
               Bejelentkezés
             </button>
