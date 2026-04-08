@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import HeaderComponent from './components/HeaderComponent.vue'
+import HeaderComponent from './components/headerComponent.vue'
 import bgImage from './assets/background.jpg'
 
 import ToastContainer from './components/ToastContainer.vue'

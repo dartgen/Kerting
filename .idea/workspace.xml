@@ -4,19 +4,24 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="9b5935a1-c4c0-4953-9cc0-9ebe4c7dab19" name="Changes" comment="PublicProfileView.vue fejlesztve erősen">
+    <list default="true" id="9b5935a1-c4c0-4953-9cc0-9ebe4c7dab19" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/Kerting_Api/Controller/UserController.cs" beforeDir="false" afterPath="$PROJECT_DIR$/backend/Kerting_Api/Controller/UserController.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/Libary/Model/User/User.cs" beforeDir="false" afterPath="$PROJECT_DIR$/backend/Libary/Model/User/User.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/forum/ForumLayout.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/forum/ForumLayout.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/PublicProfileView.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/PublicProfileView.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/services/authService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/services/authService.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/services/axios.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/services/axios.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/Kerting_Api/Properties/launchSettings.json" beforeDir="false" afterPath="$PROJECT_DIR$/backend/Kerting_Api/Properties/launchSettings.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/.env" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/.env" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/App.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/profile/CommentsTab.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/profile/CommentsTab.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/ChatView.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/ChatView.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/types/chat.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/types/chat.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CopilotPersistence">
+    <persistenceIdMap>
+      <entry key="_C:/Users/totoka28/IdeaProjects/Kerting" value="3B8da36AQ8lIlMzMJIUvDTPGCRr" />
+    </persistenceIdMap>
   </component>
   <component name="EmbeddingIndexingInfo">
     <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
@@ -66,6 +71,7 @@
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
     &quot;git-widget-placeholder&quot;: &quot;master&quot;,
     &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
@@ -76,7 +82,7 @@
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
     &quot;npm.dev.executor&quot;: &quot;Run&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;ml.llm.AcpAgentsConfigurable&quot;,
-    &quot;ts.external.directory.path&quot;: &quot;C:\\Program Files\\JetBrains\\IntelliJ IDEA 2022.2.1\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;C:\\Users\\totoka28\\AppData\\Roaming\\JetBrains\\IntelliJIdea2026.1\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   },
   &quot;keyToStringList&quot;: {
@@ -135,6 +141,14 @@
       <workItem from="1774563970747" duration="6664000" />
       <workItem from="1774616822952" duration="1005000" />
       <workItem from="1774656230187" duration="2947000" />
+      <workItem from="1775031796615" duration="3583000" />
+      <workItem from="1775419690850" duration="54000" />
+      <workItem from="1775419763790" duration="11000" />
+      <workItem from="1775467173253" duration="33000" />
+      <workItem from="1775492688400" duration="13000" />
+      <workItem from="1775503208465" duration="12000" />
+      <workItem from="1775653419344" duration="3426000" />
+      <workItem from="1775687131020" duration="1586000" />
     </task>
     <task id="LOCAL-00001" summary="Login kicsit segitve a felhasználó élményt">
       <option name="closed" value="true" />

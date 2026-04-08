@@ -1,5 +1,5 @@
 <template>
-  <div class="flex items-center justify-center w-full h-screen p-0 sm:p-6 bg-earth-950">
+  <div class="flex items-center justify-center w-full h-full min-h-[calc(100dvh-4rem)] p-0 sm:p-6 bg-earth-950">
     <div class="relative w-full max-w-6xl h-full sm:h-[85vh] flex bg-earth-900/60 backdrop-blur-md border border-earth-100/30 rounded-none sm:rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden">
 
       <div class="w-full md:w-80 md:flex-shrink-0 lg:w-96 border-r border-earth-200/20 flex flex-col bg-earth-900/40"
@@ -31,7 +31,7 @@
                ]">
             <div class="relative flex-shrink-0">
               <div class="w-12 h-12 rounded-full border border-earth-200/20 overflow-hidden bg-earth-800 shadow-md">
-                <img v-if="chat.avatar" v-lazy="getImageUrl(chat.avatar)" @error="chat.avatar = ''" class="w-full h-full object-cover">
+                <img v-if="chat.avatar" v-lazy="chat.avatarUrl" @error="chat.avatar = ''" class="w-full h-full object-cover">
                 <div v-else class="w-full h-full flex items-center justify-center text-earth-400">
                   <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
                 </div>
@@ -40,7 +40,7 @@
             <div class="flex-1 min-w-0">
               <div class="flex justify-between items-baseline">
                 <h3 class="text-earth-50 font-semibold truncate text-sm">{{ chat.nev }}</h3>
-                <span class="text-[10px] text-earth-300">{{ formatumDatum(chat.utolsoIdo, false) }}</span>
+                <span class="text-[10px] text-earth-300">{{ chat.formazottDatum }}</span>
               </div>
               <p class="text-xs text-earth-200 truncate">{{ chat.utolsoUzenet }}</p>
             </div>
@@ -57,7 +57,7 @@
                 <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" /></svg>
               </button>
               <div class="w-10 h-10 rounded-full border border-earth-200/30 overflow-hidden bg-earth-800 shadow-sm">
-                <img v-if="aktualisChat?.avatar" v-lazy="getImageUrl(aktualisChat?.avatar)" @error="aktualisChat.avatar = ''" class="w-full h-full object-cover" />
+                <img v-if="aktualisChat?.avatar" v-lazy="aktualisChat?.avatarUrl" @error="aktualisChat.avatar = ''" class="w-full h-full object-cover" />
                 <div v-else class="w-full h-full flex items-center justify-center text-earth-400">
                   <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
                 </div>
@@ -90,13 +90,13 @@
                 ]">
 
                   <div v-if="msg.imageUrl" class="mb-2">
-                    <img v-lazy="getChatImageUrl(msg.imageUrl)" alt="Kép" class="max-w-full h-auto max-h-64 rounded-xl object-contain border border-earth-200/20 cursor-pointer" />
+                    <img v-lazy="msg.fullImageUrl" alt="Kép" class="max-w-full h-auto max-h-64 rounded-xl object-contain border border-earth-200/20 cursor-pointer" />
                   </div>
 
                   <p v-if="!msg.imageUrl || msg.szoveg !== 'Fénykép'" class="leading-relaxed whitespace-pre-wrap break-all">{{ msg.szoveg }}</p>
 
                   <div class="text-[10px] mt-2 opacity-60 font-medium text-right leading-none whitespace-nowrap">
-                    {{ formatumDatum(msg.ido, true) }}
+                    {{ msg.formazottDatum }}
                   </div>
                 </div>
               </div>
@@ -156,6 +156,7 @@ import { chatService } from '@/services/chatService';
 import { useToastStore } from '@/stores/toast';
 import api from '@/services/axios';
 
+// JAVÍTVA: Kibővített interfészek
 interface ChatListItem {
   id: number;
   nev: string;
@@ -164,6 +165,8 @@ interface ChatListItem {
   olvasatlan: boolean;
   avatar: string | null;
   isGroup: boolean;
+  avatarUrl?: string;
+  formazottDatum?: string;
 }
 
 interface ChatMessage {
@@ -173,6 +176,8 @@ interface ChatMessage {
   sajat: boolean;
   senderName?: string;
   imageUrl?: string;
+  fullImageUrl?: string;
+  formazottDatum?: string;
 }
 
 const route = useRoute();
@@ -198,11 +203,8 @@ const formatumDatum = (dateStr: string, idovel: boolean = false) => {
   if (!dateStr) return '';
 
   const d = new Date(dateStr);
-
-  // Ha valamiért mégis érvénytelen lenne, visszaadjuk az eredetit
   if (isNaN(d.getTime())) return dateStr;
 
-  // Ha a bejövő dátum napja megegyezik a mai nappal
   const maiNap = d.toDateString() === new Date().toDateString();
   const ido = d.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' });
 
@@ -238,7 +240,12 @@ const loadConversations = async () => {
   toltesLista.value = true;
   try {
     const response = await chatService.getConversations();
-    beszelgetesek.value = response.data;
+    // JAVÍTVA: Előre legeneráljuk az URL-eket és dátumokat
+    beszelgetesek.value = response.data.map((chat: ChatListItem) => ({
+      ...chat,
+      avatarUrl: getImageUrl(chat.avatar),
+      formazottDatum: formatumDatum(chat.utolsoIdo, false)
+    }));
   } catch (error) {
     console.error('Hiba a beszélgetések betöltésekor:', error);
     toastStore.addToast('Nem sikerült betölteni a beszélgetéseket.', 4000, 'error');
@@ -251,7 +258,12 @@ const loadMessages = async (chatId: number) => {
   toltesUzenetek.value = true;
   try {
     const response = await chatService.getMessages(chatId);
-    uzenetek.value = response.data;
+    // JAVÍTVA: Előre legeneráljuk az URL-eket és dátumokat
+    uzenetek.value = response.data.map((msg: ChatMessage) => ({
+      ...msg,
+      fullImageUrl: getChatImageUrl(msg.imageUrl),
+      formazottDatum: formatumDatum(msg.ido, true)
+    }));
 
     const chatIndex = beszelgetesek.value.findIndex(c => c.id === chatId);
     if (chatIndex !== -1) {
@@ -282,7 +294,14 @@ const uzenetKuldese = async () => {
 
     const response = await chatService.sendMessage(payload);
 
-    uzenetek.value.push(response.data);
+    // JAVÍTVA: Az új üzenet is megkapja az előre formázott mezőket
+    const ujMsg = {
+      ...response.data,
+      fullImageUrl: getChatImageUrl(response.data.imageUrl),
+      formazottDatum: formatumDatum(response.data.ido, true)
+    };
+
+    uzenetek.value.push(ujMsg);
 
     const chatIndex = beszelgetesek.value.findIndex(c => c.id === aktivChatId.value);
     if (chatIndex !== -1) {
@@ -291,6 +310,8 @@ const uzenetKuldese = async () => {
 
       chatItem.utolsoUzenet = response.data.szoveg;
       chatItem.utolsoIdo = response.data.ido;
+      // JAVÍTVA: A bal oldali lista dátumát is frissítjük
+      chatItem.formazottDatum = formatumDatum(response.data.ido, false);
 
       const moved = beszelgetesek.value.splice(chatIndex, 1)[0];
       if (moved) {
@@ -328,7 +349,14 @@ const kepKivalasztva = async (event: Event) => {
   try {
     const response = await chatService.sendImage(aktivChatId.value, file);
 
-    uzenetek.value.push(response.data);
+    // JAVÍTVA: Az új képes üzenet is megkapja az előre formázott mezőket
+    const ujMsg = {
+      ...response.data,
+      fullImageUrl: getChatImageUrl(response.data.imageUrl),
+      formazottDatum: formatumDatum(response.data.ido, true)
+    };
+
+    uzenetek.value.push(ujMsg);
 
     const chatIndex = beszelgetesek.value.findIndex(c => c.id === aktivChatId.value);
     if (chatIndex !== -1) {
@@ -337,6 +365,8 @@ const kepKivalasztva = async (event: Event) => {
 
       chatItem.utolsoUzenet = "Fénykép";
       chatItem.utolsoIdo = response.data.ido;
+      // JAVÍTVA: A bal oldali lista dátumát is frissítjük
+      chatItem.formazottDatum = formatumDatum(response.data.ido, false);
 
       const moved = beszelgetesek.value.splice(chatIndex, 1)[0];
       if (moved) {
@@ -363,7 +393,6 @@ watch(aktivChatId, (newId) => {
   }
 });
 
-// Autoscroll when new messages arrive
 watch(uzenetek, async () => {
   await nextTick();
   await gorgetesLegalulra();

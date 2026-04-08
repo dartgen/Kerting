@@ -165,7 +165,6 @@ const handleReactReview = (reviewId: number, isLike: boolean) => {
       review.myReaction = isLike;
       (isLike ? review.likesCount++ : review.dislikesCount++);
     }
-    // Ide jön az API hívás (mentés adatbázisba)
   }
 };
 
