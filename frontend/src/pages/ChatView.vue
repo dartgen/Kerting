@@ -1,5 +1,5 @@
 <template>
-  <div class="flex items-center justify-center w-full h-full min-h-[calc(100dvh-4rem)] p-0 sm:p-6 bg-earth-950">
+  <div class="flex items-center justify-center w-full h-screen p-0 sm:p-6 bg-earth-950">
     <div class="relative w-full max-w-6xl h-full sm:h-[85vh] flex bg-earth-900/60 backdrop-blur-md border border-earth-100/30 rounded-none sm:rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden">
 
       <div class="w-full md:w-80 md:flex-shrink-0 lg:w-96 border-r border-earth-200/20 flex flex-col bg-earth-900/40"
@@ -12,7 +12,6 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input type="text" placeholder="Keresés..."
-                   v-model="keresesSzoveg"
                    class="w-full bg-earth-50/5 border border-earth-200/20 rounded-lg py-2.5 pl-9 pr-4 text-sm text-earth-50 focus:outline-none focus:ring-1 focus:ring-green-400 transition-all placeholder-earth-200/40 shadow-inner">
           </div>
         </div>
@@ -22,7 +21,7 @@
             <i class="fa-solid fa-spinner fa-spin text-2xl"></i>
           </div>
 
-          <div v-else v-for="chat in szurtBeszelgetesek" :key="chat.id"
+          <div v-else v-for="chat in beszelgetesek" :key="chat.id"
                @click="aktivChatId = chat.id"
                :class="[
                  'p-4 flex items-center gap-3 cursor-pointer transition-all border-l-4',
@@ -32,7 +31,7 @@
                ]">
             <div class="relative flex-shrink-0">
               <div class="w-12 h-12 rounded-full border border-earth-200/20 overflow-hidden bg-earth-800 shadow-md">
-                <img v-if="chat.avatar" :src="chat.avatarUrl" loading="lazy" @error="chat.avatar = ''" class="w-full h-full object-cover">
+                <img v-if="chat.avatar" v-lazy="getImageUrl(chat.avatar)" @error="chat.avatar = ''" class="w-full h-full object-cover">
                 <div v-else class="w-full h-full flex items-center justify-center text-earth-400">
                   <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
                 </div>
@@ -41,15 +40,11 @@
             <div class="flex-1 min-w-0">
               <div class="flex justify-between items-baseline">
                 <h3 class="text-earth-50 font-semibold truncate text-sm">{{ chat.nev }}</h3>
-                <span class="text-[10px] text-earth-300">{{ chat.formazottDatum }}</span>
+                <span class="text-[10px] text-earth-300">{{ formatumDatum(chat.utolsoIdo, false) }}</span>
               </div>
               <p class="text-xs text-earth-200 truncate">{{ chat.utolsoUzenet }}</p>
             </div>
             <div v-if="chat.olvasatlan" class="w-2 h-2 bg-green-500 rounded-full shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
-          </div>
-
-          <div v-if="!toltesLista && szurtBeszelgetesek.length === 0" class="p-6 text-center text-earth-300 text-sm">
-            Nincs találat a következőre: "{{ keresesSzoveg }}"
           </div>
         </div>
       </div>
@@ -62,7 +57,7 @@
                 <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" /></svg>
               </button>
               <div class="w-10 h-10 rounded-full border border-earth-200/30 overflow-hidden bg-earth-800 shadow-sm">
-                <img v-if="aktualisChat?.avatar" :src="aktualisChat?.avatarUrl" loading="lazy" @error="aktualisChat.avatar = ''" class="w-full h-full object-cover" />
+                <img v-if="aktualisChat?.avatar" v-lazy="getImageUrl(aktualisChat?.avatar)" @error="aktualisChat.avatar = ''" class="w-full h-full object-cover" />
                 <div v-else class="w-full h-full flex items-center justify-center text-earth-400">
                   <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
                 </div>
@@ -79,7 +74,7 @@
               Betöltés...
             </div>
 
-            <div v-for="(msg, index) in uzenetek" :key="msg.id || index"
+            <div v-for="(msg, index) in uzenetek" :key="index"
                  :class="['flex w-full', msg.sajat ? 'justify-end' : 'justify-start']">
 
               <div class="flex flex-col max-w-[85%] sm:max-w-[75%]" :class="msg.sajat ? 'items-end' : 'items-start'">
@@ -95,13 +90,13 @@
                 ]">
 
                   <div v-if="msg.imageUrl" class="mb-2">
-                    <img :src="msg.fullImageUrl" loading="lazy" alt="Kép" class="max-w-full h-auto max-h-64 rounded-xl object-contain border border-earth-200/20 cursor-pointer" />
+                    <img v-lazy="getChatImageUrl(msg.imageUrl)" alt="Kép" class="max-w-full h-auto max-h-64 rounded-xl object-contain border border-earth-200/20 cursor-pointer" />
                   </div>
 
                   <p v-if="!msg.imageUrl || msg.szoveg !== 'Fénykép'" class="leading-relaxed whitespace-pre-wrap break-all">{{ msg.szoveg }}</p>
 
                   <div class="text-[10px] mt-2 opacity-60 font-medium text-right leading-none whitespace-nowrap">
-                    {{ msg.formazottDatum }}
+                    {{ formatumDatum(msg.ido, true) }}
                   </div>
                 </div>
               </div>
@@ -155,8 +150,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { isAxiosError } from 'axios';
 import { chatService } from '@/services/chatService';
 import { useToastStore } from '@/stores/toast';
 import api from '@/services/axios';
@@ -169,8 +165,6 @@ interface ChatListItem {
   olvasatlan: boolean;
   avatar: string | null;
   isGroup: boolean;
-  avatarUrl?: string;
-  formazottDatum?: string;
 }
 
 interface ChatMessage {
@@ -180,8 +174,6 @@ interface ChatMessage {
   sajat: boolean;
   senderName?: string;
   imageUrl?: string;
-  fullImageUrl?: string;
-  formazottDatum?: string;
 }
 
 const route = useRoute();
@@ -193,14 +185,9 @@ const ujUzenet = ref('');
 const beszelgetesek = ref<ChatListItem[]>([]);
 const uzenetek = ref<ChatMessage[]>([]);
 
-// JAVÍTVA: Keresés változó hozzáadva
-const keresesSzoveg = ref('');
-
 const toltesLista = ref(false);
 const toltesUzenetek = ref(false);
 const kuldesFolyamatban = ref(false);
-
-let pollingIdtzito: ReturnType<typeof setInterval> | null = null;
 
 const uzenetekKontener = ref<HTMLElement | null>(null);
 const uzenetInput = ref<HTMLInputElement | null>(null);
@@ -208,28 +195,22 @@ const kepInput = ref<HTMLInputElement | null>(null);
 
 const aktualisChat = computed(() => beszelgetesek.value.find(c => c.id === aktivChatId.value));
 
-// JAVÍTVA: Számított tulajdonság a kereséshez
-const szurtBeszelgetesek = computed(() => {
-  if (!keresesSzoveg.value.trim()) {
-    return beszelgetesek.value;
-  }
-
-  const kisbetusKereses = keresesSzoveg.value.toLowerCase();
-
-  return beszelgetesek.value.filter(chat =>
-    chat.nev.toLowerCase().includes(kisbetusKereses) ||
-    chat.utolsoUzenet.toLowerCase().includes(kisbetusKereses)
-  );
-});
-
 const formatumDatum = (dateStr: string, idovel: boolean = false) => {
   if (!dateStr) return '';
+
   const d = new Date(dateStr);
+
+  // Ha valamiért mégis érvénytelen lenne, visszaadjuk az eredetit
   if (isNaN(d.getTime())) return dateStr;
+
+  // Ha a bejövő dátum napja megegyezik a mai nappal
   const maiNap = d.toDateString() === new Date().toDateString();
   const ido = d.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' });
+
   if (maiNap) return ido;
+
   const datum = d.toLocaleDateString('hu-HU', { year: 'numeric', month: '2-digit', day: '2-digit' });
+
   return idovel ? `${datum} ${ido}` : datum;
 };
 
@@ -251,11 +232,6 @@ const gorgetesLegalulra = async () => {
   await nextTick();
   if (uzenetekKontener.value) {
     uzenetekKontener.value.scrollTop = uzenetekKontener.value.scrollHeight;
-    setTimeout(() => {
-      if (uzenetekKontener.value) {
-        uzenetekKontener.value.scrollTop = uzenetekKontener.value.scrollHeight;
-      }
-    }, 150);
   }
 };
 
@@ -263,11 +239,7 @@ const loadConversations = async () => {
   toltesLista.value = true;
   try {
     const response = await chatService.getConversations();
-    beszelgetesek.value = response.data.map((chat: ChatListItem) => ({
-      ...chat,
-      avatarUrl: getImageUrl(chat.avatar),
-      formazottDatum: formatumDatum(chat.utolsoIdo, false)
-    }));
+    beszelgetesek.value = response.data;
   } catch (error) {
     console.error('Hiba a beszélgetések betöltésekor:', error);
     toastStore.addToast('Nem sikerült betölteni a beszélgetéseket.', 4000, 'error');
@@ -280,11 +252,7 @@ const loadMessages = async (chatId: number) => {
   toltesUzenetek.value = true;
   try {
     const response = await chatService.getMessages(chatId);
-    uzenetek.value = response.data.map((msg: ChatMessage) => ({
-      ...msg,
-      fullImageUrl: getChatImageUrl(msg.imageUrl),
-      formazottDatum: formatumDatum(msg.ido, true)
-    }));
+    uzenetek.value = response.data;
 
     const chatIndex = beszelgetesek.value.findIndex(c => c.id === chatId);
     if (chatIndex !== -1) {
@@ -303,41 +271,6 @@ const loadMessages = async (chatId: number) => {
   }
 };
 
-const hatterFrissites = async () => {
-  try {
-    const convRes = await chatService.getConversations();
-    beszelgetesek.value = convRes.data.map((chat: ChatListItem) => ({
-      ...chat,
-      avatarUrl: getImageUrl(chat.avatar),
-      formazottDatum: formatumDatum(chat.utolsoIdo, false)
-    }));
-
-    if (aktivChatId.value !== null) {
-      const msgRes = await chatService.getMessages(aktivChatId.value);
-
-      if (msgRes.data.length > uzenetek.value.length) {
-        uzenetek.value = msgRes.data.map((msg: ChatMessage) => ({
-          ...msg,
-          fullImageUrl: getChatImageUrl(msg.imageUrl),
-          formazottDatum: formatumDatum(msg.ido, true)
-        }));
-
-        const chatIndex = beszelgetesek.value.findIndex(c => c.id === aktivChatId.value);
-        if (chatIndex !== -1) {
-          const chatItem = beszelgetesek.value[chatIndex];
-          if(chatItem){
-            chatItem.olvasatlan = false;
-          }
-        }
-
-        await gorgetesLegalulra();
-      }
-    }
-  } catch (error) {
-    console.error('Hiba a háttérfrissítéskor:', error);
-  }
-};
-
 const uzenetKuldese = async () => {
   if (!ujUzenet.value.trim() || !aktivChatId.value || kuldesFolyamatban.value) return;
 
@@ -350,13 +283,7 @@ const uzenetKuldese = async () => {
 
     const response = await chatService.sendMessage(payload);
 
-    const ujMsg = {
-      ...response.data,
-      fullImageUrl: getChatImageUrl(response.data.imageUrl),
-      formazottDatum: formatumDatum(response.data.ido, true)
-    };
-
-    uzenetek.value.push(ujMsg);
+    uzenetek.value.push(response.data);
 
     const chatIndex = beszelgetesek.value.findIndex(c => c.id === aktivChatId.value);
     if (chatIndex !== -1) {
@@ -365,7 +292,6 @@ const uzenetKuldese = async () => {
 
       chatItem.utolsoUzenet = response.data.szoveg;
       chatItem.utolsoIdo = response.data.ido;
-      chatItem.formazottDatum = formatumDatum(response.data.ido, false);
 
       const moved = beszelgetesek.value.splice(chatIndex, 1)[0];
       if (moved) {
@@ -380,8 +306,11 @@ const uzenetKuldese = async () => {
     toastStore.addToast('Nem sikerült elküldeni az üzenetet.', 4000, 'error');
   } finally {
     kuldesFolyamatban.value = false;
+
     await nextTick();
-    if (uzenetInput.value) uzenetInput.value.focus();
+    if (uzenetInput.value) {
+      uzenetInput.value.focus();
+    }
   }
 };
 
@@ -400,13 +329,7 @@ const kepKivalasztva = async (event: Event) => {
   try {
     const response = await chatService.sendImage(aktivChatId.value, file);
 
-    const ujMsg = {
-      ...response.data,
-      fullImageUrl: getChatImageUrl(response.data.imageUrl),
-      formazottDatum: formatumDatum(response.data.ido, true)
-    };
-
-    uzenetek.value.push(ujMsg);
+    uzenetek.value.push(response.data);
 
     const chatIndex = beszelgetesek.value.findIndex(c => c.id === aktivChatId.value);
     if (chatIndex !== -1) {
@@ -415,7 +338,6 @@ const kepKivalasztva = async (event: Event) => {
 
       chatItem.utolsoUzenet = "Fénykép";
       chatItem.utolsoIdo = response.data.ido;
-      chatItem.formazottDatum = formatumDatum(response.data.ido, false);
 
       const moved = beszelgetesek.value.splice(chatIndex, 1)[0];
       if (moved) {
@@ -442,6 +364,7 @@ watch(aktivChatId, (newId) => {
   }
 });
 
+// Autoscroll when new messages arrive
 watch(uzenetek, async () => {
   await nextTick();
   await gorgetesLegalulra();
@@ -454,9 +377,8 @@ const bezaras = () => {
 onMounted(async () => {
   await loadConversations();
 
-  pollingIdtzito = setInterval(hatterFrissites, 10000);
-
   const targetId = route.query.targetId;
+
   if (targetId) {
     try {
       toltesLista.value = true;
@@ -467,11 +389,13 @@ onMounted(async () => {
       if (!letezoChat) {
         await loadConversations();
       }
+
       aktivChatId.value = ujChatId;
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Hiba a beszélgetés megnyitásakor:", error);
-      if (error.response && error.response.status === 400) {
+
+      if (isAxiosError(error) && error.response?.status === 400) {
         toastStore.addToast('Saját magaddal nem indíthatsz beszélgetést!', 4000, 'warning');
       } else {
         toastStore.addToast('Nem sikerült megnyitni a beszélgetést.', 4000, 'error');
@@ -480,12 +404,6 @@ onMounted(async () => {
       toltesLista.value = false;
       router.replace({ query: {} });
     }
-  }
-});
-
-onUnmounted(() => {
-  if (pollingIdtzito) {
-    clearInterval(pollingIdtzito);
   }
 });
 </script>

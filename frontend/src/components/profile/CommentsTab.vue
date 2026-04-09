@@ -85,7 +85,7 @@ import { useToastStore } from '@/stores/toast';
 import UserReviewItem from './UserReviewItem.vue';
 import type { UserReview } from './UserReviewItem.vue';
 
-const props = defineProps<{
+defineProps<{
   userId: string;
 }>();
 
@@ -155,7 +155,11 @@ const handleReactReview = (reviewId: number, isLike: boolean) => {
     // Ha ugyanarra nyomott rá, akkor levesszük a reakciót
     if (review.myReaction === isLike) {
       review.myReaction = null;
-      (isLike ? review.likesCount-- : review.dislikesCount--);
+      if (isLike) {
+        review.likesCount--;
+      } else {
+        review.dislikesCount--;
+      }
     } else {
       // Ha másikon volt, azt csökkentjük
       if (review.myReaction === true) review.likesCount--;
@@ -163,8 +167,13 @@ const handleReactReview = (reviewId: number, isLike: boolean) => {
 
       // Új reakció beállítása
       review.myReaction = isLike;
-      (isLike ? review.likesCount++ : review.dislikesCount++);
+      if (isLike) {
+        review.likesCount++;
+      } else {
+        review.dislikesCount++;
+      }
     }
+    // Ide jön az API hívás (mentés adatbázisba)
   }
 };
 
