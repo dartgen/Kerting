@@ -4,6 +4,7 @@ using Libary.Model.Work;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace Kerting_Api.Controller
 {
@@ -63,6 +64,13 @@ namespace Kerting_Api.Controller
             var work = await _workService.GetWorkByIdAsync(id);
             if (work == null) return NotFound();
             return Ok(work);
+        }
+
+        [HttpGet("{id}/applicants")]
+        public async Task<IActionResult> GetApplicants(int id)
+        {
+            var applicants = await _workService.GetWorkApplicantsAsync(id);
+            return Ok(applicants);
         }
 
         [HttpPost]
@@ -140,10 +148,35 @@ namespace Kerting_Api.Controller
 
         [HttpPost("{id}/apply")]
         [Authorize]
-        public async Task<IActionResult> ApplyForWork(int id, [FromBody] decimal? offeredPrice)
+        public async Task<IActionResult> ApplyForWork(int id, [FromBody] JsonElement request)
         {
             var userIdStr = User.FindFirstValue("Id");
             if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
+
+            decimal? offeredPrice = null;
+
+            if (request.ValueKind == JsonValueKind.Number && request.TryGetDecimal(out var directDecimal))
+            {
+                offeredPrice = directDecimal;
+            }
+            else if (request.ValueKind == JsonValueKind.Object)
+            {
+                if (request.TryGetProperty("offeredPrice", out var offeredPriceNode) || request.TryGetProperty("OfferedPrice", out offeredPriceNode))
+                {
+                    if (offeredPriceNode.ValueKind == JsonValueKind.Number && offeredPriceNode.TryGetDecimal(out var objectDecimal))
+                    {
+                        offeredPrice = objectDecimal;
+                    }
+                    else if (offeredPriceNode.ValueKind == JsonValueKind.String)
+                    {
+                        var value = offeredPriceNode.GetString();
+                        if (decimal.TryParse(value, out var parsed))
+                        {
+                            offeredPrice = parsed;
+                        }
+                    }
+                }
+            }
 
             try
             {

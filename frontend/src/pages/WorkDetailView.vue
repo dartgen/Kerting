@@ -11,6 +11,7 @@ import BeforeAfterViewer from '@/components/BeforeAfterViewer.vue';
 import { workService, type Work } from '@/services/workService';
 import { chatService } from '@/services/chatService';
 import { useAuthStore } from '@/stores/authStore';
+import type { WorkApplicant } from '@/types/work';
 
 const route = useRoute();
 const router = useRouter();
@@ -20,7 +21,7 @@ const work = ref<Work | null>(null);
 const loading = ref(true);
 
 // State for Apply
-const offeredPriceStr = ref('');
+const offeredPriceStr = ref<string | number>('');
 
 // State for Todo
 const newTodoTitle = ref('');
@@ -30,11 +31,32 @@ const doneMessage = ref<{ [key: number]: string }>({});
 const uploadLoading = ref(false);
 const showUploadModal = ref(false);
 
+const normalizeApplicants = (value: unknown): WorkApplicant[] => {
+  if (Array.isArray(value)) {
+    return value as WorkApplicant[];
+  }
+
+  if (value && typeof value === 'object' && '$values' in (value as Record<string, unknown>)) {
+    const values = (value as { $values?: unknown }).$values;
+    if (Array.isArray(values)) {
+      return values as WorkApplicant[];
+    }
+  }
+
+  return [];
+};
+
 const getErrorStatusAndMessage = (error: unknown) => {
-  if (isAxiosError<{ message?: string }>(error)) {
+  if (isAxiosError<{ message?: string; title?: string; detail?: string }>(error)) {
+    const payload = error.response?.data;
     return {
       status: error.response?.status,
-      message: error.response?.data?.message || error.message || 'Hiba történt a munka betöltésekor',
+      message:
+        payload?.message ||
+        payload?.detail ||
+        payload?.title ||
+        error.message ||
+        'Hiba történt a munka betöltésekor',
     };
   }
   return {
@@ -54,6 +76,19 @@ const fetchWork = async () => {
   try {
     const res = await workService.getWork(id);
     work.value = res.data;
+    if (work.value) {
+      work.value.applicants = normalizeApplicants(work.value.applicants);
+    }
+
+    try {
+      const applicantsRes = await workService.getApplicants(id);
+      if (work.value) {
+        work.value.applicants = normalizeApplicants(applicantsRes.data);
+      }
+    } catch (applicantsError) {
+      console.warn("Jelentkezők külön betöltése sikertelen", applicantsError);
+    }
+
     if (!work.value) {
       console.error("Work is null/undefined from API");
     }
@@ -73,6 +108,8 @@ const fetchWork = async () => {
   }
 };
 
+const normalizeText = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
 onMounted(fetchWork);
 
 const currentUserId = computed(() => {
@@ -84,17 +121,52 @@ const currentUserId = computed(() => {
 
 // Computeds for Access Control
 const isAuthor = computed(() => {
-  return currentUserId.value !== null && !!work.value && work.value.authorId === currentUserId.value;
+  if (currentUserId.value === null || !work.value) return false;
+  return Number(work.value.authorId) === currentUserId.value;
 });
 
 const isAcceptedApplicant = computed(() => {
   if (currentUserId.value === null || !work.value || !work.value.applicants) return false;
-  return work.value.applicants.some(a => a.userId === currentUserId.value && a.status === 'Accepted');
+  return work.value.applicants.some(a => Number(a.userId) === currentUserId.value && a.status === 'Accepted');
 });
 
 const hasApplied = computed(() => {
   if (currentUserId.value === null || !work.value || !work.value.applicants) return false;
-  return work.value.applicants.some(a => a.userId === currentUserId.value);
+  return work.value.applicants.some(a => Number(a.userId) === currentUserId.value);
+});
+
+const canApplyToWork = computed(() => {
+  const roleName = authStore.profilAdatok?.roleName?.trim() ?? '';
+  const normalizedRoleName = normalizeText(roleName);
+  const roleId = authStore.profilAdatok?.roleId ?? null;
+
+  const allowedRoleIds = new Set([1, 4, 5]);
+
+  return (
+    (roleId !== null && allowedRoleIds.has(roleId)) ||
+    normalizedRoleName.includes('kertes') ||
+    normalizedRoleName.includes('gardener') ||
+    normalizedRoleName.includes('hobbi') ||
+    normalizedRoleName.includes('hobby')
+  );
+});
+
+const applyBlockReason = computed(() => {
+  if (!authStore.isAuthenticated) return 'Jelentkezz be a munkára jelentkezéshez.';
+  if (isAuthor.value) return 'Saját munkádra nem jelentkezhetsz.';
+  if (hasApplied.value) return 'Már jelentkeztél erre a munkára.';
+  if (!work.value || work.value.status !== 'Open') return 'Erre a munkára jelenleg nem lehet jelentkezni.';
+  if (!canApplyToWork.value) return 'Ehhez a munkához csak kertész vagy hobbikertész jelentkezhet.';
+  return '';
+});
+
+const showApplicationForm = computed(() => applyBlockReason.value === '');
+
+const showApplicantsPanel = computed(() => {
+  if (!isAuthor.value || !work.value) return false;
+
+  const applicantsCount = work.value.applicants?.length ?? 0;
+  return work.value.status === 'Open' || applicantsCount > 0;
 });
 
 // Actions
@@ -114,14 +186,23 @@ const apply = async () => {
     return;
   }
   try {
-    const defaultPrice = work.value?.basePrice || 0;
-    const finalPrice = offeredPriceStr.value ? Number(offeredPriceStr.value) : defaultPrice;
+    const defaultPrice = work.value?.basePrice ?? null;
+    const offeredPriceText = String(offeredPriceStr.value ?? '').trim();
+    const finalPrice = offeredPriceText ? Number(offeredPriceText) : defaultPrice;
+
+    if (offeredPriceText && Number.isNaN(finalPrice)) {
+      alert('Az ajánlott ár nem érvényes szám.');
+      return;
+    }
+
     await workService.applyForWork(work.value!.id!, finalPrice);
     alert('Sikeres jelentkezés!');
+    offeredPriceStr.value = '';
     await fetchWork(); // reload
   } catch (error) {
     console.error(error);
-    alert('Hiba a jelentkezéskor');
+    const { message } = getErrorStatusAndMessage(error);
+    alert(message || 'Hiba a jelentkezéskor');
   }
 };
 
@@ -152,7 +233,7 @@ const withdrawApplication = async () => {
   if (!work.value) return;
 
   // Get the current applicant for this user
-  const applicant = work.value.applicants?.find(a => a.userId === currentUserId.value);
+  const applicant = work.value.applicants?.find(a => Number(a.userId) === currentUserId.value);
   if (!applicant?.id) {
     alert('Jelentkezés nem található');
     return;
@@ -359,7 +440,7 @@ const featureWorkByAdmin = async () => {
           </div>
 
           <!-- Tulajdonos nézet: jelentkezők -->
-          <div v-if="isAuthor && work.status === 'Open'" class="bg-earth-800/40 border border-earth-700 p-6 rounded-xl">
+          <div v-if="showApplicantsPanel" class="bg-earth-800/40 border border-earth-700 p-6 rounded-xl">
             <h3 class="text-xl text-earth-100 mb-4 border-b border-earth-700 pb-2">Jelentkezok ({{ work.applicants?.length || 0 }})</h3>
             <div v-if="work.applicants?.length === 0" class="text-earth-400 italic">Még nem jelentkezett senki.</div>
             <div v-else class="space-y-3">
@@ -376,7 +457,7 @@ const featureWorkByAdmin = async () => {
                   <button v-if="app.status === 'Pending'" @click="reject(app.id!)" class="rounded bg-rose-600 px-4 py-1.5 text-sm font-bold text-white transition hover:bg-rose-500">
                     Elutasít
                   </button>
-                  <button v-if="app.status === 'Accepted'" @click="openChat(app.userId)" class="rounded bg-blue-600 px-4 py-1.5 text-sm font-bold text-white transition hover:bg-blue-500">
+                  <button v-if="app.status === 'Accepted'" @click="openChat(Number(app.userId))" class="rounded bg-blue-600 px-4 py-1.5 text-sm font-bold text-white transition hover:bg-blue-500">
                     Chat
                   </button>
                   <span v-if="app.status === 'Rejected'" class="rounded bg-earth-700 px-4 py-1.5 text-sm font-bold text-earth-400">
@@ -388,28 +469,43 @@ const featureWorkByAdmin = async () => {
           </div>
 
           <!-- Jelentkezés űrlap -->
-          <div v-if="!isAuthor && !hasApplied && work.status === 'Open' && authStore.isAuthenticated && (authStore.profilAdatok?.roleName === 'Kertész' || authStore.profilAdatok?.roleName === 'Hobbikertész' || authStore.profilAdatok?.roleId === 1)" class="bg-earth-800/40 p-6 rounded-xl border border-yellow-600/30">
-            <h3 class="text-xl text-yellow-500 font-bold mb-2">Jelentkezek a munkára</h3>
-            <p class="text-earth-400 mb-4 text-sm">Megadhatsz az alapártól eltérő egyedi árajánlatot alku gyanánt.</p>
-            <div class="flex items-center gap-3">
-              <input type="number" v-model="offeredPriceStr" placeholder="Ajánlott ár (Ft)" class="flex-1 bg-earth-900/50 border border-earth-700 text-earth-100 rounded-lg p-2 focus:border-yellow-500 outline-none" />
-              <button @click="apply" class="px-6 py-2 bg-yellow-500 hover:bg-yellow-400 text-earth-900 font-bold rounded-lg transition-colors">
-                Jelentkezés
+          <div v-if="!isAuthor && !hasApplied && work.status === 'Open'" class="bg-earth-800/40 p-6 rounded-xl border border-yellow-600/30">
+            <template v-if="showApplicationForm">
+              <h3 class="text-xl text-yellow-500 font-bold mb-2">Jelentkezek a munkára</h3>
+              <p class="text-earth-400 mb-4 text-sm">Megadhatsz az alapártól eltérő egyedi árajánlatot alku gyanánt.</p>
+              <div class="flex items-center gap-3">
+                <input type="number" v-model="offeredPriceStr" placeholder="Ajánlott ár (Ft)" class="flex-1 bg-earth-900/50 border border-earth-700 text-earth-100 rounded-lg p-2 focus:border-yellow-500 outline-none" />
+                <button @click="apply" class="px-6 py-2 bg-yellow-500 hover:bg-yellow-400 text-earth-900 font-bold rounded-lg transition-colors">
+                  Jelentkezés
+                </button>
+              </div>
+            </template>
+
+            <template v-else-if="!authStore.isAuthenticated">
+              <h3 class="text-xl text-yellow-500 font-bold mb-2">Jelentkezés</h3>
+              <p class="text-earth-300 mb-4">A munkára jelentkezéshez előbb be kell jelentkezned.</p>
+              <button @click="router.push('/login')" class="px-6 py-2 bg-yellow-500 hover:bg-yellow-400 text-earth-900 font-bold rounded-lg transition-colors">
+                Bejelentkezés
               </button>
-            </div>
+            </template>
+
+            <template v-else>
+              <h3 class="text-xl text-yellow-500 font-bold mb-2">Jelentkezés nem elérhető</h3>
+              <p class="text-earth-300">{{ applyBlockReason }}</p>
+            </template>
           </div>
 
           <div v-if="!isAuthor && hasApplied" class="flex items-center justify-between rounded-xl border border-green-500/30 bg-green-900/20 p-4 text-green-400">
             <div>
               Már jelentkeztél erre a munkára. Jelenlegi státuszod:
-              <span class="font-bold">{{ work.applicants?.find(a => a.userId === currentUserId)?.status }}</span>
+              <span class="font-bold">{{ work.applicants?.find(a => Number(a.userId) === currentUserId)?.status }}</span>
             </div>
             <div class="flex items-center gap-2">
-              <button v-if="isAcceptedApplicant" @click="openChat(work.authorId!)" class="rounded-lg bg-blue-600 px-4 py-2 font-bold text-white transition hover:bg-blue-500">
+              <button v-if="isAcceptedApplicant" @click="openChat(Number(work.authorId))" class="rounded-lg bg-blue-600 px-4 py-2 font-bold text-white transition hover:bg-blue-500">
                 Ugrás a Chatre
               </button>
               <button
-                v-if="work.applicants?.find(a => a.userId === currentUserId)?.status === 'Pending'"
+                v-if="work.applicants?.find(a => Number(a.userId) === currentUserId)?.status === 'Pending'"
                 @click="withdrawApplication"
                 class="rounded-lg bg-rose-600 px-4 py-2 font-bold text-white transition hover:bg-rose-500"
               >

@@ -19,6 +19,7 @@ namespace Kerting_Api.Interface
         Task DeleteWorkAsync(int id);
 
         Task<WorkApplicant> ApplyForWorkAsync(int workId, int userId, decimal? offeredPrice);
+        Task<IEnumerable<WorkApplicant>> GetWorkApplicantsAsync(int workId);
         Task<WorkApplicant> AcceptApplicantAsync(int applicantId);
         Task<WorkApplicant> RejectApplicantAsync(int applicantId, int userId);
         Task<WorkApplicant> WithdrawApplicationAsync(int applicantId, int userId);

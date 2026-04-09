@@ -131,6 +131,11 @@ namespace Kerting_Api.Controller
                 .Select(l => l.Username)
                 .FirstOrDefaultAsync();
 
+            var roleName = await _context.Role
+                .Where(r => r.Id == userProfile.RoleId)
+                .Select(r => r.Name)
+                .FirstOrDefaultAsync();
+
             // Létrehozunk egy anonim objektumot a válaszhoz, amiben a Username is benne van
             var myProfileResponse = new
             {
@@ -148,6 +153,7 @@ namespace Kerting_Api.Controller
                 userProfile.Tiktok,
                 userProfile.EmailPublikus,
                 userProfile.TelefonPublikus,
+                RoleName = roleName,
                 Cimkek = userCimkek,
                 Username = username // <-- Ezt adjuk át a Vue-nak
             };
@@ -228,6 +234,11 @@ namespace Kerting_Api.Controller
                 .Select(l => l.Username)
                 .FirstOrDefaultAsync();
 
+            var roleName = await _context.Role
+                .Where(r => r.Id == user.RoleId)
+                .Select(r => r.Name)
+                .FirstOrDefaultAsync();
+
             // 4. ADATVÉDELEM ÉS VISSZATÉRÉS
             var publicProfile = new
             {
@@ -239,6 +250,7 @@ namespace Kerting_Api.Controller
                 user.RoleId,
                 user.IMGString,
                 user.Rolam,
+                RoleName = roleName,
                 user.Facebook,
                 user.Instagram,
                 user.Tiktok,

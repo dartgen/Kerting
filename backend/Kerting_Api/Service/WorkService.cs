@@ -105,10 +105,24 @@ namespace Kerting_Api.Service
         {
             try
             {
-                return await _context.Work
+                var work = await _context.Work
                     .Include(w => w.Author)
+                    .Include(w => w.Applicants).ThenInclude(a => a.User)
+                    .Include(w => w.Todos)
+                    .Include(w => w.Images)
                     .Include(w => w.Tags).ThenInclude(wt => wt.Tag)
                     .FirstOrDefaultAsync(w => w.Id == id);
+
+                if (work != null)
+                {
+                    work.Cimkek = work.Tags?
+                        .Select(wt => wt.Tag?.Activity?.Trim())
+                        .Where(activity => !string.IsNullOrWhiteSpace(activity))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+                }
+
+                return work;
             }
             catch (Exception ex)
             {
@@ -160,17 +174,20 @@ namespace Kerting_Api.Service
             _context.Work.Add(work);
             await _context.SaveChangesAsync();
 
-            if (work.Cimkek != null && work.Cimkek.Any())
-            {
-                foreach (var cimkeNev in work.Cimkek)
-                {
-                    string cleanCimkeNev = cimkeNev.Trim();
-                    if (string.IsNullOrEmpty(cleanCimkeNev)) continue;
+            var cimkek = work.Cimkek?
+                .Select(cimke => cimke?.Trim())
+                .Where(cimke => !string.IsNullOrWhiteSpace(cimke))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
-                    var tag = await _context.ActivityTag.FirstOrDefaultAsync(t => t.Activity == cleanCimkeNev);
+            if (cimkek != null && cimkek.Any())
+            {
+                foreach (var cimkeNev in cimkek)
+                {
+                    var tag = await _context.ActivityTag.FirstOrDefaultAsync(t => t.Activity == cimkeNev);
                     if (tag == null)
                     {
-                        tag = new Libary.Model.Tag.ActivityTag { Activity = cleanCimkeNev };
+                        tag = new Libary.Model.Tag.ActivityTag { Activity = cimkeNev };
                         _context.ActivityTag.Add(tag);
                         await _context.SaveChangesAsync();
                     }
@@ -191,24 +208,30 @@ namespace Kerting_Api.Service
                 existingWork.Title = work.Title;
                 existingWork.Description = work.Description;
                 existingWork.BasePrice = work.BasePrice;
-                existingWork.Status = work.Status;
+                if (!string.IsNullOrWhiteSpace(work.Status))
+                {
+                    existingWork.Status = work.Status;
+                }
                 existingWork.TargetAudience = work.TargetAudience;
                 existingWork.UpdatedAtUtc = DateTime.UtcNow;
 
                 _context.WorkTag.RemoveRange(existingWork.Tags);
                 
-                if (work.Cimkek != null && work.Cimkek.Any())
+                var cimkek = work.Cimkek?
+                    .Select(cimke => cimke?.Trim())
+                    .Where(cimke => !string.IsNullOrWhiteSpace(cimke))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (cimkek != null && cimkek.Any())
                 {
                     existingWork.Tags = new List<WorkTag>();
-                    foreach (var cimkeNev in work.Cimkek)
+                    foreach (var cimkeNev in cimkek)
                     {
-                        string cleanCimkeNev = cimkeNev.Trim();
-                        if (string.IsNullOrEmpty(cleanCimkeNev)) continue;
-
-                        var tag = await _context.ActivityTag.FirstOrDefaultAsync(t => t.Activity == cleanCimkeNev);
+                        var tag = await _context.ActivityTag.FirstOrDefaultAsync(t => t.Activity == cimkeNev);
                         if (tag == null)
                         {
-                            tag = new Libary.Model.Tag.ActivityTag { Activity = cleanCimkeNev };
+                            tag = new Libary.Model.Tag.ActivityTag { Activity = cimkeNev };
                             _context.ActivityTag.Add(tag);
                             await _context.SaveChangesAsync();
                         }
@@ -253,7 +276,9 @@ namespace Kerting_Api.Service
             var canApply =
                 role.Id == 1 ||
                 normalizedRoleName.Contains("kertes") ||
-                normalizedRoleName.Contains("gardener");
+                normalizedRoleName.Contains("gardener") ||
+                normalizedRoleName.Contains("hobbi") ||
+                normalizedRoleName.Contains("hobby");
 
             if (!canApply)
             {
@@ -273,6 +298,16 @@ namespace Kerting_Api.Service
             _context.WorkApplicant.Add(applicant);
             await _context.SaveChangesAsync();
             return applicant;
+        }
+
+        public async Task<IEnumerable<WorkApplicant>> GetWorkApplicantsAsync(int workId)
+        {
+            return await _context.WorkApplicant
+                .Where(a => a.WorkId == workId)
+                .Include(a => a.User)
+                .OrderByDescending(a => a.CreatedAtUtc)
+                .AsNoTracking()
+                .ToListAsync();
         }
 
         public async Task<WorkApplicant> AcceptApplicantAsync(int applicantId)

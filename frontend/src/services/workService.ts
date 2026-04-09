@@ -1,3 +1,4 @@
+import { isAxiosError } from 'axios'
 import api from './axios'
 import type {
   Work,
@@ -45,13 +46,27 @@ export const workService = {
     return api.get(`${API_URL}/${id}`);
   },
 
+  getApplicants(id: number) {
+    return api.get<WorkApplicant[]>(`${API_URL}/${id}/applicants`);
+  },
+
   createWork(work: Work) {
     return api.post(`${API_URL}`, work);
   },
 
   applyForWork(id: number, offeredPrice: number | null) {
-    return api.post(`${API_URL}/${id}/apply`, offeredPrice, {
+    // Compatibility: some deployed backends still expect a primitive decimal body,
+    // while newer versions accept an object payload.
+    return api.post(`${API_URL}/${id}/apply`, { offeredPrice }, {
       headers: { 'Content-Type': 'application/json' }
+    }).catch((error) => {
+      if (isAxiosError(error) && error.response?.status === 400) {
+        return api.post(`${API_URL}/${id}/apply`, offeredPrice, {
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      throw error;
     });
   },
 

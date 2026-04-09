@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { isAxiosError } from 'axios';
 import InnerPageLayout from '@/components/ui/InnerPageLayout.vue';
 import PageTitle from '@/components/ui/PageTitle.vue';
+import ActivityTagPicker from '@/components/ui/ActivityTagPicker.vue';
 import { workService, type Work } from '@/services/workService';
 import { authService } from '@/services/authService';
 import { useAuthStore } from '@/stores/authStore';
@@ -24,8 +25,6 @@ const work = ref<Work>({
   cimkek: []
 });
 
-const tagQuery = ref('');
-
 const getErrorMessage = (error: unknown) => {
   if (isAxiosError<{ message?: string }>(error)) {
     return error.response?.data?.message || error.message || 'Hiba történt a munka szerkesztésekor.';
@@ -34,29 +33,6 @@ const getErrorMessage = (error: unknown) => {
     return error.message;
   }
   return 'Hiba történt a munka szerkesztésekor.';
-};
-
-const normalizedTagQuery = computed(() => tagQuery.value.trim().toLowerCase());
-
-const filteredTags = computed(() => {
-  const query = normalizedTagQuery.value;
-  if (!query) return allTags.value;
-  return allTags.value.filter((tag) => tag.toLowerCase().includes(query));
-});
-
-const isTagSelected = (tag: string) => work.value.cimkek?.includes(tag) ?? false;
-
-const toggleTag = (tag: string) => {
-  if (!work.value.cimkek) {
-    work.value.cimkek = [];
-  }
-
-  const index = work.value.cimkek.indexOf(tag);
-  if (index >= 0) {
-    work.value.cimkek.splice(index, 1);
-  } else {
-    work.value.cimkek.push(tag);
-  }
 };
 
 const loadTags = async () => {
@@ -70,19 +46,19 @@ const loadWork = async () => {
   try {
     const workId = parseInt(route.params.id as string);
     const res = await workService.getWork(workId);
-    work.value = res.data;
+    work.value = { ...res.data, cimkek: res.data.cimkek ?? [] };
 
     // Only allow editing if status is Open
     if (work.value.status !== 'Open') {
       alert('Csak nyitott munkákat lehet szerkeszteni!');
-      router.push(`/work-detail/${workId}`);
+      router.push({ name: 'work-detail', params: { id: workId } });
       return;
     }
 
     // Check if current user is author
-    if (work.value.authorId !== authStore.felhasznalo?.id) {
+    if (Number(work.value.authorId) !== Number(authStore.felhasznalo?.id)) {
       alert('Csak saját munkákat szerkeszthetsz!');
-      router.push(`/work-detail/${workId}`);
+      router.push({ name: 'work-detail', params: { id: workId } });
       return;
     }
   } catch (error) {
@@ -115,7 +91,7 @@ const submitWork = async () => {
       cimkek: work.value.cimkek
     });
     alert('Sikeresen szerkesztetted a munkát!');
-    router.push(`/work-detail/${work.value.id}`);
+    router.push({ name: 'work-detail', params: { id: work.value.id } });
   } catch (error) {
     console.error('Hiba munka szerkesztésekor', error);
     alert(getErrorMessage(error));
@@ -161,31 +137,7 @@ const submitWork = async () => {
 
       <!-- Cimkek -->
       <div class="mb-4">
-        <label class="block text-earth-300 font-semibold mb-2">Címszavak (Címkék)</label>
-
-        <input
-          v-model="tagQuery"
-          type="text"
-          placeholder="Címke keresése..."
-          class="mb-3 w-full rounded-lg bg-earth-900/50 px-3 py-2 text-earth-100 border border-earth-700 focus:outline-none focus:border-yellow-500 transition-colors"
-        />
-
-        <div class="max-h-40 overflow-y-auto rounded-xl border border-earth-100/10 bg-earth-900/20 p-2">
-          <div class="flex flex-wrap gap-2">
-            <button
-              v-for="t in filteredTags"
-              :key="t"
-              type="button"
-              @click="toggleTag(t)"
-              class="px-2.5 py-1 rounded-full text-xs border transition-colors"
-              :class="isTagSelected(t) ? 'bg-green-500/25 border-green-400 text-green-100' : 'bg-earth-800 border-earth-100/10 text-earth-200 hover:bg-earth-700/80'"
-            >
-              {{ t }}
-            </button>
-          </div>
-        </div>
-
-        <p v-if="!work.cimkek?.length" class="mt-2 text-xs text-earth-300/70 italic">Válassz legalább egy címkét.</p>
+        <ActivityTagPicker v-model="work.cimkek" :available-tags="allTags" label="Tevékenységek" placeholder="Tevékenység keresése vagy hozzáadása..." empty-state-text="Írd be mivel foglalkozol!" />
       </div>
 
       <!-- Kiknek szól -->
