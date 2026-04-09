@@ -163,7 +163,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { motion, AnimatePresence } from 'motion-v'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from "@/stores/authStore.ts"

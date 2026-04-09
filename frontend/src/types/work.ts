@@ -1,7 +1,38 @@
+export interface WorkUserSummary {
+  id: number;
+  vezetekNev?: string;
+  keresztNev?: string;
+  telefon?: string;
+  email?: string;
+  telepules?: string;
+  roleId?: number;
+  imgString?: string;
+}
+
+export interface WorkTagLink {
+  tag?: {
+    activity?: string;
+  };
+}
+
+export interface WorkFilters {
+  priceMin?: number;
+  priceMax?: number;
+  createdFrom?: string;
+  createdTo?: string;
+  targetAudience?: string;
+  status?: string[];
+}
+
+export interface WorkImageMetadataUpdate {
+  isShowcase?: boolean;
+  relatedImageId?: number | null;
+}
+
 export interface Work {
   id?: number;
   authorId?: number;
-  author?: any;
+  author?: WorkUserSummary;
   targetAudience: string;
   title: string;
   description: string;
@@ -13,14 +44,14 @@ export interface Work {
   todos?: WorkTodo[];
   images?: WorkImage[];
   cimkek?: string[];
-  tags?: { tag: { activity: string } }[];
+  tags?: WorkTagLink[];
 }
 
 export interface WorkApplicant {
   id?: number;
   workId: number;
   userId: number;
-  user?: any;
+  user?: WorkUserSummary;
   offeredPrice?: number;
   status: string;
   createdAtUtc?: string;

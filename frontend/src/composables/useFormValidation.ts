@@ -1,6 +1,6 @@
 import { reactive, computed } from 'vue'
 import { validateField, validateForm } from '@/validators'
-import type { ValidationRule, FormValidationRules } from '@/validators'
+import type { FormValidationRules } from '@/validators'
 
 export interface UseFormValidationOptions {
   initialValues: Record<string, string>

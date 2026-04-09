@@ -1,5 +1,14 @@
 import api from './axios'
-import type { Work, WorkApplicant, WorkTodo, WorkImage, FeaturedWork, PaginatedWorks } from '@/types/work'
+import type {
+  Work,
+  WorkApplicant,
+  WorkTodo,
+  WorkImage,
+  FeaturedWork,
+  PaginatedWorks,
+  WorkFilters,
+  WorkImageMetadataUpdate,
+} from '@/types/work'
 
 // Types exported from @/types/work
 // Using the types exported from work.ts instead of defining inline
@@ -7,7 +16,7 @@ import type { Work, WorkApplicant, WorkTodo, WorkImage, FeaturedWork, PaginatedW
 const API_URL = '/Work'
 
 export const workService = {
-  getOpenWorks(page: number = 1, pageSize: number = 6, filters?: any) {
+  getOpenWorks(page: number = 1, pageSize: number = 6, filters?: WorkFilters) {
     let url = `${API_URL}/open?page=${page}&pageSize=${pageSize}`;
     if (filters) {
       if (filters.priceMin !== undefined && filters.priceMin !== null) {
@@ -110,7 +119,7 @@ export const workService = {
     return api.delete(`${API_URL}/${workId}/image/${imageId}`);
   },
 
-  updateImageMetadata(workId: number, imageId: number, metadata: any) {
+  updateImageMetadata(workId: number, imageId: number, metadata: WorkImageMetadataUpdate) {
     return api.patch(`${API_URL}/${workId}/image/${imageId}`, metadata);
   },
 

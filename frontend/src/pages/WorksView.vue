@@ -1,9 +1,9 @@
 ﻿<script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { isAxiosError } from 'axios';
 import InnerPageLayout from '@/components/ui/InnerPageLayout.vue';
 import PageTitle from '@/components/ui/PageTitle.vue';
-import WorkAdvancedFilters from '@/components/WorkAdvancedFilters.vue';
 import { workService, type Work } from '@/services/workService';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -35,6 +35,25 @@ const advancedFilters = ref({
 const canCreateWork = computed(() => authStore.isAuthenticated);
 const showFilters = ref(false);
 
+interface AdvancedWorkFilters {
+  priceMin?: number;
+  priceMax?: number;
+  createdFrom?: string;
+  createdTo?: string;
+  targetAudience: string[];
+  status: string[];
+}
+
+const getErrorMessage = (error: unknown) => {
+  if (isAxiosError<{ message?: string }>(error)) {
+    return error.response?.data?.message || error.message || 'Hiba történt a munkák betöltésekor.';
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'Hiba történt a munkák betöltésekor.';
+};
+
 const loadPage = async (page: number) => {
   loading.value = true;
   try {
@@ -57,12 +76,8 @@ const loadPage = async (page: number) => {
     }
     currentPage.value = page;
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  } catch (error) {
-    const message =
-      (error as any)?.response?.data?.message ||
-      (error as any)?.message ||
-      'Hiba történt a munkák betöltésekor.';
-    loadError.value = message;
+  } catch (error: unknown) {
+    loadError.value = getErrorMessage(error);
     console.error('Hiba történt a munkák betöltésekor', error);
   } finally {
     loading.value = false;
@@ -228,7 +243,7 @@ const goToPage = (page: number) => {
   }
 };
 
-const handleFiltersUpdate = (newFilters: any) => {
+const handleFiltersUpdate = (newFilters: AdvancedWorkFilters) => {
   advancedFilters.value = newFilters;
   currentPage.value = 1; // Reset to page 1 when filters change
 };
@@ -264,12 +279,13 @@ const handleFiltersReset = () => {
       </button>
     </div>
 
-    <!-- Mobile Collapsible Filters (Outside Grid) -->
-    <Transition name="slide">
-      <aside
-        v-if="showFilters"
-        class="mb-4 rounded-2xl border border-earth-100/10 bg-earth-900/40 p-4 flex flex-col gap-5 lg:hidden"
-      >
+    <div class="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 min-h-0 flex-1">
+      <!-- Mobile Collapsible Filters -->
+      <Transition name="slide">
+        <aside
+          v-if="showFilters"
+          class="mb-4 rounded-2xl border border-earth-100/10 bg-earth-900/40 p-4 flex flex-col gap-5 lg:hidden"
+        >
         <!-- Search -->
         <div class="space-y-3">
           <div class="space-y-2">
@@ -420,9 +436,8 @@ const handleFiltersReset = () => {
         </aside>
       </Transition>
 
-      <div class="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 min-h-0 flex-1">
       <!-- Desktop Permanent Sidebar -->
-      <aside class="hidden lg:block w-full shrink-0 sticky top-0 lg:max-h-[calc(100vh-200px)] overflow-y-auto pr-3">
+      <aside class="hidden lg:block w-full lg:w-80 shrink-0 sticky top-0 lg:max-h-[calc(100vh-200px)] overflow-y-auto pr-3">
         <!-- Search -->
         <div class="space-y-3">
           <div class="space-y-2">

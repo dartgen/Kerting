@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { authService } from '@/services/authService';
 import router from '@/router';
 import { jwtDecode } from 'jwt-decode';
+import { isAxiosError } from 'axios';
 import type { AuthenticatedUser, TokenPayload, UserProfileResponse } from '@/types/auth';
 
 export const useAuthStore = defineStore('auth', () => {
@@ -48,12 +49,15 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         const response = await authService.getProfile();
         profilAdatok.value = response.data;
-      } catch (error: any) {
-        const status = error?.response?.status;
+      } catch (error: unknown) {
+        const status = isAxiosError(error) ? error.response?.status : undefined;
+        const errorCode = isAxiosError(error) ? error.code : undefined;
+        const errorName = error instanceof Error ? error.name : '';
+        const errorMessage = error instanceof Error ? error.message : String(error ?? '');
         const isCanceled =
-          error?.code === 'ERR_CANCELED' ||
-          error?.name === 'CanceledError' ||
-          String(error?.message || '').toLowerCase().includes('aborted');
+          errorCode === 'ERR_CANCELED' ||
+          errorName === 'CanceledError' ||
+          errorMessage.toLowerCase().includes('aborted');
 
         if (status === 401) {
           authService.kijelentkezes();

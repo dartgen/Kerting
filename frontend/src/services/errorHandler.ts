@@ -1,3 +1,5 @@
+import { isAxiosError } from 'axios'
+
 /**
  * HTTP Error Handler Utility
  * Centralizált módszer az API errorok kezelésére
@@ -11,10 +13,26 @@ export interface ApiError {
   isValidationError: boolean
 }
 
+interface ErrorPayload {
+  message?: string
+  detail?: string
+  errors?: Record<string, string[] | string>
+}
+
 /**
  * Feldolgozza az Axios hibákat és szép hibaüzenetet generál
  */
-export function handleHttpError(error: any): ApiError {
+export function handleHttpError(error: unknown): ApiError {
+  if (!isAxiosError<ErrorPayload>(error)) {
+    return {
+      status: 0,
+      message: 'Ismeretlen hiba történt',
+      detail: error instanceof Error ? error.message : undefined,
+      isNetworkError: true,
+      isValidationError: false,
+    }
+  }
+
   // Network error (nincs response)
   if (!error.response) {
     const apiError: ApiError = {
@@ -88,12 +106,16 @@ export function handleHttpError(error: any): ApiError {
 /**
  * Field-specific validation errors kezelése (ha a backend azt ad vissza)
  */
-export function extractFieldErrors(error: any): Record<string, string> {
+export function extractFieldErrors(error: unknown): Record<string, string> {
   const fieldErrors: Record<string, string> = {}
+
+  if (!isAxiosError<ErrorPayload>(error)) {
+    return fieldErrors
+  }
 
   if (error.response?.data?.errors && typeof error.response.data.errors === 'object') {
     for (const [field, messages] of Object.entries(error.response.data.errors)) {
-      fieldErrors[field] = Array.isArray(messages) ? messages[0] : String(messages)
+      fieldErrors[field] = Array.isArray(messages) ? (messages[0] ?? '') : String(messages)
     }
   }
 

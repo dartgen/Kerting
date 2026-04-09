@@ -210,7 +210,7 @@ const adatokBetoltese = async () => {
     roles.value = rolesRes.data;
 
     const profileRes = await authService.getPublicProfile(userId);
-    const d: any = profileRes.data;
+    const d: PublicProfileResponse = profileRes.data;
 
     Object.assign(profilAdatok, {
       IMGString: d.imgString || '', vezetekNev: d.vezetekNev || '', keresztNev: d.keresztNev || '',
@@ -218,7 +218,7 @@ const adatokBetoltese = async () => {
       rolam: d.rolam || '', roleId: d.roleId || 0, facebook: d.facebook || '',
       instagram: d.instagram || '', tiktok: d.tiktok || '', ertekeles: d.ertekeles || 0,
       ertekelesSzam: d.ertekelesSzam || 0,
-      username: d.username || d.felhasznaloNev || ''
+      username: d.username || ''
     });
 
     if (d.cimkek && Array.isArray(d.cimkek)) {

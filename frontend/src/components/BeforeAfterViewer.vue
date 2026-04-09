@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 
 interface ImagePair {
   before: string;
   after: string;
 }
 
-const props = defineProps<{
+defineProps<{
   imagePairs: ImagePair[];
 }>();
 

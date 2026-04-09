@@ -1,6 +1,7 @@
 ﻿<script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { isAxiosError } from 'axios';
 import InnerPageLayout from '@/components/ui/InnerPageLayout.vue';
 import PageTitle from '@/components/ui/PageTitle.vue';
 import { workService, type Work } from '@/services/workService';
@@ -54,6 +55,16 @@ const toggleTag = (tag: string) => {
 
 const isSubmitting = ref(false);
 
+const getErrorMessage = (error: unknown) => {
+  if (isAxiosError<{ message?: string }>(error)) {
+    return error.response?.data?.message || error.message || 'Hiba történt a munka kiírásakor.';
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'Hiba történt a munka kiírásakor.';
+};
+
 const submitWork = async () => {
   if (!authStore.isAuthenticated) {
     alert("Kérjük, jelentkezzen be a munka feladásához!");
@@ -74,11 +85,7 @@ const submitWork = async () => {
     }
   } catch (error) {
     console.error('Hiba munka posztolása során', error);
-    const message =
-      (error as any)?.response?.data?.message ||
-      (error as any)?.message ||
-      'Hiba történt a munka kiírásakor.';
-    alert(message);
+    alert(getErrorMessage(error));
   } finally {
     isSubmitting.value = false;
   }

@@ -46,7 +46,7 @@ const toggleCheckbox = (value: string, list: string[], key: 'targetAudience' | '
   emit('update', updated);
 };
 
-const updatePrice = (field: 'priceMin' | 'priceMax', value: any) => {
+const updatePrice = (field: 'priceMin' | 'priceMax', value: string | number | null | undefined) => {
   const updated = { ...localFilters.value };
   updated[field] = value ? Number(value) : undefined;
   emit('update', updated);

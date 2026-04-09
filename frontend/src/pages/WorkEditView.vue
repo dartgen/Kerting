@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { isAxiosError } from 'axios';
 import InnerPageLayout from '@/components/ui/InnerPageLayout.vue';
 import PageTitle from '@/components/ui/PageTitle.vue';
 import { workService, type Work } from '@/services/workService';
@@ -24,6 +25,16 @@ const work = ref<Work>({
 });
 
 const tagQuery = ref('');
+
+const getErrorMessage = (error: unknown) => {
+  if (isAxiosError<{ message?: string }>(error)) {
+    return error.response?.data?.message || error.message || 'Hiba történt a munka szerkesztésekor.';
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'Hiba történt a munka szerkesztésekor.';
+};
 
 const normalizedTagQuery = computed(() => tagQuery.value.trim().toLowerCase());
 
@@ -107,11 +118,7 @@ const submitWork = async () => {
     router.push(`/work-detail/${work.value.id}`);
   } catch (error) {
     console.error('Hiba munka szerkesztésekor', error);
-    const message =
-      (error as any)?.response?.data?.message ||
-      (error as any)?.message ||
-      'Hiba történt a munka szerkesztésekor.';
-    alert(message);
+    alert(getErrorMessage(error));
   } finally {
     isSubmitting.value = false;
   }

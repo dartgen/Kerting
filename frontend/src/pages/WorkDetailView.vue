@@ -1,5 +1,6 @@
 ﻿<script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
+import { isAxiosError } from 'axios';
 import { useRoute, useRouter } from 'vue-router';
 import InnerPageLayout from '@/components/ui/InnerPageLayout.vue';
 import PageTitle from '@/components/ui/PageTitle.vue';
@@ -26,9 +27,21 @@ const newTodoTitle = ref('');
 const doneMessage = ref<{ [key: number]: string }>({});
 
 // Upload image state
-const fileInput = ref<HTMLInputElement | null>(null);
 const uploadLoading = ref(false);
 const showUploadModal = ref(false);
+
+const getErrorStatusAndMessage = (error: unknown) => {
+  if (isAxiosError<{ message?: string }>(error)) {
+    return {
+      status: error.response?.status,
+      message: error.response?.data?.message || error.message || 'Hiba történt a munka betöltésekor',
+    };
+  }
+  return {
+    status: undefined,
+    message: error instanceof Error ? error.message : 'Hiba történt a munka betöltésekor',
+  };
+};
 
 const fetchWork = async () => {
   loading.value = true;
@@ -46,8 +59,7 @@ const fetchWork = async () => {
     }
   } catch (error) {
     console.error("Hiba történt a munka betöltésekor", error);
-    const status = (error as any)?.response?.status;
-    const message = (error as any)?.response?.data?.message || "Hiba történt a munka betöltésekor";
+    const { status, message } = getErrorStatusAndMessage(error);
 
     if (status === 404) {
       console.error("Munka nem található (404)");
@@ -223,26 +235,6 @@ const handleImageDelete = async (imageId: number) => {
   }
 };
 
-const handleFileUpload = async (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  if (!target.files || target.files.length === 0 || !work.value?.id) return;
-
-  const file = target.files.item(0);
-  if (!file) return;
-  uploadLoading.value = true;
-  try {
-    await workService.uploadImage(work.value.id, file);
-    alert('Kép sikeresen feltöltve!');
-    await fetchWork(); // Reload images
-  } catch (error) {
-    console.error(error);
-    alert('Hiba a képfeltöltésnél');
-  } finally {
-    uploadLoading.value = false;
-    if (fileInput.value) fileInput.value.value = ''; // reset
-  }
-};
-
 const toggleShowcase = async (imgId: number) => {
   try {
     await workService.toggleShowcaseImage(imgId);
@@ -258,8 +250,8 @@ const closeWork = async () => {
       await workService.updateStatus(work.value!.id!, 'Public');
       alert("Munka lezárva és publikálva!");
       await fetchWork();
-    } catch(e) {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
     }
   }
 };
@@ -281,8 +273,8 @@ const deleteWork = async () => {
     await workService.deleteWork(work.value!.id!);
     alert("Munka sikeresen törölve!");
     router.push('/works');
-  } catch(e) {
-    console.error(e);
+  } catch (error) {
+    console.error(error);
     alert('Hiba a munka törléskor. Valószínűleg csak nyitott munkákat lehet törölni.');
   }
 };
@@ -291,14 +283,10 @@ const featureWorkByAdmin = async () => {
   try {
     const res = await workService.featureWork(work.value!.id!);
     if(res.data) alert('Munka kiemelve a fooldalra!');
-  } catch(e) {
+  } catch {
     alert('Hiba a kiemeléskor (lehet már ki van emelve vagy nem publikus).');
   }
 };
-
-const getImageUrl = (url: string) => {
-  return "https://localhost:7067/Resources/Work/" + url;
-}
 </script>
 
 <template>

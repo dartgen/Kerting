@@ -32,15 +32,10 @@ const hasReviewed = ref(false);
 const rating = ref(0);
 const message = ref('');
 
-const currentUserId = computed(() => {
-  const id = authStore.felhasznalo?.id;
-  return id ? Number(id) : null;
-});
-
 const shouldShowSection = computed(() => props.work.status === 'Public');
 
 const shouldShowReviewForm = computed(() => {
-  return !hasReviewed && (props.isAuthor || props.isAcceptedApplicant);
+  return !hasReviewed.value && (props.isAuthor || props.isAcceptedApplicant);
 });
 
 const reviewTarget = computed(() => {

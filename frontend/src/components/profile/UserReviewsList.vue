@@ -121,7 +121,7 @@ const fetchReviews = async () => {
   try {
     const response = await userReviewService.getReviews(props.userId);
     ertekelesekLista.value = response.data;
-  } catch (error) {
+  } catch {
     toastStore.addToast('Hiba az értékelések betöltésekor.', 3000, 'error');
   } finally {
     isFetching.value = false;
@@ -163,7 +163,7 @@ const ertekelesKuldese = async () => {
     // --> EZ AZ ÚJ SOR: Szólunk a szülőnek, hogy változott az értékelés! <--
     emit('review-changed');
 
-  } catch (error) {
+  } catch {
     toastStore.addToast('Hiba történt a küldés során.', 3000, 'error');
   } finally {
     isLoading.value = false;
@@ -187,7 +187,7 @@ const handleSubmitReply = async (reviewId: number) => {
     replyingToReviewId.value = null;
 
     await fetchReviews();
-  } catch (error) {
+  } catch {
     toastStore.addToast('Hiba a válasz küldésekor.', 3000, 'error');
   }
 };
@@ -218,17 +218,25 @@ const handleReactReview = async (reviewId: number, isLike: boolean) => {
   const previousReaction = target.myReaction;
   if (target.myReaction === isLike) {
     target.myReaction = null;
-    (isLike ? target.likesCount-- : target.dislikesCount--);
+    if (isLike) {
+      target.likesCount--;
+    } else {
+      target.dislikesCount--;
+    }
   } else {
     if (target.myReaction === true) target.likesCount--;
     if (target.myReaction === false) target.dislikesCount--;
     target.myReaction = isLike;
-    (isLike ? target.likesCount++ : target.dislikesCount++);
+    if (isLike) {
+      target.likesCount++;
+    } else {
+      target.dislikesCount++;
+    }
   }
 
   try {
     await userReviewService.reactReview(reviewId, isLike);
-  } catch (error) {
+  } catch {
     // Visszacsináljuk hiba esetén
     target.myReaction = previousReaction;
     toastStore.addToast('Hiba a reakció rögzítésekor.', 3000, 'error');
@@ -256,7 +264,7 @@ const handleDeleteReview = async (reviewId: number) => {
 
     await fetchReviews();
     emit('review-changed');
-  } catch (error) {
+  } catch {
     toastStore.addToast('Hiba a törlés során.', 3000, 'error');
   }
 };
@@ -271,7 +279,7 @@ const handleRestoreReview = async (reviewId: number) => {
 
     await fetchReviews();
     emit('review-changed');
-  } catch (error) {
+  } catch {
     toastStore.addToast('Hiba a visszaállítás során.', 3000, 'error');
   }
 };

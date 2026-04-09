@@ -111,7 +111,7 @@ interface PublicProfileViewState {
   tiktok?: string;
 }
 
-const props = defineProps<{
+defineProps<{
   profilAdatok: PublicProfileViewState;
   cimkek: string[];
 }>();

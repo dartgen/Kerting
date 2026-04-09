@@ -42,11 +42,6 @@ const isAdmin = computed(() => authStore.profilAdatok?.roleId === 1)
 
 const showFilters = ref(false)
 
-const shouldShowFilters = computed(() => {
-  // Desktop-on (lg+) mindig látható, mobilon a toggle alapján
-  return true // Kell media query vagy resize listner az érdemesebb módszerre
-})
-
 const roles = ref<RoleDto[]>([])
 const allTags = ref<string[]>([])
 
