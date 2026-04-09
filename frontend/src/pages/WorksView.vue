@@ -22,19 +22,6 @@ const pageSize = 6;
 const totalPages = ref(1);
 const totalCount = ref(0);
 
-// Filtering state
-const advancedFilters = ref({
-  priceMin: undefined,
-  priceMax: undefined,
-  createdFrom: undefined,
-  createdTo: undefined,
-  targetAudience: [] as string[],
-  status: [] as string[]
-});
-
-const canCreateWork = computed(() => authStore.isAuthenticated);
-const showFilters = ref(false);
-
 interface AdvancedWorkFilters {
   priceMin?: number;
   priceMax?: number;
@@ -43,6 +30,19 @@ interface AdvancedWorkFilters {
   targetAudience: string[];
   status: string[];
 }
+
+// Filtering state
+const advancedFilters = ref<AdvancedWorkFilters>({
+  priceMin: undefined,
+  priceMax: undefined,
+  createdFrom: undefined,
+  createdTo: undefined,
+  targetAudience: [],
+  status: []
+});
+
+const canCreateWork = computed(() => authStore.isAuthenticated);
+const showFilters = ref(false);
 
 const getErrorMessage = (error: unknown) => {
   if (isAxiosError<{ message?: string }>(error)) {
@@ -279,7 +279,7 @@ const handleFiltersReset = () => {
       </button>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 min-h-0 flex-1">
+    <div class="grid grid-cols-1 gap-6 min-h-0 flex-1 lg:grid-cols-[280px_1fr] lg:gap-16">
       <!-- Mobile Collapsible Filters -->
       <Transition name="slide">
         <aside
@@ -636,8 +636,8 @@ const handleFiltersReset = () => {
 
             <div v-if="work.tags && work.tags.length" class="mt-2 flex flex-wrap gap-1 text-xs">
                 <span
-                  v-for="t in work.tags"
-                  :key="t.tag.activity"
+                  v-for="(t, index) in work.tags"
+                  :key="`${t.tag?.activity ?? 'tag'}-${index}`"
                   class="rounded-full border border-earth-300/35 bg-earth-400/15 px-2 py-0.5 font-medium text-earth-100"
                 >
                   {{ t.tag?.activity }}

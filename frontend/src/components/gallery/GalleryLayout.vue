@@ -3,7 +3,10 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { motion, AnimatePresence } from 'motion-v'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/services/axios'
+import { handleHttpError } from '@/services/errorHandler'
 import { useAuthStore } from '@/stores/authStore'
+import { useToastStore } from '@/stores/toast'
+import ImageUploadModal from '@/components/ImageUploadModal.vue'
 
 interface GalleryItem {
   id: number
@@ -85,6 +88,11 @@ interface GalleryDetailDto {
   comments?: GalleryDetailCommentDto[]
 }
 
+interface GalleryUploadResponseDto {
+  id?: number
+  Id?: number
+}
+
 const props = withDefaults(defineProps<{
   userId?: string // <-- ÚJ: Ezt várjuk a Profil oldaltól
   mode?: 'main' | 'own'
@@ -113,11 +121,14 @@ const detailLoadError = ref('')
 
 const MotionDiv = motion.div
 const authStore = useAuthStore()
+const toastStore = useToastStore()
 const router = useRouter()
 const route = useRoute()
 const previewCardId = ref<number | null>(null)
 const expandedCardId = ref<number | null>(null)
 const isDesktopInteraction = ref(false)
+const isUploadModalOpen = ref(false)
+const isUploadingNewItems = ref(false)
 
 const isOwnMode = computed(() => props.mode === 'own')
 const isAdmin = computed(() => authStore.profilAdatok?.roleId === 1)
@@ -157,7 +168,7 @@ const mapDetailToGalleryItem = (data: GalleryDetailDto, existingItem?: GalleryIt
     likesCount: data.likesCount ?? existingItem?.likesCount ?? 0,
     dislikesCount: data.dislikesCount ?? existingItem?.dislikesCount ?? 0,
     myReaction: data.myReaction ?? existingItem?.myReaction ?? null,
-    isPublished: data.isPublished ?? existingItem?.isPublished ?? true,
+    isPublished: data.isPublished ?? (data as unknown as { IsPublished?: boolean }).IsPublished ?? existingItem?.isPublished ?? true,
     isDeleted: data.isDeleted ?? existingItem?.isDeleted ?? false,
     canEdit: data.canEdit ?? existingItem?.canEdit ?? false,
     canDelete: data.canDelete ?? existingItem?.canDelete ?? false,
@@ -441,6 +452,56 @@ const openPublicProfile = (userId: number) => {
   })
 }
 
+const openUploadModal = () => {
+  if (isUploadingNewItems.value) return
+  isUploadModalOpen.value = true
+}
+
+const closeUploadModal = () => {
+  if (isUploadingNewItems.value) return
+  isUploadModalOpen.value = false
+}
+
+const uploadSingleGalleryItem = async (payload: { file: File; title: string; description: string }) => {
+  if (isUploadingNewItems.value) return
+
+  const title = payload.title.trim()
+  const description = payload.description.trim()
+  if (!title || !description) {
+    toastStore.addToast('A cím és a leírás kötelező.', 3800, 'warning')
+    return
+  }
+
+  isUploadingNewItems.value = true
+
+  try {
+    const formData = new FormData()
+    formData.append('title', title)
+    formData.append('description', description)
+    formData.append('file', payload.file)
+
+    const { data } = await api.post<GalleryUploadResponseDto>('/Gallery/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+
+    const uploadedId = Number(data?.id ?? data?.Id ?? 0)
+    if (uploadedId > 0) {
+      await api.patch(`/Gallery/${uploadedId}/publish`, null, { params: { isPublished: false } })
+    }
+
+    await fetchFeed()
+    isUploadModalOpen.value = false
+    toastStore.addToast('Kép feltöltve. A kép most még nem publikus, csak te látod.', 4200, 'success')
+  } catch (error) {
+    const apiError = handleHttpError(error)
+    toastStore.addToast(apiError.message || 'Nem sikerült feltölteni a képet.', 4800, 'error')
+  } finally {
+    isUploadingNewItems.value = false
+  }
+}
+
 const endpoint = computed(() => {
   // Ha kapunk userId-t (pl. a Profil oldalról), akkor annak a usernek a képeit töltjük le
   if (props.userId) {
@@ -472,7 +533,7 @@ const fetchFeed = async () => {
       likesCount: item.likesCount ?? 0,
       dislikesCount: item.dislikesCount ?? 0,
       myReaction: null,
-      isPublished: item.isPublished ?? true,
+      isPublished: item.isPublished ?? (item as unknown as { IsPublished?: boolean }).IsPublished ?? true,
       isDeleted: item.isDeleted ?? false,
       canEdit: item.canEdit ?? false,
       canDelete: item.canDelete ?? false,
@@ -552,10 +613,20 @@ watch(expandedCard, () => {
           {{ subtitle }}
         </p>
 
-        <div v-if="isAdmin" class="mt-4 flex justify-center">
-          <label class="inline-flex items-center gap-2 text-xs sm:text-sm text-earth-100">
+        <div class="mt-4 flex flex-wrap items-center justify-center gap-3">
+          <button
+            v-if="isOwnMode"
+            type="button"
+            class="h-10 rounded-full border border-emerald-300/35 bg-emerald-700/80 px-5 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed"
+            :disabled="isUploadingNewItems"
+            @click="openUploadModal"
+          >
+            {{ isUploadingNewItems ? 'Feltöltés folyamatban...' : 'Új kép' }}
+          </button>
+
+          <label v-if="isAdmin" class="inline-flex items-center gap-2 text-xs sm:text-sm text-earth-100">
             <input v-model="showDeleted" type="checkbox" class="h-4 w-4 rounded border-earth-200/25 bg-earth-950/40" />
-            Törölt elemek megjelenítése
+            <span>Törölt elemek megjelenítése</span>
           </label>
         </div>
       </div>
@@ -576,7 +647,9 @@ watch(expandedCard, () => {
               :animate="{ opacity: 1, scale: 1 }"
               :transition="{ duration: 0.25, ease: 'easeOut' }"
               class="relative flex items-center justify-center rounded-2xl overflow-hidden border bg-earth-950/50"
-              :class="expandedCard.isDeleted ? 'border-red-400/85' : 'border-earth-100/20'"
+              :class="expandedCard.isDeleted
+                ? 'border-red-400/85'
+                : (!expandedCard.isPublished ? 'border-3 border-amber-300/90' : 'border-earth-100/20')"
             >
               <img
                 :src="expandedCard.imageUrl"
@@ -879,7 +952,9 @@ watch(expandedCard, () => {
             :transition="{ duration: 0.26, delay: index * 0.03, ease: 'easeOut' }"
             :whileHover="{ y: -2 }"
             class="group relative mb-2.5 sm:mb-3 break-inside-avoid overflow-hidden rounded-xl border bg-earth-950/35 shadow-[0_12px_24px_rgba(0,0,0,0.28)]"
-            :class="item.isDeleted ? 'border-red-400/85' : 'border-earth-100/15'"
+            :class="item.isDeleted
+              ? 'border-red-400/85'
+              : (!item.isPublished ? 'border-2 border-amber-300/90 shadow-[0_0_0_1px_rgba(252,211,77,0.25)]' : 'border-earth-100/15')"
             tabindex="0"
             role="button"
             :aria-label="`Kép megnyitása: ${item.uploaderName}`"
@@ -976,6 +1051,17 @@ watch(expandedCard, () => {
         </MotionDiv>
       </AnimatePresence>
     </MotionDiv>
+
+    <ImageUploadModal
+      v-if="isUploadModalOpen"
+      :is-submitting="isUploadingNewItems"
+      :single-file="true"
+      :require-title="true"
+      :require-description="true"
+      heading="Új kép feltöltése"
+      @upload-single="uploadSingleGalleryItem"
+      @close="closeUploadModal"
+    />
   </div>
 </template>
 

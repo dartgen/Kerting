@@ -34,7 +34,7 @@ namespace Kerting_Api.Service
                 Title = title,
                 Description = description,
                 FileExtension = extension,
-                IsPublished = true,
+                IsPublished = false,
                 CreatedAtUtc = DateTime.UtcNow
             };
 
