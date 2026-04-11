@@ -102,8 +102,7 @@ const kivalaszt = (user: any) => {
 };
 
 const profilMegnyitasa = (userId: string | number) => {
-  // Írd át a "/profil/" részt arra az útvonalra, ahogy a te Vue Routeredben szerepel!
-  window.open(`/profil/${userId}`, '_blank');
+  window.open(`/user/${userId}`, '_blank');
 };
 
 const keresesInditasa = () => {
