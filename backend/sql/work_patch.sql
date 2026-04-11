@@ -67,6 +67,18 @@ END;
 
 IF OBJECT_ID(N'[dbo].[WorkImage]', N'U') IS NOT NULL
 BEGIN
+    IF COL_LENGTH('dbo.WorkImage', 'IsShowcase') IS NULL
+    BEGIN
+        ALTER TABLE [dbo].[WorkImage]
+        ADD [IsShowcase] bit NOT NULL CONSTRAINT [DF_WorkImage_IsShowcase] DEFAULT 0 WITH VALUES;
+    END;
+
+    IF COL_LENGTH('dbo.WorkImage', 'UploadedAtUtc') IS NULL
+    BEGIN
+        ALTER TABLE [dbo].[WorkImage]
+        ADD [UploadedAtUtc] datetime2 NOT NULL CONSTRAINT [DF_WorkImage_UploadedAtUtc] DEFAULT (SYSUTCDATETIME()) WITH VALUES;
+    END;
+
     IF COL_LENGTH('dbo.WorkImage', 'RelatedImageId') IS NULL
     BEGIN
         ALTER TABLE [dbo].[WorkImage] ADD [RelatedImageId] int NULL;

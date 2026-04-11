@@ -49,14 +49,19 @@ const normalizeApplicants = (value: unknown): WorkApplicant[] => {
 const getErrorStatusAndMessage = (error: unknown) => {
   if (isAxiosError<{ message?: string; title?: string; detail?: string }>(error)) {
     const payload = error.response?.data;
+    const primaryMessage =
+      payload?.message ||
+      payload?.title ||
+      error.message ||
+      'Hiba történt a munka betöltésekor';
+    const detailedMessage =
+      payload?.detail && payload.detail !== primaryMessage
+        ? `${primaryMessage}\n${payload.detail}`
+        : primaryMessage;
+
     return {
       status: error.response?.status,
-      message:
-        payload?.message ||
-        payload?.detail ||
-        payload?.title ||
-        error.message ||
-        'Hiba történt a munka betöltésekor',
+      message: detailedMessage,
     };
   }
   return {
@@ -297,7 +302,8 @@ const handleBulkUpload = async (files: File[]) => {
     await fetchWork();
   } catch (error) {
     console.error(error);
-    alert('Hiba a képek feltöltésekor');
+    const { message } = getErrorStatusAndMessage(error);
+    alert(message || 'Hiba a képek feltöltésekor');
   } finally {
     uploadLoading.value = false;
   }
