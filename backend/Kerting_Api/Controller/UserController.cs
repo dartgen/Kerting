@@ -169,6 +169,32 @@ namespace Kerting_Api.Controller
             var roles = await _context.Role.ToListAsync();
             return Ok(roles);
         }
+        [Authorize]
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchUsers([FromQuery] string q)
+        {
+            // Ha túl rövid a keresőszó, üres listát adunk vissza
+            if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
+                return Ok(new List<object>());
+
+            // Összekapcsoljuk a User és a Login táblát az Id alapján
+            var users = await (from u in _context.User
+                               join l in _context.Login on u.Id equals l.Id
+                               where u.VezetekNev.Contains(q) ||
+                                     u.KeresztNev.Contains(q) ||
+                                     l.Username.Contains(q) // Keresünk a login névben is!
+                               select new
+                               {
+                                   id = u.Id.ToString(), // A Vue stringként várja
+                                   nev = u.VezetekNev + " " + u.KeresztNev, // Összerakjuk a teljes nevet
+                                   szakma = "Felhasználó",
+                                   avatar = u.IMGString // Az általad mutatott modellből
+                               })
+                               .Take(10) // Ne küldjük le a fél adatbázist
+                               .ToListAsync();
+
+            return Ok(users);
+        }
 
         [Authorize]
         [HttpGet("GetPublicProfile/{id}")]
