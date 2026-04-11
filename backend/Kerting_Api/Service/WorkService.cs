@@ -50,6 +50,16 @@ namespace Kerting_Api.Service
                 .ToListAsync();
         }
 
+        public async Task<PaginatedResponse<WorkListItemDto>> GetVisibleWorksAsync(int userId, int page = 1, int pageSize = 6, WorkFilterParams? filters = null)
+        {
+            return await GetUserWorkListAsync(userId, page, pageSize, filters, ownOnly: false);
+        }
+
+        public async Task<PaginatedResponse<WorkListItemDto>> GetMyWorksAsync(int userId, int page = 1, int pageSize = 6, WorkFilterParams? filters = null)
+        {
+            return await GetUserWorkListAsync(userId, page, pageSize, filters, ownOnly: true);
+        }
+
         public async Task<PaginatedResponse<Work>> GetAllOpenWorksAsync(int page = 1, int pageSize = 6, WorkFilterParams? filters = null)
         {
             var pagination = new PaginationParams { Page = page, PageSize = pageSize };
@@ -63,28 +73,7 @@ namespace Kerting_Api.Service
             // Base filter: Open status
             query = query.Where(w => w.Status == "Open");
 
-            // Advanced filters
-            if (filters != null)
-            {
-                if (filters.PriceMin.HasValue)
-                    query = query.Where(w => w.BasePrice >= filters.PriceMin);
-
-                if (filters.PriceMax.HasValue)
-                    query = query.Where(w => w.BasePrice <= filters.PriceMax);
-
-                if (filters.CreatedFrom.HasValue)
-                    query = query.Where(w => w.CreatedAtUtc >= filters.CreatedFrom);
-
-                if (filters.CreatedTo.HasValue)
-                    query = query.Where(w => w.CreatedAtUtc <= filters.CreatedTo);
-
-                if (!string.IsNullOrWhiteSpace(filters.TargetAudience))
-                    query = query.Where(w => w.TargetAudience == filters.TargetAudience);
-
-                var statusList = filters.GetStatusList();
-                if (statusList.Count > 0)
-                    query = query.Where(w => statusList.Contains(w.Status));
-            }
+            query = ApplyAdvancedFilters(query, filters);
 
             // Get total count before pagination
             var totalCount = await query.CountAsync();
@@ -99,6 +88,108 @@ namespace Kerting_Api.Service
                 .ToListAsync();
 
             return new PaginatedResponse<Work>(items, totalCount, pagination.Page, pagination.PageSize);
+        }
+
+        private async Task<PaginatedResponse<WorkListItemDto>> GetUserWorkListAsync(int userId, int page, int pageSize, WorkFilterParams? filters, bool ownOnly)
+        {
+            var pagination = new PaginationParams { Page = page, PageSize = pageSize };
+            pagination.Validate();
+
+            var query = _context.Work
+                .Include(w => w.Author)
+                .Include(w => w.Tags).ThenInclude(wt => wt.Tag)
+                .Include(w => w.Applicants)
+                .AsQueryable();
+
+            query = ownOnly
+                ? query.Where(w => w.AuthorId == userId || w.Applicants.Any(a => a.UserId == userId && a.Status == "Accepted"))
+                : query.Where(w => w.Status == "Open" || w.AuthorId == userId || w.Applicants.Any(a => a.UserId == userId && a.Status == "Accepted"));
+
+            query = ApplyAdvancedFilters(query, filters);
+
+            var totalCount = await query.CountAsync();
+            var skip = (pagination.Page - 1) * pagination.PageSize;
+
+            var works = await query
+                .OrderByDescending(w => w.CreatedAtUtc)
+                .Skip(skip)
+                .Take(pagination.PageSize)
+                .AsNoTracking()
+                .ToListAsync();
+
+            var items = works.Select(work => MapToListItem(work, userId)).ToList();
+
+            return new PaginatedResponse<WorkListItemDto>(items, totalCount, pagination.Page, pagination.PageSize);
+        }
+
+        private IQueryable<Work> ApplyAdvancedFilters(IQueryable<Work> query, WorkFilterParams? filters)
+        {
+            if (filters == null)
+            {
+                return query;
+            }
+
+            if (filters.PriceMin.HasValue)
+                query = query.Where(w => w.BasePrice >= filters.PriceMin);
+
+            if (filters.PriceMax.HasValue)
+                query = query.Where(w => w.BasePrice <= filters.PriceMax);
+
+            if (filters.CreatedFrom.HasValue)
+                query = query.Where(w => w.CreatedAtUtc >= filters.CreatedFrom);
+
+            if (filters.CreatedTo.HasValue)
+                query = query.Where(w => w.CreatedAtUtc <= filters.CreatedTo);
+
+            if (!string.IsNullOrWhiteSpace(filters.TargetAudience))
+                query = query.Where(w => w.TargetAudience == filters.TargetAudience);
+
+            var statusList = filters.GetStatusList();
+            if (statusList.Count > 0)
+                query = query.Where(w => statusList.Contains(w.Status));
+
+            return query;
+        }
+
+        private static WorkListItemDto MapToListItem(Work work, int currentUserId)
+        {
+            return new WorkListItemDto
+            {
+                Id = work.Id,
+                AuthorId = work.AuthorId,
+                Author = work.Author == null
+                    ? null
+                    : new WorkUserSummaryDto
+                    {
+                        Id = work.Author.Id,
+                        VezetekNev = work.Author.VezetekNev,
+                        KeresztNev = work.Author.KeresztNev,
+                        Telefon = work.Author.Telefon,
+                        Email = work.Author.Email,
+                        Telepules = work.Author.Telepules,
+                        RoleId = work.Author.RoleId,
+                        ImgString = work.Author.IMGString
+                    },
+                TargetAudience = work.TargetAudience,
+                Title = work.Title,
+                Description = work.Description,
+                BasePrice = work.BasePrice,
+                Status = work.Status,
+                CreatedAtUtc = work.CreatedAtUtc,
+                UpdatedAtUtc = work.UpdatedAtUtc,
+                Tags = work.Tags?
+                    .Select(tagLink => new WorkTagLinkDto
+                    {
+                        Tag = tagLink.Tag == null
+                            ? null
+                            : new WorkTagActivityDto
+                            {
+                                Activity = tagLink.Tag.Activity
+                            }
+                    })
+                    .ToList() ?? new List<WorkTagLinkDto>(),
+                IsCurrentUserRelated = work.AuthorId == currentUserId || (work.Applicants?.Any(a => a.UserId == currentUserId && a.Status == "Accepted") ?? false)
+            };
         }
 
         public async Task<Work> GetWorkByIdAsync(int id)
@@ -496,7 +587,7 @@ namespace Kerting_Api.Service
                     var image = new WorkImage
                     {
                         WorkId = workId,
-                        ImageUrl = $"/Resources/Work/{fileName}",
+                        ImageUrl = $"/resources/Work/{fileName}",
                         IsShowcase = false,
                         UploadedAtUtc = DateTime.UtcNow
                     };

@@ -1,6 +1,6 @@
 ﻿<script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, onMounted, computed, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { isAxiosError } from 'axios';
 import InnerPageLayout from '@/components/ui/InnerPageLayout.vue';
 import PageTitle from '@/components/ui/PageTitle.vue';
@@ -14,7 +14,9 @@ const searchQuery = ref('');
 const selectedTags = ref<Set<string>>(new Set());
 const sortBy = ref<'newest' | 'priceAsc' | 'priceDesc' | 'titleAsc'>('newest');
 const authStore = useAuthStore();
+const route = useRoute();
 const router = useRouter();
+const isOwnWorksView = computed(() => route.meta.workScope === 'own');
 
 // Pagination state
 const currentPage = ref(1);
@@ -43,6 +45,12 @@ const advancedFilters = ref<AdvancedWorkFilters>({
 
 const canCreateWork = computed(() => authStore.isAuthenticated);
 const showFilters = ref(false);
+const pageTitle = computed(() => (isOwnWorksView.value ? 'Saját munkák' : 'Munkák'));
+const pageSubtitle = computed(() =>
+  isOwnWorksView.value
+    ? 'Az itt látható munkák azok, amelyekhez te kötődsz kiíróként vagy elfogadott jelentkezőként.'
+    : 'Megbízások gyűjtőhelye. Keress munkát vagy találj szakembert.'
+);
 
 const getErrorMessage = (error: unknown) => {
   if (isAxiosError<{ message?: string }>(error)) {
@@ -57,7 +65,9 @@ const getErrorMessage = (error: unknown) => {
 const loadPage = async (page: number) => {
   loading.value = true;
   try {
-    const res = await workService.getOpenWorks(page, pageSize);
+    const res = isOwnWorksView.value
+      ? await workService.getMyWorks(page, pageSize)
+      : await workService.getVisibleWorks(page, pageSize);
     // Handle both paginated response (backend returns object with items/totalPages)
     // and array response (fallback for older API)
     if (Array.isArray(res.data)) {
@@ -85,6 +95,27 @@ const loadPage = async (page: number) => {
 };
 
 onMounted(async () => {
+  await loadPage(1);
+});
+
+watch(isOwnWorksView, async () => {
+  currentPage.value = 1;
+  totalPages.value = 1;
+  totalCount.value = 0;
+  works.value = [];
+  loadError.value = '';
+  searchQuery.value = '';
+  selectedTags.value = new Set();
+  sortBy.value = 'newest';
+  advancedFilters.value = {
+    priceMin: undefined,
+    priceMax: undefined,
+    createdFrom: undefined,
+    createdTo: undefined,
+    targetAudience: [],
+    status: []
+  };
+  showFilters.value = false;
   await loadPage(1);
 });
 
@@ -221,8 +252,56 @@ const formatPrice = (price?: number) => {
   return `${price.toLocaleString('hu-HU')} Ft`;
 };
 
+const formatStatus = (status?: string) => {
+  if (!status || status === 'Open') return 'Nyitott';
+  if (status === 'InProgress') return 'Folyamatban';
+  if (status === 'Public') return 'Publikus';
+  if (status === 'Closed') return 'Lezárt';
+  return status;
+};
+
+const getStatusClass = (status?: string) => {
+  if (!status || status === 'Open') return 'bg-green-500/20 text-green-300 border-green-400/20';
+  if (status === 'InProgress') return 'bg-blue-500/20 text-blue-300 border-blue-400/20';
+  if (status === 'Public') return 'bg-cyan-500/20 text-cyan-300 border-cyan-400/20';
+  if (status === 'Closed') return 'bg-slate-500/20 text-slate-200 border-slate-400/20';
+  return 'bg-earth-500/20 text-earth-100 border-earth-300/20';
+};
+
+const hasRelatedWork = (work: Work) => Boolean(work.isCurrentUserRelated);
+
+const getCardClasses = (work: Work) => [
+  'group cursor-pointer rounded-2xl border bg-earth-800/40 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgba(0,0,0,0.25)]',
+  hasRelatedWork(work)
+    ? 'border-violet-400/75 bg-violet-500/10 hover:border-violet-300 hover:shadow-[0_10px_30px_rgba(109,40,217,0.18)]'
+    : 'border-earth-700/80 hover:border-earth-400/70'
+];
+
 const hasActiveFilters = computed(
-  () => selectedTags.value.size > 0 || normalizedSearch.value.length > 0 || sortBy.value !== 'newest'
+  () =>
+    selectedTags.value.size > 0 ||
+    normalizedSearch.value.length > 0 ||
+    sortBy.value !== 'newest' ||
+    advancedFilters.value.priceMin !== undefined ||
+    advancedFilters.value.priceMax !== undefined ||
+    Boolean(advancedFilters.value.createdFrom) ||
+    Boolean(advancedFilters.value.createdTo) ||
+    advancedFilters.value.targetAudience.length > 0 ||
+    advancedFilters.value.status.length > 0
+);
+
+const showCreateButton = computed(() => canCreateWork.value && !isOwnWorksView.value);
+
+const emptyStateText = computed(() =>
+  isOwnWorksView.value
+    ? 'Még nincs olyan munkád, amelyhez kapcsolódnál.'
+    : 'Jelenleg nincs új nyitott munka. Nézz vissza később!'
+);
+
+const pageInfoText = computed(() =>
+  isOwnWorksView.value
+    ? 'A saját és kapcsolódó munkáid listája.'
+    : 'A nyitott és hozzád kapcsolódó munkák listája.'
 );
 
 const goToPreviousPage = () => {
@@ -264,7 +343,7 @@ const handleFiltersReset = () => {
 
 <template>
   <InnerPageLayout>
-    <PageTitle title="Munkák" />
+    <PageTitle :title="pageTitle" />
 
     <!-- Mobile Filter Toggle -->
     <div class="mb-4 flex lg:hidden">
@@ -591,7 +670,7 @@ const handleFiltersReset = () => {
       <main class="flex-1 overflow-y-auto min-h-0">
         <!-- Header Info -->
         <div class="mb-4">
-          <p class="text-earth-200/90 text-sm sm:text-base">Megbízások gyűjtőhelye. Keress munkát vagy találj szakembert.</p>
+          <p class="text-earth-200/90 text-sm sm:text-base">{{ pageSubtitle }}</p>
           <p class="mt-0.5 text-xs text-earth-300/90">Találatok: {{ filteredWorks.length }} / {{ works.length }}</p>
         </div>
 
@@ -605,13 +684,13 @@ const handleFiltersReset = () => {
         </div>
 
         <div v-else-if="works.length === 0" class="bg-earth-800/30 p-6 rounded-xl border border-earth-100/5 text-center">
-          <p class="text-earth-300 text-sm">Jelenleg nincs új nyitott munka. Nézz vissza később!</p>
+          <p class="text-earth-300 text-sm">{{ emptyStateText }}</p>
         </div>
 
         <div v-else-if="filteredWorks.length === 0" class="rounded-xl border border-earth-100/10 bg-earth-800/25 p-6 text-center">
           <p class="text-earth-200 text-sm">Nincs találat a beállított keresésre és szűrőkre.</p>
           <button
-            @click="handleFiltersReset; clearTagFilter; searchQuery = ''; sortBy = 'newest'"
+            @click="handleFiltersReset"
             class="mt-3 rounded-lg border border-earth-100/20 bg-earth-800/70 px-3 py-1.5 text-xs font-semibold text-earth-100 transition-colors hover:bg-earth-700/80"
           >
             Szűrők visszaállítása
@@ -622,14 +701,26 @@ const handleFiltersReset = () => {
           <div
             v-for="work in filteredWorks"
             :key="work.id"
-            class="group cursor-pointer rounded-2xl border border-earth-700/80 bg-earth-800/40 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-earth-400/70 hover:shadow-[0_10px_30px_rgba(0,0,0,0.25)]"
+            :class="getCardClasses(work)"
             @click="goToDetail(work.id!)"
           >
             <div class="flex items-start justify-between gap-2">
               <h3 class="line-clamp-2 text-base font-bold text-earth-100 sm:text-lg">
                 {{ work.title }}
               </h3>
-              <span class="shrink-0 rounded-full bg-green-500/20 px-2 py-0.5 text-xs font-semibold text-green-300">Nyitott</span>
+              <div class="flex shrink-0 flex-col items-end gap-1">
+                <span
+                  v-if="work.isCurrentUserRelated"
+                  class="rounded-full border border-violet-300/30 bg-violet-500/20 px-2 py-0.5 text-xs font-semibold text-violet-100"
+                >
+                  Saját
+                </span>
+                <span
+                  :class="['rounded-full border px-2 py-0.5 text-xs font-semibold', getStatusClass(work.status)]"
+                >
+                  {{ formatStatus(work.status) }}
+                </span>
+              </div>
             </div>
 
             <p class="mt-2 line-clamp-2 text-xs text-earth-200/90 sm:text-sm">{{ work.description }}</p>
@@ -670,7 +761,6 @@ const handleFiltersReset = () => {
           >
             ← Előző
           </button>
-
           <div class="flex items-center gap-1">
             <button
               v-for="page in totalPages"
@@ -698,7 +788,7 @@ const handleFiltersReset = () => {
 
         <!-- Page info -->
         <div v-if="!loading && works.length > 0" class="mt-3 text-center text-xs text-earth-400">
-          {{ currentPage }}. oldal / {{ totalPages }} • Összesen {{ totalCount }} munka
+          {{ currentPage }}. oldal / {{ totalPages }} • Összesen {{ totalCount }} munka • {{ pageInfoText }}
         </div>
       </main>
     </div>

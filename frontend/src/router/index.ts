@@ -67,6 +67,17 @@ const router = createRouter({
       meta: {
         title: `${pre} Munkák`,
         requiresAuth: true,
+        workScope: 'visible'
+      }
+    },
+    {
+      path: '/profile/works',
+      name: 'profile-works',
+      component: () => import('../pages/WorksView.vue'),
+      meta: {
+        title: `${pre} Saját munkák`,
+        requiresAuth: true,
+        workScope: 'own'
       }
     },
     {

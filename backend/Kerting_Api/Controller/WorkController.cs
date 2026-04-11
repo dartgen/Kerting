@@ -1,6 +1,7 @@
 ﻿using Kerting_Api.Interface;
 using Kerting_Api.DTO;
 using Libary.Model.Work;
+using Microsoft.Data.SqlClient;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -17,6 +18,49 @@ namespace Kerting_Api.Controller
         public WorkController(IWorkService workService)
         {
             _workService = workService;
+        }
+
+        private static WorkFilterParams BuildWorkFilters(
+            decimal? priceMin,
+            decimal? priceMax,
+            DateTime? createdFrom,
+            DateTime? createdTo,
+            string? targetAudience,
+            string? status)
+        {
+            return new WorkFilterParams
+            {
+                PriceMin = priceMin,
+                PriceMax = priceMax,
+                CreatedFrom = createdFrom,
+                CreatedTo = createdTo,
+                TargetAudience = targetAudience,
+                Status = status
+            };
+        }
+
+        private static bool IsWorkSchemaMismatch(Exception ex)
+        {
+            Exception? current = ex;
+            while (current != null)
+            {
+                if (current is SqlException sqlEx && (sqlEx.Number == 207 || sqlEx.Number == 208))
+                {
+                    return true;
+                }
+
+                var message = current.Message;
+                if (!string.IsNullOrWhiteSpace(message) &&
+                    (message.Contains("Invalid object name", StringComparison.OrdinalIgnoreCase) ||
+                     message.Contains("Invalid column name", StringComparison.OrdinalIgnoreCase)))
+                {
+                    return true;
+                }
+
+                current = current.InnerException;
+            }
+
+            return false;
         }
 
         [HttpGet("open")]
@@ -40,7 +84,7 @@ namespace Kerting_Api.Controller
                     CreatedTo = createdTo,
                     TargetAudience = targetAudience,
                     Status = status
-                };
+                    };
 
                 var result = await _workService.GetAllOpenWorksAsync(page, pageSize, filters);
                 return Ok(result);
@@ -55,6 +99,72 @@ namespace Kerting_Api.Controller
                 }
 
                 return StatusCode(500, new { message = "A munkák betöltése sikertelen.", detail = ex.Message });
+            }
+        }
+
+        [HttpGet("visible")]
+        [Authorize]
+        public async Task<IActionResult> GetVisibleWorks(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 6,
+            [FromQuery] decimal? priceMin = null,
+            [FromQuery] decimal? priceMax = null,
+            [FromQuery] DateTime? createdFrom = null,
+            [FromQuery] DateTime? createdTo = null,
+            [FromQuery] string? targetAudience = null,
+            [FromQuery] string? status = null)
+        {
+            var userIdStr = User.FindFirstValue("Id");
+            if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
+
+            try
+            {
+                var filters = BuildWorkFilters(priceMin, priceMax, createdFrom, createdTo, targetAudience, status);
+                var result = await _workService.GetVisibleWorksAsync(int.Parse(userIdStr), page, pageSize, filters);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message.Contains("Invalid object name", StringComparison.OrdinalIgnoreCase))
+                {
+                    Response.Headers.Append("X-Work-Warning", "Work tables are missing. Run sql/work_patch.sql.");
+                    return Ok(new PaginatedResponse<WorkListItemDto>(new List<WorkListItemDto>(), 0, 1, pageSize));
+                }
+
+                return StatusCode(500, new { message = "A munkák betöltése sikertelen.", detail = ex.Message });
+            }
+        }
+
+        [HttpGet("my")]
+        [Authorize]
+        public async Task<IActionResult> GetMyWorks(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 6,
+            [FromQuery] decimal? priceMin = null,
+            [FromQuery] decimal? priceMax = null,
+            [FromQuery] DateTime? createdFrom = null,
+            [FromQuery] DateTime? createdTo = null,
+            [FromQuery] string? targetAudience = null,
+            [FromQuery] string? status = null)
+        {
+            var userIdStr = User.FindFirstValue("Id");
+            if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
+
+            try
+            {
+                var filters = BuildWorkFilters(priceMin, priceMax, createdFrom, createdTo, targetAudience, status);
+                var result = await _workService.GetMyWorksAsync(int.Parse(userIdStr), page, pageSize, filters);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message.Contains("Invalid object name", StringComparison.OrdinalIgnoreCase))
+                {
+                    Response.Headers.Append("X-Work-Warning", "Work tables are missing. Run sql/work_patch.sql.");
+                    return Ok(new PaginatedResponse<WorkListItemDto>(new List<WorkListItemDto>(), 0, 1, pageSize));
+                }
+
+                return StatusCode(500, new { message = "A saját munkák betöltése sikertelen.", detail = ex.Message });
             }
         }
 
@@ -269,9 +379,9 @@ namespace Kerting_Api.Controller
             catch (Exception ex)
             {
                 // If schema is not patched yet, return empty list with warning
-                if (ex.Message.Contains("Invalid object name", StringComparison.OrdinalIgnoreCase))
+                if (IsWorkSchemaMismatch(ex))
                 {
-                    Response.Headers.Append("X-FeaturedWork-Warning", "FeaturedWork table is missing. Run sql/work_patch.sql.");
+                    Response.Headers.Append("X-FeaturedWork-Warning", "Work schema is outdated. Run sql/work_patch.sql and sql/image_pairing_patch.sql.");
                     return Ok(new List<object>());
                 }
 
@@ -312,6 +422,15 @@ namespace Kerting_Api.Controller
             }
             catch (Exception ex)
             {
+                if (IsWorkSchemaMismatch(ex))
+                {
+                    return StatusCode(503, new
+                    {
+                        message = "A Work séma elavult vagy hiányos.",
+                        detail = "Futtasd a backend/sql/work_patch.sql és backend/sql/image_pairing_patch.sql scriptet."
+                    });
+                }
+
                 return StatusCode(500, new { message = "Hiba a képek feltöltése során.", detail = ex.Message });
             }
         }

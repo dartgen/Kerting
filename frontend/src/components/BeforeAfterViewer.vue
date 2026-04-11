@@ -17,7 +17,19 @@ const handleSliderChange = (e: Event) => {
 };
 
 const getImageUrl = (url: string) => {
-  return "https://localhost:7067/Resources/Work/" + url;
+  if (!url) return '';
+
+  if (/^https?:\/\//i.test(url)) {
+    return url;
+  }
+
+  const normalized = String(url).replace(/\\/g, '/').trim();
+
+  if (normalized.startsWith('/')) {
+    return `https://localhost:7067${normalized}`;
+  }
+
+  return `https://localhost:7067/resources/Work/${normalized}`;
 };
 </script>
 

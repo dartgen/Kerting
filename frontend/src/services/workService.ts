@@ -17,6 +17,56 @@ import type {
 const API_URL = '/Work'
 
 export const workService = {
+  getVisibleWorks(page: number = 1, pageSize: number = 6, filters?: WorkFilters) {
+    let url = `${API_URL}/visible?page=${page}&pageSize=${pageSize}`;
+    if (filters) {
+      if (filters.priceMin !== undefined && filters.priceMin !== null) {
+        url += `&priceMin=${filters.priceMin}`;
+      }
+      if (filters.priceMax !== undefined && filters.priceMax !== null) {
+        url += `&priceMax=${filters.priceMax}`;
+      }
+      if (filters.createdFrom) {
+        url += `&createdFrom=${filters.createdFrom}`;
+      }
+      if (filters.createdTo) {
+        url += `&createdTo=${filters.createdTo}`;
+      }
+      if (filters.targetAudience) {
+        url += `&targetAudience=${filters.targetAudience}`;
+      }
+      if (filters.status && filters.status.length > 0) {
+        url += `&status=${filters.status.join(',')}`;
+      }
+    }
+    return api.get<PaginatedWorks>(url);
+  },
+
+  getMyWorks(page: number = 1, pageSize: number = 6, filters?: WorkFilters) {
+    let url = `${API_URL}/my?page=${page}&pageSize=${pageSize}`;
+    if (filters) {
+      if (filters.priceMin !== undefined && filters.priceMin !== null) {
+        url += `&priceMin=${filters.priceMin}`;
+      }
+      if (filters.priceMax !== undefined && filters.priceMax !== null) {
+        url += `&priceMax=${filters.priceMax}`;
+      }
+      if (filters.createdFrom) {
+        url += `&createdFrom=${filters.createdFrom}`;
+      }
+      if (filters.createdTo) {
+        url += `&createdTo=${filters.createdTo}`;
+      }
+      if (filters.targetAudience) {
+        url += `&targetAudience=${filters.targetAudience}`;
+      }
+      if (filters.status && filters.status.length > 0) {
+        url += `&status=${filters.status.join(',')}`;
+      }
+    }
+    return api.get<PaginatedWorks>(url);
+  },
+
   getOpenWorks(page: number = 1, pageSize: number = 6, filters?: WorkFilters) {
     let url = `${API_URL}/open?page=${page}&pageSize=${pageSize}`;
     if (filters) {

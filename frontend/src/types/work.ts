@@ -45,6 +45,7 @@ export interface Work {
   images?: WorkImage[];
   cimkek?: string[];
   tags?: WorkTagLink[];
+  isCurrentUserRelated?: boolean;
 }
 
 export interface WorkApplicant {
