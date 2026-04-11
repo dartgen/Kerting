@@ -14,6 +14,7 @@ namespace Kerting_Api.Interface
         Task<PaginatedResponse<Work>> GetAllOpenWorksAsync(int page = 1, int pageSize = 6, WorkFilterParams? filters = null);
         Task<PaginatedResponse<WorkListItemDto>> GetVisibleWorksAsync(int userId, int page = 1, int pageSize = 6, WorkFilterParams? filters = null);
         Task<PaginatedResponse<WorkListItemDto>> GetMyWorksAsync(int userId, int page = 1, int pageSize = 6, WorkFilterParams? filters = null);
+        Task<IEnumerable<Work>> GetAdminPublicWorksAsync();
         
         Task<Work> GetWorkByIdAsync(int id);
         Task<Work> CreateWorkAsync(Work work);

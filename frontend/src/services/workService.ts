@@ -92,6 +92,10 @@ export const workService = {
     return api.get<PaginatedWorks>(url);
   },
 
+  getAdminPublicWorks() {
+    return api.get<Work[]>(`${API_URL}/admin/public`);
+  },
+
   getWork(id: number) {
     return api.get(`${API_URL}/${id}`);
   },

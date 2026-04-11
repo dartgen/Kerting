@@ -1,9 +1,11 @@
 ﻿using Kerting_Api.Interface;
 using Kerting_Api.DTO;
+using Libary;
 using Libary.Model.Work;
 using Microsoft.Data.SqlClient;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.Text.Json;
 
@@ -14,10 +16,12 @@ namespace Kerting_Api.Controller
     public class WorkController : ControllerBase
     {
         private readonly IWorkService _workService;
+        private readonly KertingDbContext _context;
 
-        public WorkController(IWorkService workService)
+        public WorkController(IWorkService workService, KertingDbContext context)
         {
             _workService = workService;
+            _context = context;
         }
 
         private static WorkFilterParams BuildWorkFilters(
@@ -61,6 +65,18 @@ namespace Kerting_Api.Controller
             }
 
             return false;
+        }
+
+        private async Task<bool> IsAdminAsync()
+        {
+            var userIdString = User.FindFirst("Id")?.Value;
+            if (!int.TryParse(userIdString, out var userId))
+            {
+                return false;
+            }
+
+            var user = await _context.User.AsNoTracking().FirstOrDefaultAsync(x => x.Id == userId);
+            return user?.RoleId == 1;
         }
 
         [HttpGet("open")]
@@ -165,6 +181,32 @@ namespace Kerting_Api.Controller
                 }
 
                 return StatusCode(500, new { message = "A saját munkák betöltése sikertelen.", detail = ex.Message });
+            }
+        }
+
+        [HttpGet("admin/public")]
+        [Authorize]
+        public async Task<IActionResult> GetAdminPublicWorks()
+        {
+            if (!await IsAdminAsync())
+            {
+                return Forbid();
+            }
+
+            try
+            {
+                var result = await _workService.GetAdminPublicWorksAsync();
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                if (IsWorkSchemaMismatch(ex))
+                {
+                    Response.Headers.Append("X-Work-Warning", "Work tables are missing or outdated. Run sql/work_patch.sql.");
+                    return Ok(new List<Work>());
+                }
+
+                return StatusCode(500, new { message = "A kész munkák betöltése sikertelen.", detail = ex.Message });
             }
         }
 
@@ -390,18 +432,28 @@ namespace Kerting_Api.Controller
         }
 
         [HttpPost("{id}/feature")]
-        [Authorize(Roles = "Admin")]
+        [Authorize]
         public async Task<IActionResult> FeatureWork(int id)
         {
+            if (!await IsAdminAsync())
+            {
+                return Forbid();
+            }
+
             var featured = await _workService.FeatureWorkAsync(id);
             if (featured == null) return BadRequest("Could not feature work (maybe it's not Public).");
             return Ok(featured);
         }
 
         [HttpDelete("featured/{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize]
         public async Task<IActionResult> RemoveFeaturedWork(int id)
         {
+            if (!await IsAdminAsync())
+            {
+                return Forbid();
+            }
+
             await _workService.RemoveFeaturedWorkAsync(id);
             return Ok();
         }

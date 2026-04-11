@@ -90,6 +90,17 @@ namespace Kerting_Api.Service
             return new PaginatedResponse<Work>(items, totalCount, pagination.Page, pagination.PageSize);
         }
 
+        public async Task<IEnumerable<Work>> GetAdminPublicWorksAsync()
+        {
+            return await _context.Work
+                .Include(w => w.Author)
+                .Include(w => w.Tags).ThenInclude(wt => wt.Tag)
+                .Where(w => w.Status == "Public")
+                .OrderByDescending(w => w.UpdatedAtUtc ?? w.CreatedAtUtc)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
         private async Task<PaginatedResponse<WorkListItemDto>> GetUserWorkListAsync(int userId, int page, int pageSize, WorkFilterParams? filters, bool ownOnly)
         {
             var pagination = new PaginationParams { Page = page, PageSize = pageSize };
