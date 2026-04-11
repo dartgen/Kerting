@@ -2,6 +2,7 @@
 using Libary.Model.Chat;
 using Libary.Model.Forum;
 using Libary.Model.Gallery;
+using Libary.Model.Project;
 using Libary.Model.Tag;
 using Libary.Model.User;
 using Libary.Model.Work;
@@ -19,6 +20,12 @@ namespace Libary
         public DbSet<Login> Login { get; set; }
         public DbSet<Role> Role { get; set; }
         public DbSet<User> User { get; set; }
+        public DbSet<Project> Projects { get; set; }
+        public DbSet<ProjectMember> ProjectMembers { get; set; }
+        public DbSet<ProjectTask> ProjectTasks { get; set; }
+        public DbSet<TaskAssignment> TaskAssignments { get; set; }
+        public DbSet<TodoItem> TodoItems { get; set; }
+        public DbSet<CalendarEntry> CalendarEntries { get; set; }
         public DbSet<FeaturedUserSlot> FeaturedUserSlot { get; set; }
         public DbSet<UserReview> UserReview { get; set; }
         public DbSet<UserReviewReaction> UserReviewReaction { get; set; }
@@ -55,6 +62,34 @@ namespace Libary
         {
             base.OnModelCreating(modelBuilder);
 
+            // Projekt -> Tagok (Ha törlik a projektet, a tag-kapcsolatok is törlődnek)
+            modelBuilder.Entity<ProjectMember>()
+                .HasOne(pm => pm.Project)
+                .WithMany(p => p.Members)
+                .HasForeignKey(pm => pm.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Projekt -> Feladatok (Ha törlik a projektet, a feladatok is törlődnek)
+            modelBuilder.Entity<ProjectTask>()
+                .HasOne(pt => pt.Project)
+                .WithMany(p => p.Tasks)
+                .HasForeignKey(pt => pt.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Feladat -> Kiosztások (Ha törlik a feladatot, a dolgozók kiosztása is törlődik)
+            modelBuilder.Entity<TaskAssignment>()
+                .HasOne(ta => ta.ProjectTask)
+                .WithMany(pt => pt.AssignedTo)
+                .HasForeignKey(ta => ta.ProjectTaskId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Feladat -> Todo Checklist (Ha törlik a feladatot, a checklist is törlődik)
+            modelBuilder.Entity<TodoItem>()
+                .HasOne(t => t.ProjectTask)
+                .WithMany(pt => pt.Todos)
+                .HasForeignKey(t => t.ProjectTaskId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             modelBuilder.Entity<GalleryItem>(entity =>
             {
                 entity.ToTable("GalleryItem", "dbo", t =>
@@ -84,6 +119,7 @@ namespace Libary
                 entity.HasIndex(x => new { x.IsPublished, x.IsDeleted, x.CreatedAtUtc })
                     .HasDatabaseName("IX_GalleryItem_Published_Deleted_CreatedAtUtc");
             });
+
 
             modelBuilder.Entity<GalleryComment>(entity =>
             {

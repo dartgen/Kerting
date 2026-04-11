@@ -1,11 +1,13 @@
 
+using Kerting_Api.Interface;
+using Kerting_Api.Service;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using System.Text;
 using System.IO;
-using Microsoft.Extensions.FileProviders;
+using System.Text;
 
 namespace Kerting_Api
 {
@@ -70,10 +72,12 @@ namespace Kerting_Api
 
             builder.Services.AddDbContext<Libary.KertingDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
-            builder.Services.AddScoped(typeof(Interface.GenericInterface<>), typeof(Service.GenericService<>));
-            builder.Services.AddScoped<Interface.IGalleryService, Service.GalleryService>();
-            builder.Services.AddScoped<Interface.IForumService, Service.ForumService>();
-            builder.Services.AddScoped<Interface.IWorkService, Service.WorkService>();
+            builder.Services.AddScoped(typeof(GenericInterface<>), typeof(GenericService<>));
+            builder.Services.AddScoped<IGalleryService, GalleryService>();
+            builder.Services.AddScoped<IForumService, ForumService>();
+            builder.Services.AddScoped<IWorkService, WorkService>();
+            builder.Services.AddScoped<IProjectService, ProjectService>();
+            builder.Services.AddScoped<ICalendarService, CalendarService>();
 
             // 2. JWT KONFIGURÁCIÓ
             var jwtSettings = builder.Configuration.GetSection("JwtSettings");
