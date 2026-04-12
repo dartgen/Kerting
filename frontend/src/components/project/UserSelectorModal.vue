@@ -43,7 +43,7 @@
               <div class="w-10 h-10 rounded-full bg-earth-950 border border-earth-600 overflow-hidden shrink-0 flex items-center justify-center text-earth-400 transition-transform group-hover:scale-105">
                 <img v-if="user.avatar"
                      :src="getImageUrl(user.avatar)"
-                     @error="user.avatar = null"
+                     @error="hideImage"
                      class="w-full h-full object-cover">
                 <svg v-else class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
               </div>
@@ -66,7 +66,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import apiClient from '@/services/axios'; // Fontos: A te Axios példányod a baseURL-hez
+import apiClient from '@/services/axios';
 
 const emit = defineEmits(['close', 'select']);
 
@@ -77,22 +77,28 @@ let timeoutId: any = null;
 
 const bezaras = () => emit('close');
 
-// --- A TE TÖKÉLETES KÉP-URL GENERÁLÓ LOGIKÁD ---
-const getImageUrl = (fileName: string) => {
-  if (!fileName || fileName.trim() === '') return null;
+// Kép elrejtése hiba esetén
+const hideImage = (event: Event) => {
+  const target = event.target as HTMLElement;
+  if (target) {
+    target.style.display = 'none';
+  }
+};
+
+// Javított: undefined visszatérési érték
+const getImageUrl = (fileName?: string | null): string | undefined => {
+  if (!fileName || fileName.trim() === '') return undefined;
 
   // Biztosíték: Ha már eleve teljes link lenne
   if (fileName.startsWith('http')) return fileName;
 
   const axiosBaseUrl = apiClient.defaults.baseURL;
-  if (!axiosBaseUrl) return null;
+  if (!axiosBaseUrl) return undefined;
 
   return `${new URL(axiosBaseUrl).origin}/resources/Profiles/${fileName}`;
 };
 
 const kivalaszt = (user: any) => {
-  // Mielőtt átadjuk a kiválasztott embert, kicseréljük az avatart a formázott teljes URL-re,
-  // így a ProjectDashboard listájában is rögtön jó lesz a kép!
   const processedUser = {
     ...user,
     avatar: getImageUrl(user.avatar)

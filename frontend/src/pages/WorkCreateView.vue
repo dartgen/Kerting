@@ -20,7 +20,8 @@ const loadTags = async () => {
   } catch {}
 };
 
-const work = ref<Work>({
+// TS JAVÍTÁS: Garantáljuk, hogy a cimkek itt biztosan egy string tömb lesz, nem undefined!
+const work = ref<Work & { cimkek: string[] }>({
   title: '',
   description: '',
   targetAudience: 'Everyone',
@@ -74,7 +75,6 @@ onMounted(loadTags);
     <PageTitle title="Új Munka Kiírása" />
     <form @submit.prevent="submitWork" class="bg-earth-800/40 p-6 rounded-xl border border-earth-700/50 max-w-2xl mx-auto mt-8">
 
-      <!-- Cím -->
       <div class="mb-4">
         <label class="block text-earth-300 font-semibold mb-2" for="title">Munka Címe *</label>
         <input
@@ -87,7 +87,6 @@ onMounted(loadTags);
         />
       </div>
 
-      <!-- Leírás -->
       <div class="mb-4">
         <label class="block text-earth-300 font-semibold mb-2" for="description">Részletes Leírás *</label>
         <textarea
@@ -100,12 +99,10 @@ onMounted(loadTags);
         ></textarea>
       </div>
 
-      <!-- Cimkek -->
       <div class="mb-4">
         <ActivityTagPicker v-model="work.cimkek" :available-tags="allTags" label="Tevékenységek" placeholder="Tevékenység keresése vagy hozzáadása..." empty-state-text="Írd be mivel foglalkozol!" />
       </div>
 
-      <!-- Kiknek szól -->
       <div class="mb-4">
         <label class="block text-earth-300 font-semibold mb-2" for="targetAudience">Kik jelentkezhetnek?</label>
         <select
@@ -119,7 +116,6 @@ onMounted(loadTags);
         </select>
       </div>
 
-      <!-- Alapár -->
       <div class="mb-6">
         <label class="block text-earth-300 font-semibold mb-2" for="basePrice">Fix ár (Ft) (Opcionális)</label>
         <input

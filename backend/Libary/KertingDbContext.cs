@@ -1,4 +1,5 @@
-﻿using Libary.Model.Auth;
+﻿using Libary.Model;
+using Libary.Model.Auth;
 using Libary.Model.Chat;
 using Libary.Model.Forum;
 using Libary.Model.Gallery;
@@ -20,6 +21,7 @@ namespace Libary
         public DbSet<Login> Login { get; set; }
         public DbSet<Role> Role { get; set; }
         public DbSet<User> User { get; set; }
+        public DbSet<Ticket> Tickets { get; set; }
         public DbSet<Project> Projects { get; set; }
         public DbSet<ProjectMember> ProjectMembers { get; set; }
         public DbSet<ProjectTask> ProjectTasks { get; set; }
@@ -42,7 +44,6 @@ namespace Libary
         public DbSet<Conversation> Conversations { get; set; }
         public DbSet<ConversationParticipant> ConversationParticipants { get; set; }
         public DbSet<Message> Messages { get; set; }
-
         public DbSet<Work> Work { get; set; }
         public DbSet<WorkApplicant> WorkApplicant { get; set; }
         public DbSet<WorkTodo> WorkTodo { get; set; }

@@ -136,12 +136,17 @@
 
 <script setup lang="ts">
 import { ref, computed, reactive, onMounted } from 'vue';
+import { useRouter } from 'vue-router'; // ÚJ: Router importálása
 import { useAuthStore } from '@/stores/authStore';
+import { useToastStore } from '@/stores/toast'; // ÚJ: Toast importálása
 import { calendarService, type CalendarEntry } from '@/services/calendarService';
 import { projectService } from '@/services/projectService';
 
 const authStore = useAuthStore();
-const currentUserId = computed(() => String(authStore.profilAdatok?.id || ''));
+const router = useRouter(); // ÚJ: Router példányosítása
+const toastStore = useToastStore(); // ÚJ: Toast példányosítása
+
+const currentUserId = computed(() => String((authStore.profilAdatok as any)?.id || ''));
 
 const viewDate = ref(new Date());
 const weekDays = ['Hét', 'Ked', 'Sze', 'Csüt', 'Pén', 'Szo', 'Vas'];
@@ -152,8 +157,8 @@ const showNewEntryModal = ref(false);
 const selectedEntry = ref<any>(null);
 const newEntryForm = reactive({ title: '', description: '', date: '' });
 
-// API-ból jövő valós adatok
-const personalEntries = ref<CalendarEntry[]>([]);
+type CalendarItem = CalendarEntry & { isEntry?: boolean; projectName?: string; status?: string };
+const personalEntries = ref<CalendarItem[]>([]);
 const projectsList = ref<any[]>([]);
 
 onMounted(() => {
@@ -162,7 +167,6 @@ onMounted(() => {
   }
 });
 
-// --- ÖSSZESÍTÉS ---
 const allCalendarItems = computed(() => {
   const tasks = projectsList.value.flatMap(p =>
     p.tasks
@@ -179,7 +183,6 @@ const allCalendarItems = computed(() => {
   return [...tasks, ...personalEntries.value];
 });
 
-// --- NAPTÁR LOGIKA ---
 const currentYear = computed(() => viewDate.value.getFullYear());
 const currentMonth = computed(() => viewDate.value.getMonth());
 const monthName = computed(() => new Intl.DateTimeFormat('hu-HU', { month: 'long' }).format(viewDate.value));
@@ -216,15 +219,13 @@ const getItemsForDate = (date: Date) => {
   return allCalendarItems.value.filter(item => item.date === ds);
 };
 
-// --- MŰVELETEK ---
 const openNewEntryModal = (dateStr?: string) => {
   newEntryForm.title = '';
   newEntryForm.description = '';
-  newEntryForm.date = dateStr || formatDateStr(new Date());
+  newEntryForm.date = (dateStr ? String(dateStr) : formatDateStr(new Date())) as string;
   showNewEntryModal.value = true;
 };
 
-// --- BETÖLTÉS JAVÍTVA ---
 const loadData = async () => {
   try {
     isLoading.value = true;
@@ -233,23 +234,26 @@ const loadData = async () => {
       projectService.getMyProjects()
     ]);
 
-    // Itt a .split('T')[0] a varázslat: levágja a C# által hozzátett időt!
     personalEntries.value = entries.map(e => ({
       ...e,
       date: e.date ? e.date.split('T')[0] : '',
       isEntry: true
-    }));
+    })) as CalendarItem[];
+
     projectsList.value = projects;
   } catch (error) {
     console.error("Hiba a naptár adatainak betöltésekor", error);
+    toastStore.addToast('Hiba a naptár betöltésekor!', 3000, 'error'); // ÚJ Toast
   } finally {
     isLoading.value = false;
   }
 };
 
-// --- MENTÉS JAVÍTVA ---
 const saveNewEntry = async () => {
-  if (!newEntryForm.title.trim()) return;
+  if (!newEntryForm.title.trim()) {
+    toastStore.addToast('A cím megadása kötelező!', 3000, 'warning'); // ÚJ Toast
+    return;
+  }
   try {
     const entryToSave = {
       userId: currentUserId.value,
@@ -259,23 +263,28 @@ const saveNewEntry = async () => {
     };
     const savedEntry = await calendarService.saveEntry(entryToSave);
 
-    // Itt is megtisztítjuk a C# által visszaküldött dátumot
     personalEntries.value.push({
       ...savedEntry,
-      date: savedEntry.date ? savedEntry.date.split('T')[0] : newEntryForm.date,
+      date: savedEntry.date ? savedEntry.date.split('T')[0] : (newEntryForm.date || ''),
       isEntry: true
-    });
+    } as CalendarItem);
+
     showNewEntryModal.value = false;
+    toastStore.addToast('Bejegyzés sikeresen mentve!', 3000, 'success'); // ÚJ Toast
   } catch (error) {
     console.error("Hiba a bejegyzés mentésekor", error);
+    toastStore.addToast('Hiba történt a mentés során.', 3000, 'error'); // ÚJ Toast
   }
 };
 
+// JAVÍTÁS: Átirányítás a Projektek oldalra alert() helyett
 const megnyitElem = (item: any) => {
   if (item.isEntry) {
     selectedEntry.value = item;
   } else {
-    alert(`Ezt a feladatot a "${item.projectName}" projektben találod.`);
+    // Toast értesítés + Navigáció
+    toastStore.addToast(`Átirányítás a(z) "${item.projectName}" projekthez...`, 3000, 'info');
+    router.push('/projects');
   }
 };
 
@@ -285,8 +294,10 @@ const deleteEntry = async (id: number) => {
       await calendarService.deleteEntry(id);
       personalEntries.value = personalEntries.value.filter(e => e.id !== id);
       selectedEntry.value = null;
+      toastStore.addToast('Bejegyzés törölve.', 3000, 'success'); // ÚJ Toast
     } catch(error) {
       console.error("Hiba a bejegyzés törlésekor", error);
+      toastStore.addToast('Hiba történt a törlés során.', 3000, 'error'); // ÚJ Toast
     }
   }
 };

@@ -41,7 +41,7 @@
                   <div class="w-5 h-5 rounded-full overflow-hidden bg-earth-800 flex items-center justify-center shrink-0 border border-earth-600">
                     <img v-if="getMemberDetails(userId)?.avatar"
                          :src="getImageUrl(getMemberDetails(userId)?.avatar)"
-                         @error="$event.target.style.display='none'"
+                         @error="hideImage"
                          class="w-full h-full object-cover">
                     <svg v-else class="w-3 h-3 text-earth-400" fill="currentColor" viewBox="0 0 20 20"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/></svg>
                   </div>
@@ -139,7 +139,7 @@
                     <div class="w-5 h-5 rounded-full bg-earth-800 border border-earth-600 overflow-hidden flex items-center justify-center shrink-0">
                       <img v-if="getMemberDetails(todo.workerId)?.avatar"
                            :src="getImageUrl(getMemberDetails(todo.workerId)?.avatar)"
-                           @error="$event.target.style.display='none'"
+                           @error="hideImage"
                            class="w-full h-full object-cover">
                       <svg v-else class="w-3 h-3 text-earth-400" fill="currentColor" viewBox="0 0 20 20"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/></svg>
                     </div>
@@ -181,28 +181,32 @@ const props = defineProps<{
   currentUserId: string;
 }>();
 
-// ÚJ: A 'save-task' event felvétele, hogy szóljunk a szülőnek!
 const emit = defineEmits(['close', 'save-task']);
 const ujTodoSzoveg = ref('');
 const ujTodoOsszeg = ref<number | null>(null);
 
 const bezaras = () => emit('close');
 
-// --- ÚJ: MENTÉS FÜGGVÉNY ---
+const hideImage = (event: Event) => {
+  const target = event.target as HTMLElement;
+  if (target) {
+    target.style.display = 'none';
+  }
+};
+
 const mentes = () => {
   emit('save-task', props.task);
 };
 
-// --- ÚJ URL GENERÁLÓ (Képekhez) ---
-const getImageUrl = (fileName: string | null | undefined) => {
-  if (!fileName || fileName.trim() === '') return null;
+// Visszatérési érték típusának beállítása string | undefined-ra
+const getImageUrl = (fileName: string | null | undefined): string | undefined => {
+  if (!fileName || fileName.trim() === '') return undefined;
   if (fileName.startsWith('http')) return fileName;
   const axiosBaseUrl = apiClient.defaults.baseURL;
-  if (!axiosBaseUrl) return null;
+  if (!axiosBaseUrl) return undefined;
   return `${new URL(axiosBaseUrl).origin}/resources/Profiles/${fileName}`;
 };
 
-// --- PÉNZÜGYI KERET LOGIKA ---
 const totalBudget = computed(() => props.task.amount || 0);
 
 const usedBudget = computed(() => {
@@ -232,21 +236,16 @@ const canAddTodo = computed(() => {
   return true;
 });
 
-
-// --- FORMATÁLÁS ---
 const formatCurrency = (val: number) => new Intl.NumberFormat('hu-HU', { style: 'currency', currency: 'HUF', maximumFractionDigits: 0 }).format(val);
 const statusClass = (s: string) => s === 'done' ? 'bg-green-500/20 text-green-400 border-green-500/30' : s === 'in-progress' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-earth-800 text-earth-300 border-earth-600';
 const getStatusName = (s: string) => s === 'done' ? 'Kész' : s === 'in-progress' ? 'Folyamatban' : 'Tennivaló';
 const getMemberDetails = (id: string) => props.projectMembers.find(m => m.userId === id);
 const getMemberName = (id: string) => id === props.currentUserId ? "Én" : (getMemberDetails(id)?.name || "Ismeretlen");
 
-// --- TODO LOGIKA ÉS RENDEZÉS ---
 const sortedTodos = computed(() => {
   if (!props.task.todos) return [];
   return [...props.task.todos].sort((a, b) => {
-    // 1. Készek menjenek alulra
     if (a.completed !== b.completed) return a.completed ? 1 : -1;
-    // 2. A legújabb kerüljön legfelülre a kategórián belül
     return b.id - a.id;
   });
 });
@@ -256,13 +255,12 @@ const progress = computed(() => {
   return Math.round((props.task.todos.filter((t: any) => t.completed).length / props.task.todos.length) * 100);
 });
 
-// ÍGY NÉZZEN KI A TaskDetailModal.vue-ban:
 const ujTodoHozzaadasa = () => {
   if (!canAddTodo.value) return;
 
   if (!props.task.todos) props.task.todos = [];
   props.task.todos.push({
-    id: 0, // <--- EZT JAVÍTSD KI 0-ra! (A Date.now() helyett)
+    id: 0,
     text: ujTodoSzoveg.value.trim(),
     amount: ujTodoOsszeg.value || 0,
     completed: false,
@@ -276,19 +274,19 @@ const ujTodoHozzaadasa = () => {
 
 const todoElvallalas = (todo: any) => {
   todo.workerId = props.currentUserId;
-  mentes(); // <--- MENTÉS
+  mentes();
 };
 
 const todoLemondas = (todo: any) => {
   todo.workerId = null;
-  mentes(); // <--- MENTÉS
+  mentes();
 };
 
 const todoTorlese = (todoId: number) => {
   const idx = props.task.todos.findIndex((t: any) => t.id === todoId);
   if (idx !== -1) {
     props.task.todos.splice(idx, 1);
-    mentes(); // <--- MENTÉS
+    mentes();
   }
 };
 </script>

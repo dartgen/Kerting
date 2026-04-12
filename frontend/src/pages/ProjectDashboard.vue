@@ -168,7 +168,7 @@
                         <div class="w-10 h-10 rounded-full bg-earth-800 border border-earth-100/20 overflow-hidden shrink-0 flex items-center justify-center text-earth-400">
                           <img v-if="member.avatar"
                                :src="getImageUrl(member.avatar)"
-                               @error="$event.target.style.display='none'"
+                               @error="hideImage"
                                class="w-full h-full object-cover">
                           <svg v-else class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
                         </div>
@@ -255,7 +255,7 @@
                                   <div class="w-3.5 h-3.5 rounded-full overflow-hidden mr-1 bg-earth-950 flex-shrink-0">
                                     <img v-if="getMemberDetails(userId)?.avatar"
                                          :src="getImageUrl(getMemberDetails(userId)?.avatar)"
-                                         @error="$event.target.style.display='none'"
+                                         @error="hideImage"
                                          class="w-full h-full object-cover">
                                     <svg v-else class="w-3 h-3 text-earth-400 m-auto mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
                                   </div>
@@ -348,7 +348,7 @@
                                  :class="['w-9 h-9 rounded-full overflow-hidden border-2 flex items-center justify-center shrink-0 shadow-sm transition-transform hover:scale-110 cursor-pointer', isMe(userId) ? 'border-green-500 bg-green-900/30 text-green-400' : 'border-earth-600 bg-earth-800 text-earth-400']">
                               <img v-if="getMemberDetails(userId)?.avatar"
                                    :src="getImageUrl(getMemberDetails(userId)?.avatar)"
-                                   @error="$event.target.style.display='none'"
+                                   @error="hideImage"
                                    class="w-full h-full object-cover">
                               <svg v-else class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
                             </div>
@@ -439,11 +439,20 @@ import MemberDetailsModal from '@/components/project/MemberDetailsModal.vue';
 import TaskDetailModal from '@/components/project/TaskDetailModal.vue';
 import UserSelectorModal from '@/components/project/UserSelectorModal.vue';
 
+// --- Biztonságos kép eltüntetés hibás betöltés esetén ---
+const hideImage = (event: Event) => {
+  const target = event.target as HTMLElement;
+  if (target) {
+    target.style.display = 'none';
+  }
+};
+
 // --- AUTHENTIKÁCIÓ ÉS AZONOSÍTÁS ---
 const authStore = useAuthStore();
 
-const currentUserId = computed(() => String(authStore.profilAdatok?.id || '').toLowerCase().trim());
-const currentUserName = computed(() => String(authStore.profilAdatok?.felhasznalonev || '').toLowerCase().trim());
+// Megjegyzés: A (authStore.profilAdatok as any) azért kell, hogy a TS ne sírjon a hiányzó tulajdonságok miatt a build során
+const currentUserId = computed(() => String((authStore.profilAdatok as any)?.id || '').toLowerCase().trim());
+const currentUserName = computed(() => String((authStore.profilAdatok as any)?.felhasznalonev || (authStore.profilAdatok as any)?.username || '').toLowerCase().trim());
 
 const isMe = (userId: string) => {
   if (!userId) return false;
@@ -472,11 +481,12 @@ const dragHoverTaskId = ref<number | null>(null);
 const projectsList = ref<Project[]>([]);
 
 // --- ÚJ URL GENERÁLÓ (Képekhez) ---
-const getImageUrl = (fileName: string | null | undefined) => {
-  if (!fileName || fileName.trim() === '') return null;
+// Típus javítva: string | undefined
+const getImageUrl = (fileName: string | null | undefined): string | undefined => {
+  if (!fileName || fileName.trim() === '') return undefined;
   if (fileName.startsWith('http')) return fileName;
   const axiosBaseUrl = apiClient.defaults.baseURL;
-  if (!axiosBaseUrl) return null;
+  if (!axiosBaseUrl) return undefined;
   return `${new URL(axiosBaseUrl).origin}/resources/Profiles/${fileName}`;
 };
 
@@ -487,7 +497,10 @@ const loadProjects = async () => {
     projectsList.value = await projectService.getMyProjects();
 
     if (filteredProjects.value.length > 0 && !selectedProjectId.value) {
-      selectedProjectId.value = filteredProjects.value[0].id;
+      const firstProject = filteredProjects.value[0];
+      if (firstProject) {
+        selectedProjectId.value = firstProject.id;
+      }
     }
   } catch (error) {
     console.error("Hiba a projektek betöltésekor:", error);
@@ -553,7 +566,8 @@ const getMemberDetails = (userId: string) => {
 const getMemberName = (userId: string) => {
   if (!userId) return 'Ismeretlen';
 
-  const userNameToDisplay = authStore.profilAdatok?.nev || authStore.profilAdatok?.felhasznalonev || 'Én';
+  // Javítva as any kényszerítéssel a TS miatt
+  const userNameToDisplay = (authStore.profilAdatok as any)?.nev || (authStore.profilAdatok as any)?.felhasznalonev || (authStore.profilAdatok as any)?.username || 'Én';
 
   if (isMe(userId)) return userNameToDisplay;
 
@@ -597,14 +611,9 @@ const onDrop = async (event: DragEvent, task: Task) => {
   }
 };
 
-// --- ÚJ: Felhasználó eltávolítása a feladatból ---
 const feladatbolEltavolit = async (task: Task, userIdToRemove: string) => {
   if (!task.assignedTo) return;
-
-  // Töröljük a Vue felületen, hogy azonnal eltűnjön
   task.assignedTo = task.assignedTo.filter(id => String(id) !== String(userIdToRemove));
-
-  // Elmentjük a backendbe
   await feladatMentese(task);
 };
 
@@ -617,7 +626,8 @@ const elfogadMeghivo = async () => {
   try {
     await projectService.acceptInvite(activeProject.value.id);
     const index = projectsList.value.findIndex(p => p.id === activeProject.value!.id);
-    if (index !== -1) {
+    // Biztonsági null check indexhez
+    if (index !== -1 && projectsList.value[index]) {
       projectsList.value[index].status = 'ongoing';
       activeFilter.value = 'ongoing';
     }
@@ -674,15 +684,17 @@ const projektArchivalasa = async (isArchiving: boolean) => {
 
   if (confirm(confirmMsg)) {
     try {
-      const newStatus = isArchiving ? 'archived' : 'ongoing';
-      const updatedProject = { ...activeProject.value, status: newStatus };
+      // Típusbiztos értékadás
+      const newStatus: 'archived' | 'ongoing' = isArchiving ? 'archived' : 'ongoing';
+      const updatedProject: Partial<Project> = { ...activeProject.value, status: newStatus };
+
       await projectService.updateProject(activeProject.value.id, updatedProject);
 
       const index = projectsList.value.findIndex(p => p.id === activeProject.value!.id);
-      if (index !== -1) {
-        projectsList.value[index].status = newStatus as any;
+      if (index !== -1 && projectsList.value[index]) {
+        projectsList.value[index].status = newStatus;
       }
-      activeFilter.value = newStatus as any;
+      activeFilter.value = newStatus;
     } catch (error) {
       console.error("Hiba a projekt állapotának módosításakor", error);
     }
@@ -733,7 +745,9 @@ const tagEltavolitasa = async (userId: string) => {
   });
 
   try {
-    await projectService.updateProject(activeProject.value.id, activeProject.value);
+    // Használjuk a Partial<Project> formát
+    const projectToSave: Partial<Project> = { ...activeProject.value };
+    await projectService.updateProject(activeProject.value.id, projectToSave);
   } catch (error) {
     console.error("Hiba a tag eltávolításakor", error);
     activeProject.value.members = eredetiTagok;

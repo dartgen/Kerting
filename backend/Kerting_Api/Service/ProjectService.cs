@@ -1,6 +1,7 @@
 ﻿using Kerting_Api.Interface;
 using Libary;
 using Libary.Model.Project;
+using Libary.Model.Chat; // ÚJ: Szükséges a Conversation, Message modellekhez!
 using Microsoft.EntityFrameworkCore;
 using Kerting_Api.DTO;
 
@@ -17,7 +18,6 @@ namespace Kerting_Api.Service
 
         public async Task<IEnumerable<ProjectDto>> GetUserProjectsAsync(string userId)
         {
-            // 1. Lekérdezzük az adatbázisból a projekteket
             var projects = await _context.Projects
                 .Include(p => p.Members)
                 .Include(p => p.Tasks)
@@ -27,9 +27,6 @@ namespace Kerting_Api.Service
                 .Where(p => p.OwnerId == userId || p.Members.Any(m => m.UserId == userId))
                 .ToListAsync();
 
-            // =========================================================================
-            // --- ÚJ RÉSZ: Kigyűjtjük a felhasználókat, hogy a valós nevüket adjuk át ---
-            // =========================================================================
             var allUserIdsString = projects.SelectMany(p => p.Members.Select(m => m.UserId))
                 .Concat(projects.Select(p => p.OwnerId))
                 .Distinct()
@@ -40,7 +37,6 @@ namespace Kerting_Api.Service
                 .Select(int.Parse)
                 .ToList();
 
-            // Nevek és profilképek lekérése a User táblából
             var userDetails = await _context.User
                 .Where(u => validUserIds.Contains(u.Id))
                 .ToDictionaryAsync(u => u.Id.ToString(), u => new {
@@ -48,12 +44,10 @@ namespace Kerting_Api.Service
                     Avatar = u.IMGString
                 });
 
-            // Felhasználónevek lekérése a Login táblából (ha nincs kitöltve a rendes név)
             var loginNames = await _context.Login
                 .Where(l => validUserIds.Contains(l.Id))
                 .ToDictionaryAsync(l => l.Id.ToString(), l => l.Username);
 
-            // Belső segédfüggvény a név eldöntésére
             string GetDisplayName(string uid)
             {
                 if (userDetails.TryGetValue(uid, out var user) && !string.IsNullOrWhiteSpace(user.Name))
@@ -63,16 +57,13 @@ namespace Kerting_Api.Service
                 return "Ismeretlen";
             }
 
-            // Belső segédfüggvény a profilképhez
             string GetAvatar(string uid)
             {
                 if (userDetails.TryGetValue(uid, out var user))
                     return user.Avatar;
                 return null;
             }
-            // =========================================================================
 
-            // 2. Átmappeljük a C# entitásokat
             var result = projects.Select(p => new ProjectDto
             {
                 Id = p.Id,
@@ -80,7 +71,6 @@ namespace Kerting_Api.Service
                 Title = p.Title,
                 Description = p.Description,
                 Deadline = p.Deadline?.ToString("yyyy-MM-dd"),
-
                 Status = p.OwnerId == userId ? p.Status :
                          (p.Members.FirstOrDefault(m => m.UserId == userId)?.Role == "Meghívott" ? "invited" : p.Status),
 
@@ -88,8 +78,8 @@ namespace Kerting_Api.Service
                 {
                     UserId = m.UserId,
                     Role = m.Role,
-                    Name = GetDisplayName(m.UserId), // <--- ITT A JAVÍTÁS! "Tag" helyett a valós név!
-                    Avatar = GetAvatar(m.UserId)     // <--- Profilkép átadása a Vue-nak!
+                    Name = GetDisplayName(m.UserId),
+                    Avatar = GetAvatar(m.UserId)
                 }).ToList(),
 
                 Tasks = p.Tasks.Select(t => new TaskDto
@@ -127,34 +117,53 @@ namespace Kerting_Api.Service
                 Status = "ongoing"
             };
 
-            // A létrehozót automatikusan felvesszük a projekt tagjai közé "Tulajdonos" ranggal!
             project.Members.Add(new ProjectMember
             {
                 UserId = userId,
                 Role = "Tulajdonos"
             });
 
-            // Ha jöttek további tagok a Vue felületről
-            if (dto.Members != null)
-            {
-                foreach (var member in dto.Members)
-                {
-                    // Biztosítjuk, hogy önmagunkat ne adjuk hozzá duplán
-                    if (member.UserId != userId)
-                    {
-                        project.Members.Add(new ProjectMember
-                        {
-                            UserId = member.UserId,
-                            Role = member.Role
-                        });
-                    }
-                }
-            }
-
             _context.Projects.Add(project);
             await _context.SaveChangesAsync();
 
-            // A Vue-nak visszaküldött DTO-ba is beleégetjük a helyes adatokat
+            // ========================================================
+            // 1. AUTOMATIKUS CSOPORTOS CHAT LÉTREHOZÁSA A PROJEKTHEZ
+            // ========================================================
+            var newChat = new Conversation
+            {
+                IsGroup = true,
+                Title = project.Title, // A chat neve megegyezik a projektével
+                CreatedAt = DateTime.UtcNow,
+                LastMessageAt = DateTime.UtcNow
+            };
+            _context.Conversations.Add(newChat);
+            await _context.SaveChangesAsync(); // Hogy legyen ID-ja
+
+            if (int.TryParse(userId, out int uId))
+            {
+                // Tulajdonos hozzáadása a chathez
+                _context.ConversationParticipants.Add(new ConversationParticipant
+                {
+                    ConversationId = newChat.Id,
+                    UserId = uId
+                });
+
+                // Rendszerüzenet
+                _context.Messages.Add(new Message
+                {
+                    ConversationId = newChat.Id,
+                    SenderId = uId,
+                    Content = "A projekt létrejött, a csoportos csevegés elindult!",
+                    CreatedAt = DateTime.Now,
+                    IsRead = false
+                });
+            }
+
+            // Összekötjük a projektet az új chattel!
+            project.ChatConversationId = newChat.Id;
+            await _context.SaveChangesAsync();
+            // ========================================================
+
             dto.Id = project.Id;
             dto.OwnerId = userId;
             if (dto.Members == null) dto.Members = new List<ProjectMemberDto>();
@@ -171,10 +180,49 @@ namespace Kerting_Api.Service
 
             if (project == null) return null;
 
+            // Ha változott a projekt neve, átnevezzük a hozzá tartozó csevegést is!
+            if (project.Title != dto.Title && project.ChatConversationId.HasValue)
+            {
+                var chat = await _context.Conversations.FindAsync(project.ChatConversationId.Value);
+                if (chat != null) chat.Title = dto.Title;
+            }
+
             project.Title = dto.Title;
             project.Description = dto.Description;
             project.Deadline = string.IsNullOrEmpty(dto.Deadline) ? null : DateTime.Parse(dto.Deadline);
             project.Status = dto.Status;
+
+            // =========================================================================
+            // 2. TAGOK SZINKRONIZÁLÁSA: Ha kirúgtak valakit, a Chatből is kivesszük!
+            // =========================================================================
+            if (dto.Members != null)
+            {
+                var incomingMemberIds = dto.Members.Select(m => m.UserId).ToList();
+
+                // Megkeressük azokat, akik eddig benne voltak az adatbázisban, de az új listában már nincsenek (és nem a tulajok)
+                var membersToRemove = project.Members
+                    .Where(m => !incomingMemberIds.Contains(m.UserId) && m.Role != "Tulajdonos")
+                    .ToList();
+
+                foreach (var member in membersToRemove)
+                {
+                    // Törlés a projektből
+                    project.Members.Remove(member);
+
+                    // Törlés a Chatből
+                    if (project.ChatConversationId.HasValue && int.TryParse(member.UserId, out int removedUid))
+                    {
+                        var chatParticipant = await _context.ConversationParticipants
+                            .FirstOrDefaultAsync(cp => cp.ConversationId == project.ChatConversationId.Value && cp.UserId == removedUid);
+
+                        if (chatParticipant != null)
+                        {
+                            _context.ConversationParticipants.Remove(chatParticipant);
+                        }
+                    }
+                }
+            }
+            // =========================================================================
 
             await _context.SaveChangesAsync();
             return dto;
@@ -185,22 +233,25 @@ namespace Kerting_Api.Service
             var project = await _context.Projects.FirstOrDefaultAsync(p => p.Id == projectId && p.OwnerId == userId);
             if (project != null)
             {
+                // Ha törlik a projektet, eltüntetjük a hozzá tartozó chat szobát is!
+                if (project.ChatConversationId.HasValue)
+                {
+                    var chat = await _context.Conversations.FindAsync(project.ChatConversationId.Value);
+                    if (chat != null) _context.Conversations.Remove(chat);
+                }
+
                 _context.Projects.Remove(project);
                 await _context.SaveChangesAsync();
             }
         }
 
-        // ==========================================
-        // --- FELADATOK (TASKS) KEZELÉSE ---
-        // ==========================================
-
+        // --- FELADATOK (Nem változott) ---
         public async Task<TaskDto> SaveTaskAsync(int projectId, TaskDto taskDto)
         {
             ProjectTask task;
 
             if (taskDto.Id > 0)
             {
-                // Meglévő feladat betöltése (a Todos-t is be kell tölteni a módosításhoz!)
                 task = await _context.ProjectTasks
                     .Include(t => t.AssignedTo)
                     .Include(t => t.Todos)
@@ -208,30 +259,21 @@ namespace Kerting_Api.Service
 
                 if (task == null) throw new Exception("Task not found");
 
-                // 1. Alapadatok frissítése
                 task.Title = taskDto.Title;
                 task.Description = taskDto.Description;
                 task.Amount = taskDto.Amount;
                 task.Status = taskDto.Status;
                 task.Deadline = string.IsNullOrEmpty(taskDto.Deadline) ? null : DateTime.Parse(taskDto.Deadline);
 
-                // 2. ÚJ RÉSZ: Részfeladatok (TODOS) mentése!
                 if (taskDto.Todos != null)
                 {
-                    // A) Mik azok a meglévő ID-k, amik jöttek a Vue-tól? (Ami 0, az teljesen új!)
                     var incomingTodoIds = taskDto.Todos.Where(t => t.Id > 0).Select(t => t.Id).ToList();
-
-                    // B) Töröljük azokat az adatbázisból, amik már nincsenek a Vue listájában (törölted a felületen)
                     var todosToRemove = task.Todos.Where(t => !incomingTodoIds.Contains(t.Id)).ToList();
-                    foreach (var r in todosToRemove)
-                    {
-                        task.Todos.Remove(r);
-                    }
+                    foreach (var r in todosToRemove) task.Todos.Remove(r);
 
-                    // C) Frissítjük a meglévőket, vagy hozzáadjuk az újakat (ahol Id == 0)
                     foreach (var todoDto in taskDto.Todos)
                     {
-                        if (todoDto.Id > 0) // Meglévő módosítása (pl. kipipáltad)
+                        if (todoDto.Id > 0)
                         {
                             var existingTodo = task.Todos.FirstOrDefault(t => t.Id == todoDto.Id);
                             if (existingTodo != null)
@@ -242,9 +284,9 @@ namespace Kerting_Api.Service
                                 existingTodo.WorkerId = todoDto.WorkerId;
                             }
                         }
-                        else // Új hozzáadása (a Vue 0 ID-t küldött)
+                        else
                         {
-                            task.Todos.Add(new TodoItem // <--- ITT A JAVÍTÁS: ProjectTaskTodo helyett TodoItem
+                            task.Todos.Add(new TodoItem
                             {
                                 Text = todoDto.Text,
                                 Amount = todoDto.Amount,
@@ -255,19 +297,17 @@ namespace Kerting_Api.Service
                     }
                 }
 
-                // 3. Felelősök szinkronizálása
                 var toRemoveAssign = task.AssignedTo.Where(a => !taskDto.AssignedTo.Contains(a.UserId)).ToList();
                 foreach (var r in toRemoveAssign) task.AssignedTo.Remove(r);
 
                 var existingUsers = task.AssignedTo.Select(a => a.UserId).ToList();
-                foreach (var userId in taskDto.AssignedTo.Where(id => !existingUsers.Contains(id)))
+                foreach (var uid in taskDto.AssignedTo.Where(id => !existingUsers.Contains(id)))
                 {
-                    task.AssignedTo.Add(new TaskAssignment { UserId = userId });
+                    task.AssignedTo.Add(new TaskAssignment { UserId = uid });
                 }
             }
             else
             {
-                // TELJESEN ÚJ FELADAT LÉTREHOZÁSA
                 task = new ProjectTask
                 {
                     ProjectId = projectId,
@@ -280,10 +320,9 @@ namespace Kerting_Api.Service
 
                 if (taskDto.AssignedTo != null)
                 {
-                    foreach (var userId in taskDto.AssignedTo) task.AssignedTo.Add(new TaskAssignment { UserId = userId });
+                    foreach (var uid in taskDto.AssignedTo) task.AssignedTo.Add(new TaskAssignment { UserId = uid });
                 }
 
-                // Ha egyből részfeladatokkal hozná létre
                 if (taskDto.Todos != null)
                 {
                     foreach (var t in taskDto.Todos)
@@ -302,15 +341,13 @@ namespace Kerting_Api.Service
             }
 
             await _context.SaveChangesAsync();
-
-            // DTO visszaküldése a Vue-nak a friss adatbázis ID-kkal!
             taskDto.Id = task.Id;
 
             if (task.Todos != null)
             {
                 taskDto.Todos = task.Todos.Select(todo => new TodoDto
                 {
-                    Id = todo.Id, // Itt már a valódi, adatbázis által generált ID-t küldjük vissza!
+                    Id = todo.Id,
                     Text = todo.Text,
                     Amount = todo.Amount,
                     Completed = todo.Completed,
@@ -331,24 +368,20 @@ namespace Kerting_Api.Service
             }
         }
 
-        // ==========================================
-        // --- MEGHÍVÓK KEZELÉSE ---
-        // ==========================================
-
+        // --- MEGHÍVÓK ---
         public async Task InviteMemberAsync(int projectId, string userIdToInvite)
         {
             var project = await _context.Projects
                 .Include(p => p.Members)
                 .FirstOrDefaultAsync(p => p.Id == projectId);
 
-            // Ha létezik a projekt, és az illető még nincs benne
             if (project != null && !project.Members.Any(m => m.UserId == userIdToInvite))
             {
                 project.Members.Add(new ProjectMember
                 {
                     ProjectId = projectId,
                     UserId = userIdToInvite,
-                    Role = "Meghívott" // Ő még csak meghívott!
+                    Role = "Meghívott"
                 });
                 await _context.SaveChangesAsync();
             }
@@ -361,7 +394,38 @@ namespace Kerting_Api.Service
 
             if (member != null)
             {
-                member.Role = "Tag"; // Átírjuk Tag-ra, hivatalosan is bekerült!
+                member.Role = "Tag";
+
+                // =========================================================================
+                // 3. CHATBE HELYEZÉS: Amint elfogadta a meghívót, bekerül a szobába is!
+                // =========================================================================
+                var project = await _context.Projects.FindAsync(projectId);
+
+                if (project != null && project.ChatConversationId.HasValue && int.TryParse(userId, out int uId))
+                {
+                    var alreadyInChat = await _context.ConversationParticipants
+                        .AnyAsync(cp => cp.ConversationId == project.ChatConversationId.Value && cp.UserId == uId);
+
+                    if (!alreadyInChat)
+                    {
+                        _context.ConversationParticipants.Add(new ConversationParticipant
+                        {
+                            ConversationId = project.ChatConversationId.Value,
+                            UserId = uId
+                        });
+
+                        _context.Messages.Add(new Message
+                        {
+                            ConversationId = project.ChatConversationId.Value,
+                            SenderId = uId,
+                            Content = "Csatlakoztam a projekthez!",
+                            CreatedAt = DateTime.Now,
+                            IsRead = false
+                        });
+                    }
+                }
+                // =========================================================================
+
                 await _context.SaveChangesAsync();
             }
         }
@@ -373,7 +437,7 @@ namespace Kerting_Api.Service
 
             if (member != null)
             {
-                _context.ProjectMembers.Remove(member); // Töröljük a kapcsolatot
+                _context.ProjectMembers.Remove(member);
                 await _context.SaveChangesAsync();
             }
         }

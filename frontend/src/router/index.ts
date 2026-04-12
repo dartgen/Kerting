@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
+import CalendarView from '@/pages/CalendarView.vue'
 
 const pre = "🌱|";
 const router = createRouter({
@@ -11,6 +12,14 @@ const router = createRouter({
       component: () => import('../pages/HomeView.vue'),
       meta: {
         title: `${pre} Kerting`
+      },
+    },
+    {
+      path: '/calendar',
+      name: 'calendar',
+      component: CalendarView,
+      meta: {
+        title: `${pre} Naptár`
       },
     },
     {
@@ -37,6 +46,15 @@ const router = createRouter({
       component: () => import('../pages/ProfileManagementView.vue'),
       meta: {
         title: `${pre} Profil`,
+        requiresAuth: true
+      }
+    },
+    {
+      path: '/projects',
+      name: 'projects',
+      component: () => import('../pages/ProjectDashboard.vue'),
+      meta: {
+        title: `${pre} Projektek`,
         requiresAuth: true
       }
     },
@@ -157,6 +175,17 @@ const router = createRouter({
       component: () => import('../pages/AdminFeaturedUsersView.vue'),
       meta: {
         title: `${pre} Kiemelt felhasználók`,
+        requiresAuth: true,
+        requiresAdmin: true,
+      }
+    },
+    // ÚJ: Hibajegyek (Tickets) admin útvonal
+    {
+      path: '/admin/tickets',
+      name: 'admin-tickets',
+      component: () => import('../pages/TicketAdminView.vue'),
+      meta: {
+        title: `${pre} Hibajegyek`,
         requiresAuth: true,
         requiresAdmin: true,
       }

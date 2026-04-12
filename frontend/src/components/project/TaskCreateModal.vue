@@ -46,34 +46,13 @@
           ></textarea>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div>
-            <label class="block text-xs font-bold text-earth-300 uppercase mb-1.5 ml-1">Határidő</label>
-            <input
-              v-model="urlapAdat.deadline"
-              type="date"
-              class="w-full bg-earth-950 border border-earth-700 text-earth-50 rounded-xl py-2.5 px-4 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all [color-scheme:dark]"
-            >
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-earth-300 uppercase mb-1.5 ml-1">Felelősök (Több is választható)</label>
-            <div class="bg-earth-950 border border-earth-700 rounded-xl p-2 max-h-32 overflow-y-auto custom-scrollbar space-y-1">
-              <div v-if="projectMembers.length === 0" class="text-xs text-earth-400 p-2 text-center italic">
-                Nincsenek tagok a projektben.
-              </div>
-              <label v-for="member in projectMembers" :key="member.userId" class="flex items-center gap-3 p-2 hover:bg-earth-800 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-earth-700">
-                <input
-                  type="checkbox"
-                  :value="member.userId"
-                  v-model="urlapAdat.assignedTo"
-                  class="w-4 h-4 rounded border-earth-600 bg-earth-900 text-green-500 focus:ring-green-500/50"
-                >
-                <span class="text-earth-50 text-sm flex-1 truncate">{{ member.name }}</span>
-                <span class="text-[10px] text-earth-400 uppercase tracking-wider">{{ member.role }}</span>
-              </label>
-            </div>
-          </div>
+        <div class="w-full sm:w-1/2">
+          <label class="block text-xs font-bold text-earth-300 uppercase mb-1.5 ml-1">Határidő</label>
+          <input
+            v-model="urlapAdat.deadline"
+            type="date"
+            class="w-full bg-earth-950 border border-earth-700 text-earth-50 rounded-xl py-2.5 px-4 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all [color-scheme:dark]"
+          >
         </div>
 
         <div class="pt-4 border-t border-earth-100/10 flex justify-end gap-3 mt-6">
@@ -110,7 +89,6 @@ const urlapAdat = reactive({
   description: props.editData?.description || '',
   amount: props.editData?.amount || null,
   deadline: props.editData?.deadline || props.defaultDeadline || '',
-  assignedTo: props.editData?.assignedTo ? [...props.editData.assignedTo] : [],
   status: props.editData?.status || 'todo'
 });
 
@@ -118,8 +96,9 @@ const bezaras = () => emit('close');
 
 const mentes = () => {
   if (!urlapAdat.title.trim()) return;
-  // A 'save' emit elküldi az új adatokat (ha volt id-ja, a szülő tudni fogja, hogy frissítés)
-  emit('save', { ...urlapAdat, assignedTo: [...urlapAdat.assignedTo] });
+
+  // JAVÍTÁS: Csak az űrlapon szereplő adatokat küldjük vissza, a 'assignedTo' már nincs benne
+  emit('save', { ...urlapAdat });
   bezaras();
 };
 </script>

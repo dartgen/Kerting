@@ -137,7 +137,7 @@ const submitWork = async () => {
 
       <!-- Cimkek -->
       <div class="mb-4">
-        <ActivityTagPicker v-model="work.cimkek" :available-tags="allTags" label="Tevékenységek" placeholder="Tevékenység keresése vagy hozzáadása..." empty-state-text="Írd be mivel foglalkozol!" />
+        <ActivityTagPicker :model-value="work.cimkek || []" @update:model-value="work.cimkek = $event" :available-tags="allTags" label="Tevékenységek" placeholder="Tevékenység keresése vagy hozzáadása..." empty-state-text="Írd be mivel foglalkozol!" />
       </div>
 
       <!-- Kiknek szól -->

@@ -14,6 +14,8 @@ namespace Libary.Model.Project
         public string? Description { get; set; }
         public DateTime? Deadline { get; set; }
         public string Status { get; set; } = "ongoing"; // ongoing, archived, invited
+                                                        // Valahol a többi property között:
+        public int? ChatConversationId { get; set; }
 
         // Kapcsolatok
         public ICollection<ProjectMember> Members { get; set; } = new List<ProjectMember>();
