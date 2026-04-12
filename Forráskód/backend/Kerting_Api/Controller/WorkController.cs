@@ -1,0 +1,697 @@
+﻿using Kerting_Api.Interface;
+using Kerting_Api.DTO;
+using Libary;
+using Libary.Model.Work;
+using Microsoft.Data.SqlClient;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+using System.Text.Json;
+
+namespace Kerting_Api.Controller
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    /// <summary>
+    /// Work modul HTTP vezérlője.
+    /// Feladata a kérés/válasz szint kezelése: auth, paraméter validáció, HTTP státuszkódok,
+    /// míg a tényleges üzleti logikát a WorkService valósítja meg.
+    /// </summary>
+    public class WorkController : ControllerBase
+    {
+        private readonly IWorkService _workService;
+
+        public WorkController(IWorkService workService)
+        {
+            _workService = workService;
+        }
+
+        // A query paraméterekből egységes szűrőobjektumot készít,
+        // így a különböző listázó végpontok ugyanazzal a logikával dolgoznak.
+        private static WorkFilterParams BuildWorkFilters(
+            decimal? priceMin,
+            decimal? priceMax,
+            DateTime? createdFrom,
+            DateTime? createdTo,
+            string? targetAudience,
+            string? status)
+        {
+            return new WorkFilterParams
+            {
+                PriceMin = priceMin,
+                PriceMax = priceMax,
+                CreatedFrom = createdFrom,
+                CreatedTo = createdTo,
+                TargetAudience = targetAudience,
+                Status = status
+            };
+        }
+
+        // SQL schema mismatch detektálás:
+        // segít kulturált visszalépő választ adni, ha a patch script(ek) még nem futottak le.
+        private static bool IsWorkSchemaMismatch(Exception ex)
+        {
+            Exception? current = ex;
+            while (current != null)
+            {
+                if (current is SqlException sqlEx && (sqlEx.Number == 207 || sqlEx.Number == 208))
+                {
+                    return true;
+                }
+
+                var message = current.Message;
+                if (!string.IsNullOrWhiteSpace(message) &&
+                    (message.Contains("Invalid object name", StringComparison.OrdinalIgnoreCase) ||
+                     message.Contains("Invalid column name", StringComparison.OrdinalIgnoreCase)))
+                {
+                    return true;
+                }
+
+                current = current.InnerException;
+            }
+
+            return false;
+        }
+
+        // Egyszerű segédfüggvény az admin végpontok védelméhez.
+        private async Task<bool> IsAdminAsync()
+        {
+            var userIdString = User.FindFirst("Id")?.Value;
+            if (!int.TryParse(userIdString, out var userId))
+            {
+                return false;
+            }
+
+            return await _workService.IsAdminAsync(userId);
+        }
+
+        /// <summary>
+        /// Nyitott munkák listázása lapozással és opcionális szűrőkkel.
+        /// Publikus végpont, ezért bejelentkezés nélkül is elérhető.
+        /// </summary>
+        [HttpGet("open")]
+        public async Task<IActionResult> GetOpenWorks(
+            [FromQuery] int page = 1, 
+            [FromQuery] int pageSize = 6,
+            [FromQuery] decimal? priceMin = null,
+            [FromQuery] decimal? priceMax = null,
+            [FromQuery] DateTime? createdFrom = null,
+            [FromQuery] DateTime? createdTo = null,
+            [FromQuery] string? targetAudience = null,
+            [FromQuery] string? status = null)
+        {
+            try
+            {
+                var filters = new WorkFilterParams
+                {
+                    PriceMin = priceMin,
+                    PriceMax = priceMax,
+                    CreatedFrom = createdFrom,
+                    CreatedTo = createdTo,
+                    TargetAudience = targetAudience,
+                    Status = status
+                    };
+
+                var result = await _workService.GetAllOpenWorksAsync(page, pageSize, filters);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                // Ha a Work tábla vagy oszlopok még hiányoznak,
+                // a frontend stabilitás érdekében üres lista megy vissza figyelmeztető headerrel.
+                if (ex.Message.Contains("Invalid object name", StringComparison.OrdinalIgnoreCase))
+                {
+                    Response.Headers.Append("X-Work-Warning", "Work tables are missing. Run sql/work_patch.sql.");
+                    return Ok(new PaginatedResponse<Work>(new List<Work>(), 0, 1, pageSize));
+                }
+
+                return StatusCode(500, new { message = "A munkák betöltése sikertelen.", detail = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Bejelentkezett user szemszögéből látható munkák listázása.
+        /// Beleértve saját munkákat és elfogadott jelentkezéshez kötött munkákat is.
+        /// </summary>
+        [HttpGet("visible")]
+        [Authorize]
+        public async Task<IActionResult> GetVisibleWorks(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 6,
+            [FromQuery] decimal? priceMin = null,
+            [FromQuery] decimal? priceMax = null,
+            [FromQuery] DateTime? createdFrom = null,
+            [FromQuery] DateTime? createdTo = null,
+            [FromQuery] string? targetAudience = null,
+            [FromQuery] string? status = null)
+        {
+            var userIdStr = User.FindFirstValue("Id");
+            if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
+
+            try
+            {
+                var filters = BuildWorkFilters(priceMin, priceMax, createdFrom, createdTo, targetAudience, status);
+                var result = await _workService.GetVisibleWorksAsync(int.Parse(userIdStr), page, pageSize, filters);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message.Contains("Invalid object name", StringComparison.OrdinalIgnoreCase))
+                {
+                    Response.Headers.Append("X-Work-Warning", "Work tables are missing. Run sql/work_patch.sql.");
+                    return Ok(new PaginatedResponse<WorkListItemDto>(new List<WorkListItemDto>(), 0, 1, pageSize));
+                }
+
+                return StatusCode(500, new { message = "A munkák betöltése sikertelen.", detail = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// A user saját munka-nézetéhez tartozó lista végpont.
+        /// </summary>
+        [HttpGet("my")]
+        [Authorize]
+        public async Task<IActionResult> GetMyWorks(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 6,
+            [FromQuery] decimal? priceMin = null,
+            [FromQuery] decimal? priceMax = null,
+            [FromQuery] DateTime? createdFrom = null,
+            [FromQuery] DateTime? createdTo = null,
+            [FromQuery] string? targetAudience = null,
+            [FromQuery] string? status = null)
+        {
+            var userIdStr = User.FindFirstValue("Id");
+            if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
+
+            try
+            {
+                var filters = BuildWorkFilters(priceMin, priceMax, createdFrom, createdTo, targetAudience, status);
+                var result = await _workService.GetMyWorksAsync(int.Parse(userIdStr), page, pageSize, filters);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message.Contains("Invalid object name", StringComparison.OrdinalIgnoreCase))
+                {
+                    Response.Headers.Append("X-Work-Warning", "Work tables are missing. Run sql/work_patch.sql.");
+                    return Ok(new PaginatedResponse<WorkListItemDto>(new List<WorkListItemDto>(), 0, 1, pageSize));
+                }
+
+                return StatusCode(500, new { message = "A saját munkák betöltése sikertelen.", detail = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Admin publikus munkalista.
+        /// Kizárólag admin jogosultsággal hívható.
+        /// </summary>
+        [HttpGet("admin/public")]
+        [Authorize]
+        public async Task<IActionResult> GetAdminPublicWorks()
+        {
+            if (!await IsAdminAsync())
+            {
+                return Forbid();
+            }
+
+            try
+            {
+                var result = await _workService.GetAdminPublicWorksAsync();
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                if (IsWorkSchemaMismatch(ex))
+                {
+                    Response.Headers.Append("X-Work-Warning", "Work tables are missing or outdated. Run sql/work_patch.sql.");
+                    return Ok(new List<Work>());
+                }
+
+                return StatusCode(500, new { message = "A kész munkák betöltése sikertelen.", detail = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Egy munka részletes adatainak lekérdezése ID alapján.
+        /// </summary>
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetWork(int id)
+        {
+            var work = await _workService.GetWorkByIdAsync(id);
+            if (work == null) return NotFound();
+            return Ok(work);
+        }
+
+        /// <summary>
+        /// A megadott munkához tartozó jelentkezők listája.
+        /// </summary>
+        [HttpGet("{id}/applicants")]
+        public async Task<IActionResult> GetApplicants(int id)
+        {
+            var applicants = await _workService.GetWorkApplicantsAsync(id);
+            return Ok(applicants);
+        }
+
+        /// <summary>
+        /// Új munka létrehozása a bejelentkezett user nevében.
+        /// A szerző azonosítóját mindig tokenből vesszük, nem kliens inputból.
+        /// </summary>
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> CreateWork([FromBody] Work work)
+        {
+            var userIdStr = User.FindFirstValue("Id");
+            if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
+
+            try
+            {
+                work.AuthorId = int.Parse(userIdStr);
+                var result = await _workService.CreateWorkAsync(work);
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message.Contains("Invalid object name", StringComparison.OrdinalIgnoreCase))
+                {
+                    return StatusCode(503, new { message = "A Work adatbázis séma hiányzik. Futtasd a sql/work_patch.sql patch-et." });
+                }
+
+                return StatusCode(500, new { message = "Hiba történt a munka kiírásakor.", detail = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Munka szerkesztése.
+        /// Alapelv: szerző vagy admin módosíthat.
+        /// </summary>
+        [HttpPut("{id}")]
+        [Authorize]
+        public async Task<IActionResult> UpdateWork(int id, [FromBody] Work work)
+        {
+            var userIdStr = User.FindFirstValue("Id");
+            if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
+            int userId = int.Parse(userIdStr);
+
+            var existingWork = await _workService.GetWorkByIdAsync(id);
+            if (existingWork == null) return NotFound();
+            
+            // Csak a szerző vagy admin módosíthat.
+            if (existingWork.AuthorId != userId && !User.IsInRole("Admin"))
+            {
+                return Forbid();
+            }
+
+            var result = await _workService.UpdateWorkAsync(id, work);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Munka törlése szerző vagy admin jogosultsággal.
+        /// </summary>
+        [HttpDelete("{id}")]
+        [Authorize]
+        public async Task<IActionResult> DeleteWork(int id)
+        {
+            var userIdStr = User.FindFirstValue("Id");
+            if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
+            int userId = int.Parse(userIdStr);
+
+            var existingWork = await _workService.GetWorkByIdAsync(id);
+            if (existingWork == null) return NotFound();
+
+            if (existingWork.AuthorId != userId && !User.IsInRole("Admin"))
+            {
+                return Forbid();
+            }
+
+            await _workService.DeleteWorkAsync(id);
+            return Ok();
+        }
+
+        /// <summary>
+        /// Jelentkezés munkára.
+        /// Több kérésadat-formátumot fogad a visszafelé kompatibilitás miatt
+        /// (objektum: { offeredPrice } vagy közvetlen decimal/string).
+        /// </summary>
+        [HttpPost("{id}/apply")]
+        [Authorize]
+        public async Task<IActionResult> ApplyForWork(int id, [FromBody] JsonElement request)
+        {
+            var userIdStr = User.FindFirstValue("Id");
+            if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
+
+            decimal? offeredPrice = null;
+
+            // Kompatibilitás: közvetlen szám formátum kezelése.
+            if (request.ValueKind == JsonValueKind.Number && request.TryGetDecimal(out var directDecimal))
+            {
+                offeredPrice = directDecimal;
+            }
+            else if (request.ValueKind == JsonValueKind.Object)
+            {
+                // Kompatibilitás: camelCase és PascalCase mezőnév támogatás.
+                if (request.TryGetProperty("offeredPrice", out var offeredPriceNode) || request.TryGetProperty("OfferedPrice", out offeredPriceNode))
+                {
+                    if (offeredPriceNode.ValueKind == JsonValueKind.Number && offeredPriceNode.TryGetDecimal(out var objectDecimal))
+                    {
+                        offeredPrice = objectDecimal;
+                    }
+                    else if (offeredPriceNode.ValueKind == JsonValueKind.String)
+                    {
+                        var value = offeredPriceNode.GetString();
+                        if (decimal.TryParse(value, out var parsed))
+                        {
+                            offeredPrice = parsed;
+                        }
+                    }
+                }
+            }
+
+            try
+            {
+                var applicant = await _workService.ApplyForWorkAsync(id, int.Parse(userIdStr), offeredPrice);
+                return Ok(applicant);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Hiba történt a jelentkezés során.", detail = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Jelentkező elfogadása a munkára.
+        /// </summary>
+        [HttpPost("applicant/{applicantId}/accept")]
+        [Authorize]
+        public async Task<IActionResult> AcceptApplicant(int applicantId)
+        {
+            var userIdStr = User.FindFirstValue("Id");
+            if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
+
+            var accepted = await _workService.AcceptApplicantAsync(applicantId);
+            return Ok(accepted);
+        }
+
+        /// <summary>
+        /// Új teendő hozzáadása egy munkához.
+        /// </summary>
+        [HttpPost("{id}/todo")]
+        [Authorize]
+        public async Task<IActionResult> AddTodo(int id, [FromBody] WorkTodo todo)
+        {
+            var userIdStr = User.FindFirstValue("Id");
+            if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
+
+            var result = await _workService.AddTodoAsync(id, todo, int.Parse(userIdStr));
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Teendő teljesített állapotba állítása üzenettel.
+        /// </summary>
+        [HttpPost("todo/{todoId}/toggle")]
+        [Authorize]
+        public async Task<IActionResult> ToggleTodo(int todoId, [FromBody] string doneMessage)
+        {
+            var userIdStr = User.FindFirstValue("Id");
+            if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
+
+            var result = await _workService.ToggleTodoAsync(todoId, int.Parse(userIdStr), doneMessage);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Egy kép feltöltése a munkához.
+        /// </summary>
+        [HttpPost("{id}/image")]
+        [Authorize]
+        public async Task<IActionResult> UploadImage(int id, IFormFile file)
+        {
+            if (file == null || file.Length == 0) return BadRequest("No file uploaded");
+            
+            var directoryPath = Path.Combine(Directory.GetCurrentDirectory(), "Resources", "Work");
+            var img = await _workService.UploadWorkImageAsync(id, file, directoryPath);
+            return Ok(img);
+        }
+
+        /// <summary>
+        /// Kiemelt kép (showcase) flag kapcsolása.
+        /// </summary>
+        [HttpPost("image/{imageId}/showcase")]
+        [Authorize(Roles = "Gardener,Admin,User")] // vagy egyedi üzleti logika alapján
+        public async Task<IActionResult> ToggleShowcaseImage(int imageId)
+        {
+            var success = await _workService.ToggleShowcaseImageAsync(imageId);
+            if (!success) return NotFound();
+            return Ok();
+        }
+
+        /// <summary>
+        /// Munka státusz frissítése explicit értékre.
+        /// </summary>
+        [HttpPut("{id}/status")]
+        [Authorize]
+        public async Task<IActionResult> UpdateStatus(int id, [FromBody] string status)
+        {
+            var result = await _workService.SetWorkStatusAsync(id, status);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Kiemelt munkák listája landing/admin megjelenítéshez.
+        /// </summary>
+        [HttpGet("featured")]
+        public async Task<IActionResult> GetFeaturedWorks()
+        {
+            try
+            {
+                var featured = await _workService.GetFeaturedWorksAsync();
+                return Ok(featured);
+            }
+            catch (Exception ex)
+            {
+                // Ha a séma még nincs patch-elve, üres listával tartjuk működőképesen a klienst.
+                if (IsWorkSchemaMismatch(ex))
+                {
+                    Response.Headers.Append("X-FeaturedWork-Warning", "Work schema is outdated. Run sql/work_patch.sql and sql/image_pairing_patch.sql.");
+                    return Ok(new List<object>());
+                }
+
+                return StatusCode(500, new { message = "Kiemelt munkák betöltése sikertelen.", detail = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Munka kiemelése admin jogosultsággal.
+        /// </summary>
+        [HttpPost("{id}/feature")]
+        [Authorize]
+        public async Task<IActionResult> FeatureWork(int id)
+        {
+            if (!await IsAdminAsync())
+            {
+                return Forbid();
+            }
+
+            var featured = await _workService.FeatureWorkAsync(id);
+            if (featured == null) return BadRequest("Could not feature work (maybe it's not Public).");
+            return Ok(featured);
+        }
+
+        /// <summary>
+        /// Kiemelés törlése admin joggal.
+        /// </summary>
+        [HttpDelete("featured/{id}")]
+        [Authorize]
+        public async Task<IActionResult> RemoveFeaturedWork(int id)
+        {
+            if (!await IsAdminAsync())
+            {
+                return Forbid();
+            }
+
+            await _workService.RemoveFeaturedWorkAsync(id);
+            return Ok();
+        }
+
+        /// <summary>
+        /// Bulk képfeltöltés ugyanahhoz a munkához.
+        /// </summary>
+        [HttpPost("{id}/images")]
+        [Authorize]
+        public async Task<IActionResult> UploadImages(int id, IFormFileCollection files)
+        {
+            if (files == null || files.Count == 0)
+                return BadRequest("No files uploaded");
+
+            try
+            {
+                var directoryPath = Path.Combine(Directory.GetCurrentDirectory(), "Resources", "Work");
+                var images = await _workService.UploadWorkImagesAsync(id, files, directoryPath);
+                return Ok(images);
+            }
+            catch (Exception ex)
+            {
+                if (IsWorkSchemaMismatch(ex))
+                {
+                    return StatusCode(503, new
+                    {
+                        message = "A Work séma elavult vagy hiányos.",
+                        detail = "Futtasd a backend/sql/work_patch.sql és backend/sql/image_pairing_patch.sql scriptet."
+                    });
+                }
+
+                return StatusCode(500, new { message = "Hiba a képek feltöltése során.", detail = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Kép törlése adott munkából.
+        /// </summary>
+        [HttpDelete("{workId}/image/{imageId}")]
+        [Authorize]
+        public async Task<IActionResult> DeleteImage(int workId, int imageId)
+        {
+            var userIdStr = User.FindFirstValue("Id");
+            if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
+
+            try
+            {
+                await _workService.DeleteWorkImageAsync(imageId, int.Parse(userIdStr));
+                return Ok();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Hiba a kép törlése során.", detail = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Kép metadata frissítése (pl. showcase/párosítás).
+        /// </summary>
+        [HttpPatch("{workId}/image/{imageId}")]
+        [Authorize]
+        public async Task<IActionResult> UpdateImageMetadata(int workId, int imageId, [FromBody] WorkImage metadata)
+        {
+            try
+            {
+                var result = await _workService.UpdateImageMetadataAsync(imageId, metadata);
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Hiba a kép metaadatainak frissítése során.", detail = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Két kép összekapcsolása before/after nézethez.
+        /// </summary>
+        [HttpPost("image/{imageId}/link")]
+        [Authorize]
+        public async Task<IActionResult> LinkImagePair(int imageId, [FromBody] int relatedImageId)
+        {
+            try
+            {
+                var result = await _workService.LinkImagePairAsync(imageId, relatedImageId);
+                return Ok(new { success = result });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Hiba a képek összekapcsolása során.", detail = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Jelentkező elutasítása.
+        /// </summary>
+        [HttpPost("applicant/{applicantId}/reject")]
+        [Authorize]
+        public async Task<IActionResult> RejectApplicant(int applicantId)
+        {
+            var userIdStr = User.FindFirstValue("Id");
+            if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
+
+            try
+            {
+                var result = await _workService.RejectApplicantAsync(applicantId, int.Parse(userIdStr));
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Hiba az elutasítás során.", detail = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Saját jelentkezés visszavonása.
+        /// </summary>
+        [HttpPost("applicant/{applicantId}/withdraw")]
+        [Authorize]
+        public async Task<IActionResult> WithdrawApplication(int applicantId)
+        {
+            var userIdStr = User.FindFirstValue("Id");
+            if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
+
+            try
+            {
+                var result = await _workService.WithdrawApplicationAsync(applicantId, int.Parse(userIdStr));
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Hiba a visszavonás során.", detail = ex.Message });
+            }
+        }
+    }
+}
