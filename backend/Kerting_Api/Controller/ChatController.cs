@@ -1,6 +1,7 @@
 ﻿using Libary;
 using Libary.Model.Chat;
-using Libary.Model.Auth; // ÚJ: Ez kell a Login modell eléréséhez!
+using Libary.Model.Auth;
+using Libary.Model.Project; // ÚJ: Ez feltétlenül kell a Project modell eléréséhez!
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -36,6 +37,10 @@ namespace Kerting_Api.Controller
 
             var rawConversations = await _context.Conversations
                 .Where(c => c.Participants.Any(p => p.UserId == userId))
+                // ==============================================================================
+                // ÚJ VARÁZSLAT: Kiszűrjük a csevegést, ha a hozzá tartozó projekt archiválva van!
+                // ==============================================================================
+                .Where(c => !_context.Set<Project>().Any(p => p.ChatConversationId == c.Id && p.Status == "archived"))
                 .OrderByDescending(c => c.LastMessageAt)
                 .Select(c => new
                 {
@@ -43,8 +48,6 @@ namespace Kerting_Api.Controller
                     c.IsGroup,
                     c.Title,
                     c.GroupImage,
-
-                    // ÚJ TRÜKK: Közvetlenül az SQL-ben lekérdezzük a Username-t a Login táblából!
                     Participants = c.Participants.Select(p => new
                     {
                         p.UserId,
@@ -54,7 +57,6 @@ namespace Kerting_Api.Controller
                                            .Select(l => l.Username)
                                            .FirstOrDefault()
                     }),
-
                     LastMessage = _context.Messages
                         .Where(m => m.ConversationId == c.Id)
                         .OrderByDescending(m => m.CreatedAt)
@@ -66,15 +68,12 @@ namespace Kerting_Api.Controller
 
             var dtos = rawConversations.Select(c =>
             {
-                // Kikeressük a partnert az új, bővített listából
                 var partner = c.Participants.FirstOrDefault(p => p.UserId != userId);
                 string megjelenitendoNev = "";
 
                 if (partner != null && partner.User != null)
                 {
                     string teljesNev = (partner.User.VezetekNev + " " + partner.User.KeresztNev).Trim();
-
-                    // Ha a teljesNév üres, bevetjük a Login táblából kihúzott Username-t
                     megjelenitendoNev = string.IsNullOrWhiteSpace(teljesNev)
                         ? (partner.Username ?? "Ismeretlen felhasználó")
                         : teljesNev;
@@ -85,9 +84,7 @@ namespace Kerting_Api.Controller
                     Id = c.Id,
                     IsGroup = c.IsGroup,
                     Nev = c.IsGroup ? (c.Title ?? "Ismeretlen csoport") : megjelenitendoNev,
-                    Avatar = c.IsGroup
-                        ? (c.GroupImage ?? "")
-                        : (partner?.User?.IMGString ?? ""),
+                    Avatar = c.IsGroup ? (c.GroupImage ?? "") : (partner?.User?.IMGString ?? ""),
                     UtolsoUzenet = c.LastMessage != null ? c.LastMessage.Content : "Nincs üzenet",
                     UtolsoIdo = c.LastMessage != null ? c.LastMessage.CreatedAt.ToString("s") : "",
                     Olvasatlan = c.UnreadCount > 0
@@ -107,6 +104,10 @@ namespace Kerting_Api.Controller
 
             if (!isParticipant) return Forbid("Nincs jogosultságod ehhez a beszélgetéshez.");
 
+            // ÚJ: Biztonsági ellenőrzés - Archivált projekt chatjébe nem lehet belépni!
+            var isArchived = await _context.Set<Project>().AnyAsync(p => p.ChatConversationId == conversationId && p.Status == "archived");
+            if (isArchived) return BadRequest("A projekt archiválva lett, a csevegés jelenleg szünetel.");
+
             var messages = await _context.Messages
                 .Include(m => m.Sender)
                 .Where(m => m.ConversationId == conversationId)
@@ -118,8 +119,6 @@ namespace Kerting_Api.Controller
                     ImageUrl = m.ImageUrl,
                     Ido = m.CreatedAt.ToString("s"),
                     Sajat = m.SenderId == userId,
-
-                    // ÚJ TRÜKK IDE IS: Ha nincs keresztnév, on-the-fly kikeresi a Login-ból a nevet
                     SenderName = string.IsNullOrWhiteSpace(m.Sender.KeresztNev)
                         ? _context.Set<Login>().Where(l => l.Id == m.SenderId).Select(l => l.Username).FirstOrDefault()
                         : m.Sender.KeresztNev
@@ -132,10 +131,7 @@ namespace Kerting_Api.Controller
 
             if (unreadMessages.Any())
             {
-                foreach (var msg in unreadMessages)
-                {
-                    msg.IsRead = true;
-                }
+                foreach (var msg in unreadMessages) msg.IsRead = true;
                 await _context.SaveChangesAsync();
             }
 
@@ -152,6 +148,10 @@ namespace Kerting_Api.Controller
 
             if (!isParticipant) return Forbid("Nincs jogosultságod ide írni.");
 
+            // ÚJ: Biztonsági ellenőrzés - Archivált projekt chatjébe nem lehet írni!
+            var isArchived = await _context.Set<Project>().AnyAsync(p => p.ChatConversationId == dto.ConversationId && p.Status == "archived");
+            if (isArchived) return BadRequest("A projekt archiválva lett, ide nem küldhetsz üzenetet.");
+
             var newMessage = new Message
             {
                 ConversationId = dto.ConversationId,
@@ -164,10 +164,7 @@ namespace Kerting_Api.Controller
             _context.Messages.Add(newMessage);
 
             var conversation = await _context.Conversations.FindAsync(dto.ConversationId);
-            if (conversation != null)
-            {
-                conversation.LastMessageAt = DateTime.Now;
-            }
+            if (conversation != null) conversation.LastMessageAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
 
@@ -195,10 +192,7 @@ namespace Kerting_Api.Controller
                 .Select(c => c.Id)
                 .FirstOrDefaultAsync();
 
-            if (existingConversationId != 0)
-            {
-                return Ok(existingConversationId);
-            }
+            if (existingConversationId != 0) return Ok(existingConversationId);
 
             var newConversation = new Conversation
             {
@@ -232,14 +226,16 @@ namespace Kerting_Api.Controller
                 .AnyAsync(cp => cp.ConversationId == conversationId && cp.UserId == userId);
 
             if (!isParticipant) return Forbid("Nincs jogosultságod ide írni.");
+
+            // ÚJ: Biztonsági ellenőrzés
+            var isArchived = await _context.Set<Project>().AnyAsync(p => p.ChatConversationId == conversationId && p.Status == "archived");
+            if (isArchived) return BadRequest("A projekt archiválva lett, ide nem küldhetsz képet.");
+
             if (image == null || image.Length == 0) return BadRequest("Nincs kiválasztva kép.");
 
             string uploadsFolder = Path.Combine(_env.ContentRootPath, "Resources", "ChatImages");
 
-            if (!Directory.Exists(uploadsFolder))
-            {
-                Directory.CreateDirectory(uploadsFolder);
-            }
+            if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
 
             string extension = Path.GetExtension(image.FileName);
             string uniqueFileName = Guid.NewGuid().ToString() + extension;

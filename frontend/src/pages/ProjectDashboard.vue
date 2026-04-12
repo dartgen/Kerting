@@ -129,7 +129,14 @@
                 <p class="text-earth-300 text-sm mt-1.5">{{ activeProject.description }}</p>
               </div>
 
-              <div class="flex flex-col items-end shrink-0 mt-2 xl:mt-0 xl:pt-8 w-full xl:w-auto">
+              <div class="flex flex-col items-end shrink-0 mt-2 xl:mt-0 xl:pt-8 w-full xl:w-auto gap-3">
+                <button v-if="activeProject.status === 'ongoing' && activeProject.chatConversationId"
+                        @click="ugrasACsevegeshez(activeProject.chatConversationId)"
+                        class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-md active:scale-95 w-full xl:w-auto justify-center">
+                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                  Csoportos Csevegés
+                </button>
+
                 <div class="flex items-center gap-2 text-orange-400 font-bold bg-orange-400/10 px-4 py-2 rounded-xl border border-orange-400/20 shadow-sm w-full xl:w-auto justify-center">
                   <span>Határidő: {{ activeProject.deadline || 'Nincs megadva' }}</span>
                 </div>
@@ -428,6 +435,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
 import { projectService } from '@/services/projectService';
 import apiClient from '@/services/axios';
@@ -449,6 +457,7 @@ const hideImage = (event: Event) => {
 
 // --- AUTHENTIKÁCIÓ ÉS AZONOSÍTÁS ---
 const authStore = useAuthStore();
+const router = useRouter();
 
 // Megjegyzés: A (authStore.profilAdatok as any) azért kell, hogy a TS ne sírjon a hiányzó tulajdonságok miatt a build során
 const currentUserId = computed(() => String((authStore.profilAdatok as any)?.id || '').toLowerCase().trim());
@@ -800,6 +809,11 @@ const feladatTorlese = async (taskId: number) => {
   } catch (error) {
     console.error("Hiba a feladat törlésekor", error);
   }
+};
+
+// --- ÚJ LOGIKA A GOMBHOZ ---
+const ugrasACsevegeshez = (chatId: number) => {
+  router.push({ path: '/chat', query: { id: chatId } });
 };
 </script>
 

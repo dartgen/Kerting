@@ -11,6 +11,7 @@ namespace Kerting_Api.DTO
         public string? Description { get; set; }
         public string? Deadline { get; set; }
         public string? Status { get; set; }
+        public int? ChatConversationId { get; set; }
         public List<ProjectMemberDto>? Members { get; set; } = new();
         public List<TaskDto>? Tasks { get; set; } = new();
     }

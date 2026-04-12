@@ -12,7 +12,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input type="text" placeholder="Keresés..."
-                   class="w-full bg-earth-50/5 border border-earth-200/20 rounded-lg py-2.5 pl-9 pr-4 text-sm text-earth-50 focus:outline-none focus:ring-1 focus:ring-green-400 transition-all placeholder-earth-200/40 shadow-inner">
+                   class="w-full bg-earth-50/5 border border-earth-200/20 rounded-lg py-2.5 pl-9 pr-4 text-sm text-earth-50 focus:outline-none focus:ring-1 focus:ring-green-400 transition-colors placeholder-earth-200/40 shadow-inner">
           </div>
         </div>
 
@@ -24,14 +24,14 @@
           <div v-else v-for="chat in beszelgetesek" :key="chat.id"
                @click="aktivChatId = chat.id"
                :class="[
-                 'p-4 flex items-center gap-3 cursor-pointer transition-all border-l-4',
+                 'p-4 flex items-center gap-3 cursor-pointer transition-colors border-l-4',
                  aktivChatId === chat.id
                   ? 'bg-green-500/10 border-green-500'
                   : 'border-transparent hover:bg-earth-50/5'
                ]">
             <div class="relative flex-shrink-0">
               <div class="w-12 h-12 rounded-full border border-earth-200/20 overflow-hidden bg-earth-800 shadow-md">
-                <img v-if="chat.avatar" v-lazy="getImageUrl(chat.avatar)" @error="chat.avatar = ''" class="w-full h-full object-cover">
+                <img v-if="chat.avatar" :src="getImageUrl(chat.avatar)" :key="'list-avatar-'+chat.id" loading="lazy" @error="chat.avatar = ''" class="w-full h-full object-cover">
                 <div v-else class="w-full h-full flex items-center justify-center text-earth-400">
                   <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
                 </div>
@@ -57,7 +57,7 @@
                 <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" /></svg>
               </button>
               <div class="w-10 h-10 rounded-full border border-earth-200/30 overflow-hidden bg-earth-800 shadow-sm">
-                <img v-if="aktualisChat?.avatar" v-lazy="getImageUrl(aktualisChat?.avatar)" @error="aktualisChat.avatar = ''" class="w-full h-full object-cover" />
+                <img v-if="aktualisChat?.avatar" :src="getImageUrl(aktualisChat?.avatar)" :key="'header-avatar-'+aktualisChat.id" loading="lazy" @error="aktualisChat.avatar = ''" class="w-full h-full object-cover" />
                 <div v-else class="w-full h-full flex items-center justify-center text-earth-400">
                   <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
                 </div>
@@ -74,7 +74,7 @@
               Betöltés...
             </div>
 
-            <div v-for="(msg, index) in uzenetek" :key="index"
+            <div v-for="msg in uzenetek" :key="msg.id"
                  :class="['flex w-full', msg.sajat ? 'justify-end' : 'justify-start']">
 
               <div class="flex flex-col max-w-[85%] sm:max-w-[75%]" :class="msg.sajat ? 'items-end' : 'items-start'">
@@ -90,7 +90,7 @@
                 ]">
 
                   <div v-if="msg.imageUrl" class="mb-2">
-                    <img v-lazy="getChatImageUrl(msg.imageUrl)" alt="Kép" class="max-w-full h-auto max-h-64 rounded-xl object-contain border border-earth-200/20 cursor-pointer" />
+                    <img :src="getChatImageUrl(msg.imageUrl)" :key="'msg-img-'+msg.id" loading="lazy" alt="Kép" class="max-w-full h-auto max-h-64 rounded-xl object-contain border border-earth-200/20 cursor-pointer" />
                   </div>
 
                   <p v-if="!msg.imageUrl || msg.szoveg !== 'Fénykép'" class="leading-relaxed whitespace-pre-wrap break-all">{{ msg.szoveg }}</p>
@@ -104,29 +104,30 @@
           </div>
 
           <div class="p-4 bg-earth-900/40 border-t border-earth-200/20">
-            <form @submit.prevent="uzenetKuldese" class="flex items-center gap-2 max-w-5xl mx-auto">
+            <form @submit.prevent="uzenetKuldese" class="flex items-center gap-3 max-w-5xl mx-auto">
               <input type="file" ref="kepInput" @change="kepKivalasztva" accept="image/*" class="hidden" />
+
               <button type="button" @click="triggerKepFeltoltes" :disabled="kuldesFolyamatban"
-                      class="p-3.5 text-earth-300 hover:text-green-400 bg-earth-50/5 hover:bg-earth-50/10 border border-earth-200/30 rounded-xl transition-all disabled:opacity-50 shrink-0">
+                      class="w-12 h-12 flex items-center justify-center text-earth-300 hover:text-green-400 bg-earth-50/5 hover:bg-earth-50/10 border border-earth-200/30 rounded-xl transition-colors disabled:opacity-50 shrink-0">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </button>
 
-              <div class="relative flex-1">
+              <div class="relative flex-1 flex">
                 <input
                   ref="uzenetInput"
                   v-model="ujUzenet"
                   :disabled="kuldesFolyamatban"
                   placeholder="Üzenet írása..."
-                  class="w-full bg-earth-50/5 border border-earth-200/30 rounded-xl py-3.5 px-5 text-earth-50 focus:outline-none focus:ring-2 focus:ring-green-500/50 transition-all placeholder-earth-200/30 shadow-inner disabled:opacity-50"
+                  class="w-full bg-earth-50/5 border border-earth-200/30 rounded-xl py-3 px-5 text-earth-50 focus:outline-none focus:border-green-500 transition-colors placeholder-earth-200/30 shadow-inner disabled:opacity-50"
                 />
               </div>
 
               <button type="submit" :disabled="!ujUzenet.trim() || kuldesFolyamatban"
-                      class="p-3.5 bg-green-500/90 hover:bg-green-400 text-white rounded-xl shadow-lg shadow-green-900/20 transition-all disabled:opacity-30 disabled:grayscale flex items-center justify-center shrink-0">
+                      class="w-12 h-12 flex items-center justify-center bg-green-600 hover:bg-green-500 text-white rounded-xl transition-colors disabled:bg-earth-800 disabled:text-earth-500 disabled:cursor-not-allowed shrink-0">
                 <i v-if="kuldesFolyamatban" class="fa-solid fa-spinner fa-spin w-5 h-5 flex items-center justify-center"></i>
-                <svg v-else class="w-5 h-5 fill-current rotate-45" viewBox="0 0 20 20">
+                <svg v-else class="w-5 h-5 fill-current rotate-45 ml-[-2px] mt-[2px]" viewBox="0 0 20 20">
                   <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
                 </svg>
               </button>
@@ -150,7 +151,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { isAxiosError } from 'axios';
 import { chatService } from '@/services/chatService';
@@ -200,10 +201,8 @@ const formatumDatum = (dateStr: string, idovel: boolean = false) => {
 
   const d = new Date(dateStr);
 
-  // Ha valamiért mégis érvénytelen lenne, visszaadjuk az eredetit
   if (isNaN(d.getTime())) return dateStr;
 
-  // Ha a bejövő dátum napja megegyezik a mai nappal
   const maiNap = d.toDateString() === new Date().toDateString();
   const ido = d.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' });
 
@@ -357,6 +356,32 @@ const kepKivalasztva = async (event: Event) => {
   }
 };
 
+// --- CSENDES FRISSÍTÉS (POLLING) LOGIKÁJA ---
+let pollingInterval: ReturnType<typeof setInterval> | null = null;
+
+const csendesFrissites = async () => {
+  if (kuldesFolyamatban.value) return;
+
+  try {
+    const listResponse = await chatService.getConversations();
+    beszelgetesek.value = listResponse.data;
+
+    if (aktivChatId.value) {
+      const msgResponse = await chatService.getMessages(aktivChatId.value);
+
+      const isNewMessage = msgResponse.data.length > uzenetek.value.length;
+
+      uzenetek.value = msgResponse.data;
+
+      if (isNewMessage) {
+        gorgetesLegalulra();
+      }
+    }
+  } catch (error) {
+    console.warn("Csendes frissítés sikertelen (valószínűleg hálózati hiba).");
+  }
+};
+
 watch(aktivChatId, (newId) => {
   if (newId !== null) {
     uzenetek.value = [];
@@ -364,7 +389,6 @@ watch(aktivChatId, (newId) => {
   }
 });
 
-// Autoscroll when new messages arrive
 watch(uzenetek, async () => {
   await nextTick();
   await gorgetesLegalulra();
@@ -378,8 +402,13 @@ onMounted(async () => {
   await loadConversations();
 
   const targetId = route.query.targetId;
+  const chatId = route.query.id;
 
-  if (targetId) {
+  if (chatId) {
+    aktivChatId.value = Number(chatId);
+    router.replace({ query: {} });
+  }
+  else if (targetId) {
     try {
       toltesLista.value = true;
       const response = await chatService.getOrCreateConversation(Number(targetId));
@@ -404,6 +433,16 @@ onMounted(async () => {
       toltesLista.value = false;
       router.replace({ query: {} });
     }
+  }
+
+  // Időzítő indítása: 5 másodpercenként csendesen frissít
+  pollingInterval = setInterval(csendesFrissites, 15000);
+});
+
+onUnmounted(() => {
+  // Időzítő leállítása, ha elhagyjuk a chat oldalt
+  if (pollingInterval) {
+    clearInterval(pollingInterval);
   }
 });
 </script>
