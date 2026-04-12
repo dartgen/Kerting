@@ -1,24 +1,29 @@
 ﻿using Kerting_Api.DTO;
+using Kerting_Api.Interface;
 using Libary.Model;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Kerting_Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
+    /// <summary>
+    /// Hibajegy végpontok: létrehozás, admin listázás, lezárás.
+    /// </summary>
     public class TicketController : ControllerBase
     {
-        private readonly Libary.KertingDbContext _context;
+        private readonly ITicketService _ticketService;
 
-        public TicketController(Libary.KertingDbContext context)
+        public TicketController(ITicketService ticketService)
         {
-            _context = context;
+            _ticketService = ticketService;
         }
 
-        // 1. ÚJ HIBAJEGY BEKÜLDÉSE
+        /// <summary>
+        /// Új hibajegy beküldése a bejelentkezett usertől.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> CreateTicket([FromBody] TicketCreateDto dto)
         {
@@ -29,26 +34,18 @@ namespace Kerting_Api.Controllers
                 return BadRequest("Hibás token: Nem található az Id!");
             }
 
-            var ticket = new Ticket
-            {
-                Title = dto.Title,
-                Description = dto.Description,
-                UserId = userId,
-                CreatedAt = DateTime.Now,
-                IsResolved = false
-            };
-
-            _context.Tickets.Add(ticket);
-            await _context.SaveChangesAsync();
+            await _ticketService.CreateTicketAsync(userId, dto);
 
             return Ok(new { message = "Hibajegy sikeresen elküldve!" });
         }
 
-        // 2. ÖSSZES HIBAJEGY LEKÉRÉSE (Javítva: 500-as hiba kiküszöbölve!)
+        /// <summary>
+        /// Összes hibajegy listázása admin joggal.
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetAllTickets()
         {
-            // PONTOSAN AZ A JAVÍTÁS, MINT A LÉTREHOZÁSNÁL
+            // User ID tokenből, ugyanazzal a mintával mint a create végpontnál.
             var userIdString = User.FindFirst("Id")?.Value;
 
             if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out int userId))
@@ -56,37 +53,24 @@ namespace Kerting_Api.Controllers
                 return BadRequest("Hibás token: Nem található az Id!");
             }
 
-            // Ellenőrizzük, hogy Admin-e (roleId == 1)
-            var currentUser = await _context.User.FindAsync(userId);
-            if (currentUser == null || currentUser.RoleId != 1)
+            try
             {
-                return Forbid("Nincs jogosultságod ehhez a funkcióhoz!");
+                var tickets = await _ticketService.GetAllTicketsAsync(userId);
+                return Ok(tickets);
             }
-
-            // Lekérjük a ticketeket (Közben a mezőneveket kisbetűvel adjuk át a Vue-nak, hogy biztosan passzoljon)
-            var tickets = await (from t in _context.Tickets
-                                 join u in _context.User on t.UserId equals u.Id
-                                 orderby t.CreatedAt descending
-                                 select new
-                                 {
-                                     id = t.Id,
-                                     title = t.Title,
-                                     description = t.Description,
-                                     createdAt = t.CreatedAt,
-                                     isResolved = t.IsResolved,
-                                     bekuldoNeve = u.VezetekNev + " " + u.KeresztNev,
-                                     bekuldoAvatar = u.IMGString,
-                                     userId = u.Id
-                                 }).ToListAsync();
-
-            return Ok(tickets);
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid(ex.Message);
+            }
         }
 
-        // 3. HIBAJEGY LEZÁRÁSA
+        /// <summary>
+        /// Hibajegy lezárás admin jogosultsággal.
+        /// </summary>
         [HttpPut("{id}/resolve")]
         public async Task<IActionResult> ResolveTicket(int id)
         {
-            // ITT IS JAVÍTVA AZ ID OLVASÁS
+            // User ID ellenőrzés a token claim-ből.
             var userIdString = User.FindFirst("Id")?.Value;
 
             if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out int userId))
@@ -94,16 +78,19 @@ namespace Kerting_Api.Controllers
                 return BadRequest("Hibás token!");
             }
 
-            var currentUser = await _context.User.FindAsync(userId);
-            if (currentUser == null || currentUser.RoleId != 1) return Forbid();
-
-            var ticket = await _context.Tickets.FindAsync(id);
-            if (ticket == null) return NotFound();
-
-            ticket.IsResolved = true; // Átállítjuk lezártra
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Hibajegy lezárva." });
+            try
+            {
+                await _ticketService.ResolveTicketAsync(id, userId);
+                return Ok(new { message = "Hibajegy lezárva." });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid(ex.Message);
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound();
+            }
         }
     }
 }

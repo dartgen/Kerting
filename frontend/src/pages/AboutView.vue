@@ -3,8 +3,10 @@ import { ref } from 'vue'
 import InnerPageLayout from '@/components/ui/InnerPageLayout.vue'
 import PageTitle from '@/components/ui/PageTitle.vue'
 
+// Adatkezeles tajekoztato modal kapcsoloja.
 const showPrivacyModal = ref(false)
 
+// Bemutatkozo blokkok statikus tartalmai.
 const creators = [
   {
     name: 'Zöld Dániel',
@@ -20,6 +22,7 @@ const creators = [
   },
 ]
 
+// Fobb termekertekek listaja.
 const values = [
   'Átlátható kommunikáció a megrendelők és szakemberek között.',
   'Egyszerű és gyors munkakeresés valós, értelmes szűrésekkel.',

@@ -256,7 +256,7 @@ import type { RoleDto, UpdateProfilePayload } from '@/types/auth';
 
 type SocialPlatform = 'facebook' | 'instagram' | 'tiktok';
 
-// Kibővítettük a típust a két új logikai változóval
+// A backend kérésadat kiegészítve UI-specifikus profile mezőkkel.
 interface ProfileManagementForm extends UpdateProfilePayload {
   IMGString: string;
   facebook: string;
@@ -274,7 +274,7 @@ const isLoading = ref(false);
 const telefonHiba = ref(false);
 const roles = ref<RoleDto[]>([]);
 
-// Reaktív adatok kiegészítve az új változókkal
+// Űrlap állapot teljes profil-adathalmazzal.
 const profilAdatok = reactive<ProfileManagementForm>({
   vezetekNev: '',
   keresztNev: '',
@@ -288,16 +288,16 @@ const profilAdatok = reactive<ProfileManagementForm>({
   facebook: '',
   instagram: '',
   tiktok: '',
-  emailPublikus: false, // Alapértelmezett érték
-  telefonPublikus: false  // Alapértelmezett érték
+  emailPublikus: false,
+  telefonPublikus: false
 });
 
-// Modal állapota és változói
+// Közösségi média URL modál állapot.
 const isModalOpen = ref(false);
 const currentSocial = ref<SocialPlatform | ''>('');
 const tempUrl = ref('');
 
-// Címke kezelés adatai
+// Tevékenység címke kezelés állapota.
 const cimkeInput = ref<HTMLInputElement | null>(null);
 const ujCimke = ref('');
 const cimkek = ref<string[]>([]);
@@ -314,7 +314,7 @@ const szurtAjanlasok = computed(() => {
   return eloreDefinialtCimkek.value.filter(c => c.toLowerCase().includes(keresoSzoveg) && !cimkek.value.includes(c));
 });
 
-// Modal kezelő függvények
+// Kozossegi URL modal nyitas/mentes/zaras.
 const openModal = (social: 'facebook' | 'instagram' | 'tiktok') => {
   currentSocial.value = social;
   tempUrl.value = profilAdatok[social] || '';
@@ -336,6 +336,7 @@ const saveSocialUrl = () => {
   closeModal();
 };
 
+// Profil + role + cimkek kezdobetoltese.
 const adatokBetoltese = async () => {
   try {
     const rolesRes = await authService.getRoles();
@@ -355,11 +356,11 @@ const adatokBetoltese = async () => {
     profilAdatok.rolam = d.rolam || '';
     profilAdatok.roleId = d.roleId || 2;
 
-    // Közösségi média és láthatósági adatok betöltése
+    // Kozossegi media es lathatosagi flag-ek.
     profilAdatok.facebook = d.facebook || '';
     profilAdatok.instagram = d.instagram || '';
     profilAdatok.tiktok = d.tiktok || '';
-    profilAdatok.emailPublikus = !!d.emailPublikus; // Boolean-ra konvertálva
+    profilAdatok.emailPublikus = !!d.emailPublikus;
     profilAdatok.telefonPublikus = !!d.telefonPublikus;
 
     if (d.cimkek && Array.isArray(d.cimkek)) {
@@ -380,6 +381,7 @@ onMounted(() => {
   adatokBetoltese();
 });
 
+// Címke gyorsfelvétel ajánláslistából.
 const selectAjanlas = (cimke: string) => {
   ujCimke.value = cimke;
   addCimke();
@@ -407,6 +409,7 @@ const getCimkeStyle = (index: number) => {
   return styles[index % styles.length];
 };
 
+// Profil mentese validacioval (telefon formatum + cimkelista sync).
 const adatokMentese = async () => {
   if (profilAdatok.telefon) {
     const tisztitottSzam = profilAdatok.telefon.replace(/[\s-]/g, '');

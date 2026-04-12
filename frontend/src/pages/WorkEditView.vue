@@ -35,6 +35,7 @@ const getErrorMessage = (error: unknown) => {
   return 'Hiba történt a munka szerkesztésekor.';
 };
 
+// Címkék betöltése a picker komponenshez.
 const loadTags = async () => {
   try {
     const res = await authService.GetCimekek();
@@ -42,20 +43,21 @@ const loadTags = async () => {
   } catch {}
 };
 
+// Szerkesztendő work betöltése, majd szerkeszthetőségi guardok ellenőrzése.
 const loadWork = async () => {
   try {
     const workId = parseInt(route.params.id as string);
     const res = await workService.getWork(workId);
     work.value = { ...res.data, cimkek: res.data.cimkek ?? [] };
 
-    // Only allow editing if status is Open
+    // Csak nyitott work szerkeszthető.
     if (work.value.status !== 'Open') {
       alert('Csak nyitott munkákat lehet szerkeszteni!');
       router.push({ name: 'work-detail', params: { id: workId } });
       return;
     }
 
-    // Check if current user is author
+    // Csak a saját (author) munkát lehessen módosítani.
     if (Number(work.value.authorId) !== Number(authStore.felhasznalo?.id)) {
       alert('Csak saját munkákat szerkeszthetsz!');
       router.push({ name: 'work-detail', params: { id: workId } });
@@ -75,6 +77,7 @@ onMounted(async () => {
   await loadWork();
 });
 
+// Mentéskor csak a szerkeszthető mezőket küldjük vissza.
 const submitWork = async () => {
   if (!authStore.isAuthenticated) {
     alert('Kérjük, jelentkezzen be a munka szerkesztéséhez!');

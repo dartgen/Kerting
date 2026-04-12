@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import GalleryLayout from '@/components/gallery/GalleryLayout.vue'
+
+// Saját galéria menedzsment oldal útvonal-komponense.
 </script>
 
 <template>

@@ -1,5 +1,8 @@
 namespace Kerting_Api.DTO
 {
+    /// <summary>
+    /// Work listaoldal egy rekordja, author és címke összefoglaló adatokkal.
+    /// </summary>
     public class WorkListItemDto
     {
         public int Id { get; set; }
@@ -16,6 +19,9 @@ namespace Kerting_Api.DTO
         public bool IsCurrentUserRelated { get; set; }
     }
 
+    /// <summary>
+    /// Work listákban használt rövidített szerző/felhasználó nézet.
+    /// </summary>
     public class WorkUserSummaryDto
     {
         public int Id { get; set; }
@@ -28,11 +34,17 @@ namespace Kerting_Api.DTO
         public string? ImgString { get; set; }
     }
 
+    /// <summary>
+    /// Work és activity címke kapcsolati DTO.
+    /// </summary>
     public class WorkTagLinkDto
     {
         public WorkTagActivityDto? Tag { get; set; }
     }
 
+    /// <summary>
+    /// Címke aktivitás nevét hordozó minimál DTO.
+    /// </summary>
     public class WorkTagActivityDto
     {
         public string? Activity { get; set; }

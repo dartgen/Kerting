@@ -71,18 +71,21 @@
 
 <script setup lang="ts">
 import { reactive, computed } from 'vue';
+import type { ProjectMember, Task } from '@/types/project';
 
+// Feladat létrehozó/szerkesztő modál.
+// A tényleges perzisztencia és a task lista frissítése a szülő komponensben történik.
 const props = defineProps<{
-  projectMembers: Array<any>;
+  projectMembers: ProjectMember[];
   defaultDeadline?: string;
-  editData?: any; // Ha ez meg van adva, akkor szerkesztő módban vagyunk
+  editData?: Partial<Task> | null; // Ha ez meg van adva, akkor szerkesztő módban vagyunk
 }>();
 
 const emit = defineEmits(['close', 'save']);
 
 const isEditMode = computed(() => !!props.editData);
 
-// Inicializáljuk az űrlapot: ha van editData, azt töltjük be, amúgy alapértékek
+// Űrlap inicializálás: szerkesztésnél meglévő adatok, új tasknál default értékek.
 const urlapAdat = reactive({
   id: props.editData?.id || null,
   title: props.editData?.title || '',
@@ -97,7 +100,7 @@ const bezaras = () => emit('close');
 const mentes = () => {
   if (!urlapAdat.title.trim()) return;
 
-  // JAVÍTÁS: Csak az űrlapon szereplő adatokat küldjük vissza, a 'assignedTo' már nincs benne
+  // Csak az űrlap mezőit küldjük vissza; a kiosztási adatok külön workflow-ban kezelendők.
   emit('save', { ...urlapAdat });
   bezaras();
 };

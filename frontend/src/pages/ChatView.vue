@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="flex items-center justify-center w-full h-screen p-0 sm:p-6 bg-earth-950">
     <div class="relative w-full max-w-6xl h-full sm:h-[85vh] flex bg-earth-900/60 backdrop-blur-md border border-earth-100/30 rounded-none sm:rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden">
 
@@ -181,11 +181,13 @@ const route = useRoute();
 const router = useRouter();
 const toastStore = useToastStore();
 
+// Chat UI állapotok.
 const aktivChatId = ref<number | null>(null);
 const ujUzenet = ref('');
 const beszelgetesek = ref<ChatListItem[]>([]);
 const uzenetek = ref<ChatMessage[]>([]);
 
+// Folyamatjelző flag-ek.
 const toltesLista = ref(false);
 const toltesUzenetek = ref(false);
 const kuldesFolyamatban = ref(false);
@@ -196,6 +198,7 @@ const kepInput = ref<HTMLInputElement | null>(null);
 
 const aktualisChat = computed(() => beszelgetesek.value.find(c => c.id === aktivChatId.value));
 
+// Dátumformátum segédfüggvény a lista- és üzenetnézeti időbélyegekhez.
 const formatumDatum = (dateStr: string, idovel: boolean = false) => {
   if (!dateStr) return '';
 
@@ -213,6 +216,7 @@ const formatumDatum = (dateStr: string, idovel: boolean = false) => {
   return idovel ? `${datum} ${ido}` : datum;
 };
 
+// Profilkép URL összeállítása backend static resources végponthoz.
 const getImageUrl = (fileName: string | null | undefined) => {
   if (!fileName || fileName.trim() === '') return undefined;
   const axiosBaseUrl = api.defaults.baseURL;
@@ -220,6 +224,7 @@ const getImageUrl = (fileName: string | null | undefined) => {
   return `${new URL(axiosBaseUrl).origin}/resources/Profiles/${fileName}`;
 };
 
+// Chatben küldött képek URL-je.
 const getChatImageUrl = (fileName: string | null | undefined) => {
   if (!fileName || fileName.trim() === '') return undefined;
   const axiosBaseUrl = api.defaults.baseURL;
@@ -227,6 +232,7 @@ const getChatImageUrl = (fileName: string | null | undefined) => {
   return `${new URL(axiosBaseUrl).origin}/resources/ChatImages/${fileName}`;
 };
 
+// Üzenetfolyam automatikus legaljára görgetése új elemeknél.
 const gorgetesLegalulra = async () => {
   await nextTick();
   if (uzenetekKontener.value) {
@@ -234,6 +240,7 @@ const gorgetesLegalulra = async () => {
   }
 };
 
+// Beszélgetéslista kezdeti betöltése.
 const loadConversations = async () => {
   toltesLista.value = true;
   try {
@@ -247,6 +254,7 @@ const loadConversations = async () => {
   }
 };
 
+// Aktív beszélgetés üzeneteinek betöltése és olvasatlan jelzés frissítése.
 const loadMessages = async (chatId: number) => {
   toltesUzenetek.value = true;
   try {
@@ -270,6 +278,7 @@ const loadMessages = async (chatId: number) => {
   }
 };
 
+// Szöveges üzenet küldése + lista sorrend frissítése utolsó aktivitás szerint.
 const uzenetKuldese = async () => {
   if (!ujUzenet.value.trim() || !aktivChatId.value || kuldesFolyamatban.value) return;
 
@@ -313,12 +322,14 @@ const uzenetKuldese = async () => {
   }
 };
 
+// Rejtett file input nyitása képküldéshez.
 const triggerKepFeltoltes = () => {
   if (kepInput.value) {
     kepInput.value.click();
   }
 };
 
+// Kiválasztott kép feltöltése a chatbe, majd lokális üzenetlista frissítése.
 const kepKivalasztva = async (event: Event) => {
   const target = event.target as HTMLInputElement;
   const file = target.files?.[0];
@@ -356,7 +367,7 @@ const kepKivalasztva = async (event: Event) => {
   }
 };
 
-// --- CSENDES FRISSÍTÉS (POLLING) LOGIKÁJA ---
+// Csendes periodikus frissítés: lista + aktív chat újratöltés.
 let pollingInterval: ReturnType<typeof setInterval> | null = null;
 
 const csendesFrissites = async () => {
@@ -377,11 +388,12 @@ const csendesFrissites = async () => {
         gorgetesLegalulra();
       }
     }
-  } catch (error) {
+  } catch {
     console.warn("Csendes frissítés sikertelen (valószínűleg hálózati hiba).");
   }
 };
 
+// Beszélgetés váltásakor újra betöltjük az adott chat üzeneteit.
 watch(aktivChatId, (newId) => {
   if (newId !== null) {
     uzenetek.value = [];
@@ -389,6 +401,7 @@ watch(aktivChatId, (newId) => {
   }
 });
 
+// Minden üzenetlista változás után legalulra görgetünk.
 watch(uzenetek, async () => {
   await nextTick();
   await gorgetesLegalulra();
@@ -401,6 +414,7 @@ const bezaras = () => {
 onMounted(async () => {
   await loadConversations();
 
+  // Route query alapú megnyitás: konkrét chat ID, vagy target userből új/get-or-create.
   const targetId = route.query.targetId;
   const chatId = route.query.id;
 
@@ -435,12 +449,12 @@ onMounted(async () => {
     }
   }
 
-  // Időzítő indítása: 5 másodpercenként csendesen frissít
+  // Időzítő indítása: 15 másodpercenként csendes szinkron.
   pollingInterval = setInterval(csendesFrissites, 15000);
 });
 
 onUnmounted(() => {
-  // Időzítő leállítása, ha elhagyjuk a chat oldalt
+  // Ne maradjon háttérben futó polling, ha elhagyjuk az oldalt.
   if (pollingInterval) {
     clearInterval(pollingInterval);
   }

@@ -1,276 +1,126 @@
-﻿using Libary;
-using Libary.Model.Chat;
-using Libary.Model.Auth;
-using Libary.Model.Project; // ÚJ: Ez feltétlenül kell a Project modell eléréséhez!
+﻿using Libary.Model.Chat;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
+using Kerting_Api.Interface;
 
 namespace Kerting_Api.Controller
 {
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
+    /// <summary>
+    /// Chat vezérlő: beszélgetéslista, üzenetfolyam, szöveges és képes küldés végpontok.
+    /// </summary>
     public class ChatController : ControllerBase
     {
-        private readonly KertingDbContext _context;
-        private readonly IWebHostEnvironment _env;
+        private readonly IChatService _chatService;
 
-        public ChatController(KertingDbContext context, IWebHostEnvironment env)
+        public ChatController(IChatService chatService)
         {
-            _context = context;
-            _env = env;
+            _chatService = chatService;
         }
 
+        // Kliens tokenjéből kinyert aktuális felhasználó azonosító.
         private int GetCurrentUserId()
         {
             var userIdString = User.FindFirst("Id")?.Value;
             return int.Parse(userIdString);
         }
 
+        /// <summary>
+        /// Beszélgetéslista lekérése a bejelentkezett userhez.
+        /// </summary>
         [HttpGet("list")]
         public async Task<ActionResult<IEnumerable<ChatListItemDto>>> GetConversations()
         {
             var userId = GetCurrentUserId();
-
-            var rawConversations = await _context.Conversations
-                .Where(c => c.Participants.Any(p => p.UserId == userId))
-                // ==============================================================================
-                // ÚJ VARÁZSLAT: Kiszűrjük a csevegést, ha a hozzá tartozó projekt archiválva van!
-                // ==============================================================================
-                .Where(c => !_context.Set<Project>().Any(p => p.ChatConversationId == c.Id && p.Status == "archived"))
-                .OrderByDescending(c => c.LastMessageAt)
-                .Select(c => new
-                {
-                    c.Id,
-                    c.IsGroup,
-                    c.Title,
-                    c.GroupImage,
-                    Participants = c.Participants.Select(p => new
-                    {
-                        p.UserId,
-                        p.User,
-                        Username = _context.Set<Login>()
-                                           .Where(l => l.Id == p.UserId)
-                                           .Select(l => l.Username)
-                                           .FirstOrDefault()
-                    }),
-                    LastMessage = _context.Messages
-                        .Where(m => m.ConversationId == c.Id)
-                        .OrderByDescending(m => m.CreatedAt)
-                        .FirstOrDefault(),
-                    UnreadCount = _context.Messages
-                        .Count(m => m.ConversationId == c.Id && m.SenderId != userId && !m.IsRead)
-                })
-                .ToListAsync();
-
-            var dtos = rawConversations.Select(c =>
-            {
-                var partner = c.Participants.FirstOrDefault(p => p.UserId != userId);
-                string megjelenitendoNev = "";
-
-                if (partner != null && partner.User != null)
-                {
-                    string teljesNev = (partner.User.VezetekNev + " " + partner.User.KeresztNev).Trim();
-                    megjelenitendoNev = string.IsNullOrWhiteSpace(teljesNev)
-                        ? (partner.Username ?? "Ismeretlen felhasználó")
-                        : teljesNev;
-                }
-
-                return new ChatListItemDto
-                {
-                    Id = c.Id,
-                    IsGroup = c.IsGroup,
-                    Nev = c.IsGroup ? (c.Title ?? "Ismeretlen csoport") : megjelenitendoNev,
-                    Avatar = c.IsGroup ? (c.GroupImage ?? "") : (partner?.User?.IMGString ?? ""),
-                    UtolsoUzenet = c.LastMessage != null ? c.LastMessage.Content : "Nincs üzenet",
-                    UtolsoIdo = c.LastMessage != null ? c.LastMessage.CreatedAt.ToString("s") : "",
-                    Olvasatlan = c.UnreadCount > 0
-                };
-            }).ToList();
-
+            var dtos = await _chatService.GetConversationsAsync(userId);
             return Ok(dtos);
         }
 
+        /// <summary>
+        /// Üzenetek lekérése egy konkrét beszélgetéshez.
+        /// </summary>
         [HttpGet("{conversationId}/messages")]
         public async Task<ActionResult<IEnumerable<MessageDto>>> GetMessages(int conversationId)
         {
             var userId = GetCurrentUserId();
-
-            var isParticipant = await _context.ConversationParticipants
-                .AnyAsync(cp => cp.ConversationId == conversationId && cp.UserId == userId);
-
-            if (!isParticipant) return Forbid("Nincs jogosultságod ehhez a beszélgetéshez.");
-
-            // ÚJ: Biztonsági ellenőrzés - Archivált projekt chatjébe nem lehet belépni!
-            var isArchived = await _context.Set<Project>().AnyAsync(p => p.ChatConversationId == conversationId && p.Status == "archived");
-            if (isArchived) return BadRequest("A projekt archiválva lett, a csevegés jelenleg szünetel.");
-
-            var messages = await _context.Messages
-                .Include(m => m.Sender)
-                .Where(m => m.ConversationId == conversationId)
-                .OrderBy(m => m.CreatedAt)
-                .Select(m => new MessageDto
-                {
-                    Id = m.Id,
-                    Szoveg = m.Content,
-                    ImageUrl = m.ImageUrl,
-                    Ido = m.CreatedAt.ToString("s"),
-                    Sajat = m.SenderId == userId,
-                    SenderName = string.IsNullOrWhiteSpace(m.Sender.KeresztNev)
-                        ? _context.Set<Login>().Where(l => l.Id == m.SenderId).Select(l => l.Username).FirstOrDefault()
-                        : m.Sender.KeresztNev
-                })
-                .ToListAsync();
-
-            var unreadMessages = await _context.Messages
-                .Where(m => m.ConversationId == conversationId && m.SenderId != userId && !m.IsRead)
-                .ToListAsync();
-
-            if (unreadMessages.Any())
+            try
             {
-                foreach (var msg in unreadMessages) msg.IsRead = true;
-                await _context.SaveChangesAsync();
+                var messages = await _chatService.GetMessagesAsync(userId, conversationId);
+                return Ok(messages);
             }
-
-            return Ok(messages);
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
+        /// <summary>
+        /// Új szöveges üzenet küldése.
+        /// </summary>
         [HttpPost("send")]
         public async Task<ActionResult<MessageDto>> SendMessage([FromBody] SendMessageDto dto)
         {
             var userId = GetCurrentUserId();
-
-            var isParticipant = await _context.ConversationParticipants
-                .AnyAsync(cp => cp.ConversationId == dto.ConversationId && cp.UserId == userId);
-
-            if (!isParticipant) return Forbid("Nincs jogosultságod ide írni.");
-
-            // ÚJ: Biztonsági ellenőrzés - Archivált projekt chatjébe nem lehet írni!
-            var isArchived = await _context.Set<Project>().AnyAsync(p => p.ChatConversationId == dto.ConversationId && p.Status == "archived");
-            if (isArchived) return BadRequest("A projekt archiválva lett, ide nem küldhetsz üzenetet.");
-
-            var newMessage = new Message
+            try
             {
-                ConversationId = dto.ConversationId,
-                SenderId = userId,
-                Content = dto.Content,
-                CreatedAt = DateTime.Now,
-                IsRead = false
-            };
-
-            _context.Messages.Add(newMessage);
-
-            var conversation = await _context.Conversations.FindAsync(dto.ConversationId);
-            if (conversation != null) conversation.LastMessageAt = DateTime.Now;
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new MessageDto
+                var message = await _chatService.SendMessageAsync(userId, dto);
+                return Ok(message);
+            }
+            catch (UnauthorizedAccessException ex)
             {
-                Id = newMessage.Id,
-                Szoveg = newMessage.Content,
-                Ido = newMessage.CreatedAt.ToString("s"),
-                Sajat = true
-            });
+                return Forbid(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
+        /// <summary>
+        /// Privát beszélgetés visszaadása vagy létrehozása két user között.
+        /// </summary>
         [HttpPost("get-or-create/{targetUserId}")]
         public async Task<ActionResult<int>> GetOrCreateConversation(int targetUserId)
         {
             var currentUserId = GetCurrentUserId();
-
-            if (currentUserId == targetUserId)
-                return BadRequest("Nem indíthatsz beszélgetést saját magaddal.");
-
-            var existingConversationId = await _context.Conversations
-                .Where(c => !c.IsGroup)
-                .Where(c => c.Participants.Any(p => p.UserId == currentUserId) &&
-                            c.Participants.Any(p => p.UserId == targetUserId))
-                .Select(c => c.Id)
-                .FirstOrDefaultAsync();
-
-            if (existingConversationId != 0) return Ok(existingConversationId);
-
-            var newConversation = new Conversation
+            try
             {
-                IsGroup = false,
-                CreatedAt = DateTime.UtcNow,
-                LastMessageAt = DateTime.UtcNow
-            };
-
-            _context.Conversations.Add(newConversation);
-            await _context.SaveChangesAsync();
-
-            _context.ConversationParticipants.AddRange(
-                new ConversationParticipant { ConversationId = newConversation.Id, UserId = currentUserId },
-                new ConversationParticipant { ConversationId = newConversation.Id, UserId = targetUserId }
-            );
-
-            await _context.SaveChangesAsync();
-
-            return Ok(newConversation.Id);
+                var conversationId = await _chatService.GetOrCreateConversationAsync(currentUserId, targetUserId);
+                return Ok(conversationId);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
+        /// <summary>
+        /// Kép küldése form-data kérésadatból.
+        /// </summary>
         [HttpPost("send-image")]
         public async Task<ActionResult<MessageDto>> SendImage([FromForm] ImageUploadDto dto)
         {
             var userId = GetCurrentUserId();
-
-            int conversationId = dto.ConversationId;
-            IFormFile image = dto.Image;
-
-            var isParticipant = await _context.ConversationParticipants
-                .AnyAsync(cp => cp.ConversationId == conversationId && cp.UserId == userId);
-
-            if (!isParticipant) return Forbid("Nincs jogosultságod ide írni.");
-
-            // ÚJ: Biztonsági ellenőrzés
-            var isArchived = await _context.Set<Project>().AnyAsync(p => p.ChatConversationId == conversationId && p.Status == "archived");
-            if (isArchived) return BadRequest("A projekt archiválva lett, ide nem küldhetsz képet.");
-
-            if (image == null || image.Length == 0) return BadRequest("Nincs kiválasztva kép.");
-
-            string uploadsFolder = Path.Combine(_env.ContentRootPath, "Resources", "ChatImages");
-
-            if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
-
-            string extension = Path.GetExtension(image.FileName);
-            string uniqueFileName = Guid.NewGuid().ToString() + extension;
-            string filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            try
             {
-                await image.CopyToAsync(fileStream);
+                var message = await _chatService.SendImageAsync(userId, dto);
+                return Ok(message);
             }
-
-            var newMessage = new Message
+            catch (UnauthorizedAccessException ex)
             {
-                ConversationId = conversationId,
-                SenderId = userId,
-                Content = "Fénykép",
-                ImageUrl = uniqueFileName,
-                CreatedAt = DateTime.Now,
-                IsRead = false
-            };
-
-            _context.Messages.Add(newMessage);
-
-            var conversation = await _context.Conversations.FindAsync(conversationId);
-            if (conversation != null) conversation.LastMessageAt = DateTime.Now;
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new MessageDto
+                return Forbid(ex.Message);
+            }
+            catch (InvalidOperationException ex)
             {
-                Id = newMessage.Id,
-                Szoveg = newMessage.Content,
-                ImageUrl = newMessage.ImageUrl,
-                Ido = newMessage.CreatedAt.ToString("s"),
-                Sajat = true
-            });
+                return BadRequest(ex.Message);
+            }
         }
     }
 }

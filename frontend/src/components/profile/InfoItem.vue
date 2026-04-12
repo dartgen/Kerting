@@ -21,6 +21,8 @@
 </template>
 
 <script setup lang="ts">
+// Profil adatsor komponens:
+// ikon + címke + érték megjelenítését egységesíti, opcionális linkes viselkedéssel.
 defineProps<{
   icon: string;
   label: string;

@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { isAxiosError } from 'axios';
 import { useRoute, useRouter } from 'vue-router';
@@ -20,17 +20,19 @@ const authStore = useAuthStore();
 const work = ref<Work | null>(null);
 const loading = ref(true);
 
-// State for Apply
+// Jelentkezési űrlap állapot.
 const offeredPriceStr = ref<string | number>('');
 
-// State for Todo
+// Todo panel állapota.
 const newTodoTitle = ref('');
 const doneMessage = ref<{ [key: number]: string }>({});
 
-// Upload image state
+// Képfeltöltés modál állapot.
 const uploadLoading = ref(false);
 const showUploadModal = ref(false);
 
+// A backend egyes pontokon tömböt, máshol $values wrapperes listát ad.
+// Ez a segédfüggvény egységesen WorkApplicant[] formátumra alakít.
 const normalizeApplicants = (value: unknown): WorkApplicant[] => {
   if (Array.isArray(value)) {
     return value as WorkApplicant[];
@@ -86,6 +88,7 @@ const fetchWork = async () => {
     }
 
     try {
+      // Külön endpointról is frissítjük a jelentkezők listáját, ha elérhető.
       const applicantsRes = await workService.getApplicants(id);
       if (work.value) {
         work.value.applicants = normalizeApplicants(applicantsRes.data);
@@ -124,7 +127,7 @@ const currentUserId = computed(() => {
   return Number.isNaN(parsed) ? null : parsed;
 });
 
-// Computeds for Access Control
+// Jogosultsági computed-ek: ezek döntik el, melyik panel/művelet látszik.
 const isAuthor = computed(() => {
   if (currentUserId.value === null || !work.value) return false;
   return Number(work.value.authorId) === currentUserId.value;
@@ -174,7 +177,7 @@ const showApplicantsPanel = computed(() => {
   return work.value.status === 'Open' || applicantsCount > 0;
 });
 
-// Actions
+// Műveletek: chat, jelentkezés, jelentkező kezelés, todo, képkezelés, státusz.
 const openChat = async (targetId: number) => {
   if (!authStore.isAuthenticated) return;
   try {
@@ -187,7 +190,7 @@ const openChat = async (targetId: number) => {
 
 const apply = async () => {
   if (!authStore.isAuthenticated) {
-    alert("Jelentkezz be eloször!");
+    alert("Jelentkezz be először!");
     return;
   }
   try {
@@ -203,7 +206,9 @@ const apply = async () => {
     await workService.applyForWork(work.value!.id!, finalPrice);
     alert('Sikeres jelentkezés!');
     offeredPriceStr.value = '';
-    await fetchWork(); // reload
+
+    // Jelentkezés után újratöltjük a részleteket, hogy a lista/állapot frissüljön.
+    await fetchWork();
   } catch (error) {
     console.error(error);
     const { message } = getErrorStatusAndMessage(error);
@@ -214,7 +219,7 @@ const apply = async () => {
 const accept = async (applicantId: number) => {
   try {
     await workService.acceptApplicant(applicantId);
-    alert('Jelentkezo elfogadva!');
+    alert('Jelentkező elfogadva!');
     await fetchWork();
   } catch (err) {
     console.error(err);
@@ -225,7 +230,7 @@ const reject = async (applicantId: number) => {
   if (!confirm('Biztosan elutasítod ezt a jelentkezést?')) return;
   try {
     await workService.rejectApplicant(applicantId);
-    alert('Jelentkezo elutasitva!');
+    alert('Jelentkező elutasítva!');
     await fetchWork();
   } catch (err) {
     console.error(err);
@@ -237,7 +242,8 @@ const withdrawApplication = async () => {
   if (!confirm('Biztosan vissza akarod vonni a jelentkezésed?')) return;
   if (!work.value) return;
 
-  // Get the current applicant for this user
+  // Az aktuális felhasználó jelentkezésének kikeresése
+  // A saját jelentkezés rekordját keressük a visszavonáshoz.
   const applicant = work.value.applicants?.find(a => Number(a.userId) === currentUserId.value);
   if (!applicant?.id) {
     alert('Jelentkezés nem található');
@@ -258,7 +264,8 @@ const addTodo = async () => {
   if (!newTodoTitle.value.trim()) return;
   try {
     const res = await workService.addTodo(work.value!.id!, { title: newTodoTitle.value });
-    // Optimistic update - add to local todos without full refresh
+
+    // Optimista frissítés: lokálisan hozzáadjuk az új todo-t teljes oldalfrissítés nélkül.
     if (!work.value!.todos) work.value!.todos = [];
     work.value!.todos.push({
       id: res.data?.id,
@@ -276,7 +283,8 @@ const toggleTodoItem = async (todoId: number) => {
   const msg = doneMessage.value[todoId] || 'Kész!';
   try {
     await workService.toggleTodo(todoId, msg);
-    // Optimistic update - toggle local state without full refresh
+
+    // Optimista állapotváltás a lokális listában.
     const todo = work.value!.todos?.find(t => t.id === todoId);
     if (todo) {
       todo.isDone = !todo.isDone;
@@ -399,7 +407,7 @@ const featureWorkByAdmin = async () => {
           </span>
         </div>
         <div class="flex items-center gap-2 flex-wrap justify-center sm:justify-end">
-          <!-- Author actions -->
+          <!-- Szerzői műveletek -->
           <button
             v-if="isAuthor && work.status === 'Open'"
             @click="editWork"
@@ -414,7 +422,7 @@ const featureWorkByAdmin = async () => {
           >
             🗑 Törlés
           </button>
-          <!-- Admin feature button -->
+          <!-- Admin kiemelés gomb -->
           <button
             v-if="authStore.profilAdatok?.roleName === 'Admin' && work.status === 'Public'"
             @click="featureWorkByAdmin"
@@ -551,7 +559,7 @@ const featureWorkByAdmin = async () => {
               </button>
             </div>
 
-            <!-- Reviews Section -->
+            <!-- Értékelések szekció -->
             <WorkReviewSection
               :work="work"
               :isAuthor="isAuthor"
@@ -567,7 +575,7 @@ const featureWorkByAdmin = async () => {
           <div class="bg-earth-800/40 border border-earth-700 p-6 rounded-xl sticky top-24">
             <h3 class="text-xl text-earth-100 mb-4 border-b border-earth-700 pb-2">To-Do Lista</h3>
 
-            <!-- Progress Bar -->
+            <!-- Haladás sáv -->
             <div class="mb-5">
               <div class="flex justify-between text-xs text-earth-400 mb-1">
                 <span>Haladás</span>
@@ -578,7 +586,7 @@ const featureWorkByAdmin = async () => {
               </div>
             </div>
 
-            <!-- Add new todo (Owner only) -->
+            <!-- Új teendő hozzáadása (csak tulajdonos) -->
             <div v-if="isAuthor && work.status !== 'Public' && work.status !== 'Closed'" class="flex gap-2 mb-4">
               <input v-model="newTodoTitle" @keyup.enter="addTodo" placeholder="Új feladat..." class="w-full bg-earth-900/50 border border-earth-700 text-sm text-earth-100 rounded p-2 focus:border-yellow-500 outline-none" />
               <button @click="addTodo" class="bg-yellow-600 hover:bg-yellow-500 text-white px-3 font-bold rounded transition">
@@ -586,7 +594,7 @@ const featureWorkByAdmin = async () => {
               </button>
             </div>
 
-            <!-- List -->
+            <!-- Lista -->
             <div v-if="work.todos?.length === 0" class="text-earth-400 text-sm italic">Nincs még feladat felvéve.</div>
             <ul class="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
               <li v-for="t in work.todos" :key="t.id" class="p-3 bg-earth-900/30 border border-earth-700/50 rounded flex flex-col gap-2 relative">
@@ -600,7 +608,7 @@ const featureWorkByAdmin = async () => {
                   "{{ t.doneMessage }}"
                 </div>
 
-                <!-- Complete Action (For workers in InProgress) -->
+                <!-- Teljesítés művelet (folyamatban státuszú kivitelezőknek) -->
                 <div v-if="!t.isDone && work.status === 'InProgress' && (isAcceptedApplicant || isAuthor)" class="ml-6 mt-1 flex flex-col gap-1">
                   <input v-model="doneMessage[t.id!]" placeholder="Megjegyzés (pl. elkészült).." class="flex-1 bg-black/30 border border-earth-700 text-xs px-2 py-1 rounded text-earth-200 outline-none w-full" />
                   <button @click="toggleTodoItem(t.id!)" class="text-xs bg-green-600/80 hover:bg-green-500 text-white px-2 py-1 rounded w-fit self-end font-bold uppercase transition">Kész</button>
@@ -613,7 +621,7 @@ const featureWorkByAdmin = async () => {
       </div>
     </div>
 
-    <!-- Image Upload Modal -->
+    <!-- Kép feltöltő modál -->
     <ImageUploadModal
       v-if="showUploadModal"
       @upload="handleBulkUpload"

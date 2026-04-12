@@ -1,6 +1,8 @@
 import api from './axios'
 import type { ForumSort, ForumFeedFilters, UpsertForumPostPayload, AddForumCommentPayload } from '@/types/forum'
 
+// Feed szűrőkből URLSearchParams építése.
+// A több-értékű mezőket (roleIds, tagNames) külön paraméterként küldjük, hogy a backend korrektül tudja parse-olni.
 const buildForumFeedQuery = (filters: ForumFeedFilters) => {
   const params = new URLSearchParams()
 
@@ -23,7 +25,9 @@ const buildForumFeedQuery = (filters: ForumFeedFilters) => {
   return params
 }
 
+// Fórum API szolgáltatás.
 export const forumService = {
+  // Fórum feed lapozott/szűrt listázása.
   getFeed(filters: ForumFeedFilters) {
     return api.get('/Forum/feed', {
       params: buildForumFeedQuery(filters),
@@ -33,6 +37,7 @@ export const forumService = {
     })
   },
 
+  // Egy poszt részletes adatlapja kommentekkel.
   getPostById(
     postId: number,
     params?: {
@@ -45,18 +50,21 @@ export const forumService = {
     return api.get(`/Forum/${postId}`, { params })
   },
 
+  // Komment válaszok cursor alapú lapozással.
   getReplies(commentId: number, cursor = 0, pageSize = 10, includeDeleted = false) {
     return api.get(`/Forum/comment/${commentId}/replies`, {
       params: { cursor, pageSize, includeDeleted }
     })
   },
 
+  // Saját gallery elemek fórum csatoláshoz.
   getOwnGalleryItems(page = 1, pageSize = 100, includeDeleted = false) {
     return api.get('/Gallery/mine', {
       params: { page, pageSize, includeDeleted }
     })
   },
 
+  // Poszt létrehozás/szerkesztés/törlés/visszaállítás.
   createPost(payload: UpsertForumPostPayload) {
     return api.post('/Forum', payload)
   },
@@ -73,6 +81,7 @@ export const forumService = {
     return api.patch(`/Forum/${postId}/restore`)
   },
 
+  // Moderációs állapotok (pin/lock).
   setPinned(postId: number, isPinned: boolean) {
     return api.patch(`/Forum/${postId}/pin`, null, { params: { isPinned } })
   },
@@ -81,10 +90,12 @@ export const forumService = {
     return api.patch(`/Forum/${postId}/lock`, { isLocked, reason })
   },
 
+  // Reakciók posztra.
   reactPost(postId: number, isLike: boolean) {
     return api.post(`/Forum/${postId}/react`, null, { params: { isLike } })
   },
 
+  // Komment létrehozás/törlés/visszaállítás + reakció.
   addComment(postId: number, payload: AddForumCommentPayload) {
     return api.post(`/Forum/${postId}/comment`, payload)
   },
@@ -102,5 +113,5 @@ export const forumService = {
   }
 }
 
-// Re-export types for convenience
+// Típusok újraexportja a fogyasztó komponensek egyszerűbb importjához.
 export type { ForumSort, ForumFeedFilters, UpsertForumPostPayload, AddForumCommentPayload } from '@/types/forum'

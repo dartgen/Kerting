@@ -65,12 +65,16 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
+import type { ProjectMember, Task } from '@/types/project';
 
+// A modál egy kiválasztott csapattag projektbeli teljesítményét és várható keresetét mutatja.
+// A task lista és member adat a szülőből érkezik, itt csak megjelenítési számítások történnek.
 const props = defineProps<{
-  member: any;
-  projectTasks: Array<any>;
+  member: ProjectMember;
+  projectTasks: Task[];
 }>();
 
+// A bezárást eventtel jelezzük vissza a szülőnek.
 const emit = defineEmits(['close']);
 const router = useRouter();
 
@@ -78,16 +82,16 @@ const bezaras = () => emit('close');
 
 const ugrasProfilra = () => {
   bezaras();
-  // A router alapján a publikus profil a /user/:id címen érhető el
+  // A publikus profil route-ra navigálunk, így a felhasználó további adatai is elérhetők.
   router.push({ name: 'public-profile', params: { id: props.member.userId } });
 };
 
-// Szűrt feladatok listája, amin a tag dolgozik
+// Csak azokat a taskokat tartjuk meg, ahol a tag userId-ja a kiosztottak között szerepel.
 const memberTasks = computed(() => {
   return props.projectTasks.filter(task => task.assignedTo && task.assignedTo.includes(props.member.userId));
 });
 
-// A várható kereset (Feladat összege / Hányan csinálják)
+// Várható kereset: task összegét elosztjuk az adott taskon dolgozó tagok számával.
 const totalEarnings = computed(() => {
   let sum = 0;
   memberTasks.value.forEach(task => {

@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { isAxiosError } from 'axios';
@@ -13,6 +13,8 @@ const router = useRouter();
 const authStore = useAuthStore();
 
 const allTags = ref<string[]>([]);
+
+// Tevékenység címkék betöltése az activity pickerhez.
 const loadTags = async () => {
   try {
     const res = await authService.GetCimekek();
@@ -20,7 +22,7 @@ const loadTags = async () => {
   } catch {}
 };
 
-// TS JAVÍTÁS: Garantáljuk, hogy a cimkek itt biztosan egy string tömb lesz, nem undefined!
+// Form modell: címkék mindig tömb legyen, hogy a picker típusbiztos maradjon.
 const work = ref<Work & { cimkek: string[] }>({
   title: '',
   description: '',
@@ -41,6 +43,7 @@ const getErrorMessage = (error: unknown) => {
   return 'Hiba történt a munka kiírásakor.';
 };
 
+// Új munka mentése, siker után irányítás az új work részletoldalára.
 const submitWork = async () => {
   if (!authStore.isAuthenticated) {
     alert("Kérjük, jelentkezzen be a munka feladásához!");
@@ -52,11 +55,12 @@ const submitWork = async () => {
     const response = await workService.createWork(work.value);
     const newWorkId = response.data?.id;
     alert('Sikeresen kiírtad a munkát!');
-    // Ha van ID, irányítunk az új munka részletesítésére
+
+    // Ha a backend visszaad ID-t, azonnal a részletoldalra navigálunk.
     if (newWorkId) {
       router.push({ name: 'work-detail', params: { id: newWorkId } });
     } else {
-      // Fallback: ha nincs ID, irányítunk a munkák listájára
+      // Visszalépő út: régi API válasz esetén listanézet.
       router.push('/works');
     }
   } catch (error) {

@@ -158,24 +158,31 @@ import { useToastStore } from '@/stores/toast'
 const toastStore = useToastStore()
 const router = useRouter();
 const authStore = useAuthStore();
+
+// Flipkártya állapot: hátlap regisztráció vagy elfelejtett jelszó nézet.
 const isFlipped = ref(false);
 const hatlapTipus = ref<'regisztracio' | 'elfelejtett'>('regisztracio');
 
+// Bejelentkezés űrlap.
 const felhasznaloNev = ref('');
 const jelszo = ref('');
 const isLoading = ref(false);
 
+// Regisztráció űrlap.
 const regFelhasznaloNev = ref('');
 const regJelszo = ref('');
 const regJelszos = ref('');
 const isRegLoading = ref(false);
 const isNevFoglalt = ref(false);
 
+// Elfelejtett jelszó űrlap.
 const resetAzonosito = ref('');
 
+// Kártyaflip segédfüggvények.
 const mutasdARegisztraciot = () => { hatlapTipus.value = 'regisztracio'; isFlipped.value = true; };
 const mutasdAzElfelejtettJelszot = () => { hatlapTipus.value = 'elfelejtett'; isFlipped.value = true; };
 
+// Felhasználónév-foglaltság ellenőrzés regisztráció közben.
 const felhasznaloNevEllenorzes = async () => {
   if (!regFelhasznaloNev.value.trim()) return;
   try {
@@ -184,7 +191,7 @@ const felhasznaloNevEllenorzes = async () => {
   } catch { console.error("Hiba"); }
 };
 
-// --- BEJELENTKEZÉS LOGIKA ---
+// Bejelentkezés meghívja az auth store centralizált login folyamatait.
 const bejelentkezes = async () => {
   isLoading.value = true;
   try {
@@ -196,14 +203,17 @@ const bejelentkezes = async () => {
   }
 };
 
+// Új user regisztrálása, siker után visszavált login nézetre.
 const regisztracio = async () => {
   isRegLoading.value = true;
     try {
       await authStore.regisztracio(regFelhasznaloNev.value, regJelszo.value);
       toastStore.addToast('Sikeres regisztráció, most jelentkezz be!', 4000, 'success')
-      isFlipped.value = false; // Visszafordítjuk a bejelentkezési oldalra
 
-      // Mezők ürítése
+      // Visszafordítjuk a login oldalra.
+      isFlipped.value = false;
+
+      // Űrlap állapot reset.
       regFelhasznaloNev.value = '';
       regJelszo.value = '';
       regJelszos.value = '';
@@ -214,8 +224,8 @@ const regisztracio = async () => {
     }
 };
 
+// Placeholder workflow, amíg valódi jelszó-visszaállítás végpont nincs.
 const elfelejtettJelszoKeres = () => {
-  // Jelszó-visszaállítás helyőrző logika
   toastStore.addToast('A jelszó visszaálitás igényelve!', 4000, 'success')
   isFlipped.value = false;
   resetAzonosito.value = '';

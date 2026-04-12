@@ -11,6 +11,9 @@ using System;
 
 namespace Kerting_Api.Service
 {
+    /// <summary>
+    /// Projekt üzleti logika: projekt/feladat kezelés, meghívók, tagság és projektchat szinkron.
+    /// </summary>
     public class ProjectService : IProjectService
     {
         private readonly KertingDbContext _context;
@@ -20,6 +23,9 @@ namespace Kerting_Api.Service
             _context = context;
         }
 
+        /// <summary>
+        /// User projektlistája a tagok/feladatok/todo-k kibővített adataival.
+        /// </summary>
         public async Task<IEnumerable<ProjectDto>> GetUserProjectsAsync(string userId)
         {
             var projects = await _context.Projects
@@ -53,6 +59,7 @@ namespace Kerting_Api.Service
                 .Where(l => validUserIds.Contains(l.Id))
                 .ToDictionaryAsync(l => l.Id.ToString(), l => l.Username);
 
+            // Megjelenítési név visszalépő lánc: teljes név -> login username -> Ismeretlen.
             string GetDisplayName(string uid)
             {
                 if (userDetails.TryGetValue(uid, out var user) && !string.IsNullOrWhiteSpace(user.Name))
@@ -62,6 +69,7 @@ namespace Kerting_Api.Service
                 return "Ismeretlen";
             }
 
+            // Avatar visszalépő segédfüggvény.
             string GetAvatar(string uid)
             {
                 if (userDetails.TryGetValue(uid, out var user))
@@ -77,7 +85,7 @@ namespace Kerting_Api.Service
                 Description = p.Description ?? "",
                 Deadline = p.Deadline?.ToString("yyyy-MM-dd"),
 
-                // Itt adjuk át a chat szoba ID-ját a Vue-nak (a gombhoz)
+                // A frontend csoportchat gombja ezt az ID-t használja.
                 ChatConversationId = p.ChatConversationId,
 
                 Status = p.OwnerId == userId ? (p.Status ?? "ongoing") :
@@ -115,6 +123,9 @@ namespace Kerting_Api.Service
             return result;
         }
 
+        /// <summary>
+        /// Új projekt létrehozása + automatikus csoportchat inicializálás.
+        /// </summary>
         public async Task<ProjectDto> CreateProjectAsync(string userId, ProjectDto dto)
         {
             var project = new Project
@@ -133,11 +144,10 @@ namespace Kerting_Api.Service
             });
 
             _context.Projects.Add(project);
-            await _context.SaveChangesAsync(); // Elmentjük, hogy legyen ID-ja
+            // Első mentés kell, hogy legyen projekt ID a kapcsolatokhoz.
+            await _context.SaveChangesAsync();
 
-            // ========================================================
-            // AUTOMATIKUS CSOPORTOS CHAT LÉTREHOZÁSA A PROJEKTHEZ
-            // ========================================================
+            // Projekthez kötött csoportchat létrehozása.
             var newChat = new Conversation
             {
                 IsGroup = true,
@@ -166,10 +176,9 @@ namespace Kerting_Api.Service
                 });
             }
 
-            // Összekötjük a projektet az új chattel
+            // Projekt-chat kapcsolat mentése.
             project.ChatConversationId = newChat.Id;
             await _context.SaveChangesAsync();
-            // ========================================================
 
             dto.Id = project.Id;
             dto.OwnerId = userId;
@@ -180,6 +189,9 @@ namespace Kerting_Api.Service
             return dto;
         }
 
+        /// <summary>
+        /// Projekt adatainak frissítése, beleértve a tagság és chat-résztvevők szinkronját.
+        /// </summary>
         public async Task<ProjectDto> UpdateProjectAsync(int projectId, ProjectDto dto)
         {
             var project = await _context.Projects
@@ -188,7 +200,7 @@ namespace Kerting_Api.Service
 
             if (project == null) return null;
 
-            // Ha változott a projekt neve, átnevezzük a hozzá tartozó csevegést is
+            // Névváltozás esetén a csoportchat címét is frissítjük.
             if (project.Title != dto.Title && project.ChatConversationId.HasValue)
             {
                 var chat = await _context.Conversations.FindAsync(project.ChatConversationId.Value);
@@ -200,9 +212,7 @@ namespace Kerting_Api.Service
             project.Deadline = string.IsNullOrEmpty(dto.Deadline) ? null : DateTime.Parse(dto.Deadline);
             project.Status = dto.Status;
 
-            // =========================================================================
-            // TAGOK SZINKRONIZÁLÁSA: Ha kirúgtak valakit, a Chatből is kivesszük
-            // =========================================================================
+            // Taglista szinkron: eltávolított tagok menjenek ki a projektchatből is.
             if (dto.Members != null)
             {
                 var incomingMemberIds = dto.Members.Select(m => m.UserId).ToList();
@@ -227,18 +237,20 @@ namespace Kerting_Api.Service
                     }
                 }
             }
-            // =========================================================================
 
             await _context.SaveChangesAsync();
             return dto;
         }
 
+        /// <summary>
+        /// Projekt törlése tulajdonos által, kapcsolt chat törlésével.
+        /// </summary>
         public async Task DeleteProjectAsync(int projectId, string userId)
         {
             var project = await _context.Projects.FirstOrDefaultAsync(p => p.Id == projectId && p.OwnerId == userId);
             if (project != null)
             {
-                // Ha törlik a projektet, eltüntetjük a hozzá tartozó chat szobát is
+                // Kapcsolt csoportchat törlése a projekt törlésekor.
                 if (project.ChatConversationId.HasValue)
                 {
                     var chat = await _context.Conversations.FindAsync(project.ChatConversationId.Value);
@@ -250,9 +262,9 @@ namespace Kerting_Api.Service
             }
         }
 
-        // ==========================================
-        // --- FELADATOK (TASKS) KEZELÉSE ---
-        // ==========================================
+        /// <summary>
+        /// Feladat létrehozása vagy frissítése, hozzárendelésekkel és todo listával.
+        /// </summary>
         public async Task<TaskDto> SaveTaskAsync(int projectId, TaskDto taskDto)
         {
             ProjectTask task;
@@ -274,6 +286,7 @@ namespace Kerting_Api.Service
 
                 if (taskDto.Todos != null)
                 {
+                    // Todo szinkron: törlés/frissítés/új elem felvétele.
                     var incomingTodoIds = taskDto.Todos.Where(t => t.Id > 0).Select(t => t.Id).ToList();
                     var todosToRemove = task.Todos.Where(t => !incomingTodoIds.Contains(t.Id)).ToList();
                     foreach (var r in todosToRemove) task.Todos.Remove(r);
@@ -304,6 +317,7 @@ namespace Kerting_Api.Service
                     }
                 }
 
+                // Assignment szinkron user listával.
                 var toRemoveAssign = task.AssignedTo.Where(a => !taskDto.AssignedTo.Contains(a.UserId)).ToList();
                 foreach (var r in toRemoveAssign) task.AssignedTo.Remove(r);
 
@@ -365,6 +379,9 @@ namespace Kerting_Api.Service
             return taskDto;
         }
 
+        /// <summary>
+        /// Feladat törlése projekten belül.
+        /// </summary>
         public async Task DeleteTaskAsync(int projectId, int taskId)
         {
             var task = await _context.ProjectTasks.FirstOrDefaultAsync(t => t.Id == taskId && t.ProjectId == projectId);
@@ -375,9 +392,9 @@ namespace Kerting_Api.Service
             }
         }
 
-        // ==========================================
-        // --- MEGHÍVÓK KEZELÉSE ---
-        // ==========================================
+        /// <summary>
+        /// User meghívása projektbe (Meghívott szerepkörrel).
+        /// </summary>
         public async Task InviteMemberAsync(int projectId, string userIdToInvite)
         {
             var project = await _context.Projects
@@ -396,6 +413,9 @@ namespace Kerting_Api.Service
             }
         }
 
+        /// <summary>
+        /// Meghívó elfogadása, tagság aktiválása és chat csatlakoztatás.
+        /// </summary>
         public async Task AcceptInviteAsync(int projectId, string userId)
         {
             var member = await _context.ProjectMembers
@@ -405,9 +425,7 @@ namespace Kerting_Api.Service
             {
                 member.Role = "Tag";
 
-                // =========================================================================
-                // CHATBE HELYEZÉS: Amint elfogadta a meghívót, bekerül a szobába is
-                // =========================================================================
+                // Elfogadás után a user bekerül a projekt csoportchat résztvevői közé.
                 var project = await _context.Projects.FindAsync(projectId);
 
                 if (project != null && project.ChatConversationId.HasValue && int.TryParse(userId, out int uId))
@@ -433,12 +451,14 @@ namespace Kerting_Api.Service
                         });
                     }
                 }
-                // =========================================================================
 
                 await _context.SaveChangesAsync();
             }
         }
 
+        /// <summary>
+        /// Meghívó visszautasítása: tagság rekord eltávolítása.
+        /// </summary>
         public async Task RejectInviteAsync(int projectId, string userId)
         {
             var member = await _context.ProjectMembers

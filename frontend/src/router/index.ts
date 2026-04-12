@@ -2,7 +2,11 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import CalendarView from '@/pages/CalendarView.vue'
 
+// Oldalcím prefix, hogy minden route címben egységes branding jelenjen meg.
 const pre = "🌱|";
+
+// Kliens oldali router definíció.
+// A route lista tartalmazza a publikus, autentikált és csak-admin oldalakat is.
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -179,7 +183,7 @@ const router = createRouter({
         requiresAdmin: true,
       }
     },
-    // ÚJ: Hibajegyek (Tickets) admin útvonal
+    // Hibajegyek (Tickets) admin útvonal
     {
       path: '/admin/tickets',
       name: 'admin-tickets',
@@ -193,26 +197,34 @@ const router = createRouter({
   ],
 })
 
+// Globális route guard:
+// - oldal cím frissítése,
+// - profil preload, ha mar van token,
+// - auth/admin/guest szabályok érvényesítése.
 router.beforeEach(async (to, from, next) => {
+  // A meta.title alapján dinamikusan frissítjük a böngésző tab címét.
   document.title = to.meta.title as string;
 
   const authStore = useAuthStore();
 
+  // Ha van hitelesített session, de nincs betöltve a profil,
+  // akkor route váltás előtt lehúzzuk, hogy a jogosultsági ellenőrzés pontos legyen.
   if (authStore.isAuthenticated && !authStore.profilAdatok) {
     await authStore.fetchUserProfile();
   }
 
-  // 2. KIBŐVÍTETT LOGIKA AZ ÚTVONAL ŐRBEN
+  // Jogosultsági mátrix kezelése.
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    // Védett oldal, de NINCS bejelentkezve -> irány a login
+    // Védett oldal, de nincs bejelentkezve -> loginra irányítjuk.
     next({ name: 'login' });
   } else if (to.meta.requiresAdmin && authStore.profilAdatok?.roleId !== 1) {
+    // Admin oldalra csak roleId=1 user léphet.
     next({ name: 'home' });
   } else if (to.meta.requiresGuest && authStore.isAuthenticated) {
-    // Vendég oldal (pl. login, regisztráció), de MÁR be van jelentkezve -> irány a főoldal (vagy profil)
+    // Csak-vendég oldal (pl. login), de már be van jelentkezve -> főoldal.
     next({ name: 'home' });
   } else {
-    // Minden más esetben mehet
+    // Minden szabály teljesült, mehet a navigáció.
     next();
   }
 });

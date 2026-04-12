@@ -263,6 +263,13 @@ interface NavLink {
   delay?: number;
 }
 
+interface SearchUser {
+  id: number | string;
+  nev: string;
+  avatar?: string | null;
+  szakma?: string;
+}
+
 const authStore = useAuthStore()
 const toastStore = useToastStore()
 const router = useRouter()
@@ -314,8 +321,8 @@ const submitTicket = async () => {
 const kereses = ref('')
 const isSearching = ref(false)
 const showSearchResults = ref(false)
-const foundUsers = ref<any[]>([])
-let timeoutId: any = null
+const foundUsers = ref<SearchUser[]>([])
+let timeoutId: ReturnType<typeof setTimeout> | null = null
 
 const getImageUrl = (fileName?: string | null): string | undefined => {
   if (!fileName || fileName.trim() === '') return undefined
@@ -326,7 +333,9 @@ const getImageUrl = (fileName?: string | null): string | undefined => {
 }
 
 const keresesInditasa = () => {
-  clearTimeout(timeoutId)
+  if (timeoutId !== null) {
+    clearTimeout(timeoutId)
+  }
   if (kereses.value.trim().length < 2) {
     foundUsers.value = []
     showSearchResults.value = false
@@ -339,7 +348,7 @@ const keresesInditasa = () => {
   timeoutId = setTimeout(async () => {
     try {
       // JAVÍTVA: Helyes végpont a kereséshez!
-      const response = await apiClient.get(`/search?q=${kereses.value}`)
+      const response = await apiClient.get<SearchUser[]>(`/search?q=${kereses.value}`)
       foundUsers.value = response.data
     } catch (error) {
       console.error("Hiba a kereséskor:", error)
@@ -373,7 +382,7 @@ const handleKijelentkezes = () => {
   authStore.kijelentkezes()
   profileMenuOpen.value = false
   mobileMenuOpen.value = false
-  toastStore.addToast('Sikeresen kijelentkeztél!', 3000, 'info');
+  toastStore.addToast('Sikeresen kijelentkeztél!', 3000, 'success');
   router.push('/')
 }
 

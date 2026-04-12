@@ -26,6 +26,7 @@ const emit = defineEmits<{
   close: [];
 }>();
 
+// UI allapotok: dragover visszajelzes, valasztott fajlok, metadata mezok.
 const isDragover = ref(false);
 const selectedFiles = ref<FilePreview[]>([]);
 const fileInput = ref<HTMLInputElement>();
@@ -33,6 +34,7 @@ const uploading = ref(false);
 const title = ref('');
 const description = ref('');
 
+// Akkor tiltjuk a kuldest, ha folyamatban van valami vagy hianyosak a kotelezo mezok.
 const isBusy = computed(() => uploading.value || props.isSubmitting);
 const canUpload = computed(() => {
   if (isBusy.value || selectedFiles.value.length === 0) return false;
@@ -41,6 +43,7 @@ const canUpload = computed(() => {
   return true;
 });
 
+// Húzd-és-ejtsd események a vizuális állapothoz és alapértelmezett böngésző-művelet tiltásához.
 const handleDragover = (e: DragEvent) => {
   e.preventDefault();
   isDragover.value = true;
@@ -62,12 +65,14 @@ const handleFileSelect = (e: Event) => {
   addFiles(files);
 };
 
+// Csak kep fajlok maradnak, majd FileReader-el preview adaturl keszul.
 const addFiles = (files: File[]) => {
   const imageFiles = files.filter(file => file.type.startsWith('image/'));
   if (!imageFiles.length) return;
 
   let filesToAdd: File[] = imageFiles;
   if (props.singleFile) {
+    // Single módban csak az első érvényes képet tartjuk meg.
     const firstImage = imageFiles[0];
     if (!firstImage) return;
     filesToAdd = [firstImage];
@@ -103,6 +108,7 @@ const handleUpload = async () => {
       const first = selectedFiles.value[0];
       if (!first) return;
 
+      // Single mod: metadata-val egyutt kuldjuk fel a kepet.
       emit('uploadSingle', {
         file: first.file,
         title: title.value.trim(),
@@ -111,12 +117,14 @@ const handleUpload = async () => {
       return;
     }
 
+    // Bulk mod: csak a fajllistat kuldjuk vissza a szulo komponensnek.
     emit('upload', selectedFiles.value.map(f => f.file));
   } finally {
     uploading.value = false;
   }
 };
 
+// Rejtett file inputot nyitjuk meg kattintasra.
 const openFileDialog = () => {
   fileInput.value?.click();
 };

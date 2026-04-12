@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { OwnGalleryItem } from '@/types/forum'
 
+// Kontrollalt komponens: minden form allapotot a szulo tart,
+// Ez a panel csak megjelenít és eventeket küld vissza.
 const props = defineProps<{
   showCreateForm: boolean
   titleValue: string
@@ -55,6 +57,7 @@ const emit = defineEmits<{
       />
 
       <div class="rounded-lg border border-earth-100/10 bg-earth-800/60 p-3 space-y-2">
+        <!-- Opcionális sajat galeria kep csatolasa -->
         <p class="text-sm text-earth-200">Csatolt saját galéria kép (opcionális)</p>
         <p v-if="props.selectedGalleryItem" class="text-sm text-earth-100">
           Kiválasztva: <span class="font-semibold">{{ props.selectedGalleryItem.title }}</span>
@@ -68,6 +71,7 @@ const emit = defineEmits<{
 
       <div class="relative flex gap-2">
         <div class="flex-1">
+          <!-- Címke input + javaslatlista -->
           <input
             :value="props.tagInputValue"
             type="text"

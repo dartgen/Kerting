@@ -10,6 +10,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Kerting_Api.Service
 {
+    /// <summary>
+    /// Fórum üzleti logika: feed szűrés/lapozás, post részlet, kommentfa, reakciók és moderációs műveletek.
+    /// </summary>
     public class ForumService : IForumService
     {
         private const int MaxDepth = 3;
@@ -20,6 +23,9 @@ namespace Kerting_Api.Service
             _context = context;
         }
 
+        /// <summary>
+        /// Feed lekérése dinamikus szűrésekkel, rendezésekkel és lapozással.
+        /// </summary>
         public async Task<object> GetFeedAsync(
             int page,
             int pageSize,
@@ -185,6 +191,9 @@ namespace Kerting_Api.Service
             };
         }
 
+        /// <summary>
+        /// Egy post részletes lekérése kommentlapozással és kezdő válaszhalmazzal.
+        /// </summary>
         public async Task<object?> GetPostByIdAsync(
             int postId,
             int? currentUserId,
@@ -351,6 +360,9 @@ namespace Kerting_Api.Service
             };
         }
 
+        /// <summary>
+        /// Egy komment válaszainak cursoros lapozott lekérése.
+        /// </summary>
         public async Task<object> GetCommentRepliesAsync(
             int commentId,
             int cursor,
@@ -447,6 +459,9 @@ namespace Kerting_Api.Service
             };
         }
 
+        /// <summary>
+        /// Új post létrehozása validációval és opcionális tag/attachment feldolgozással.
+        /// </summary>
         public async Task<object> CreatePostAsync(int userId, string title, string description, int? attachedGalleryItemId, List<string>? tagNames)
         {
             if (string.IsNullOrWhiteSpace(title)) throw new ArgumentException("A cím kötelező.");
@@ -480,6 +495,9 @@ namespace Kerting_Api.Service
             return new { post.Id };
         }
 
+        /// <summary>
+        /// Meglévő post frissítése jogosultság- és inputellenőrzéssel.
+        /// </summary>
         public async Task<bool> UpdatePostAsync(int postId, int userId, string title, string description, int? attachedGalleryItemId, List<string>? tagNames)
         {
             var post = await _context.ForumPost.FirstOrDefaultAsync(p => p.Id == postId && !p.IsDeleted);
@@ -508,6 +526,9 @@ namespace Kerting_Api.Service
             return true;
         }
 
+        /// <summary>
+        /// Post soft-delete (szerzo vagy admin).
+        /// </summary>
         public async Task<bool> DeletePostAsync(int postId, int userId)
         {
             var post = await _context.ForumPost.FirstOrDefaultAsync(p => p.Id == postId);
@@ -526,6 +547,9 @@ namespace Kerting_Api.Service
             return true;
         }
 
+        /// <summary>
+        /// Törölt post visszaállítása (csak admin).
+        /// </summary>
         public async Task<bool> RestorePostAsync(int postId, int userId)
         {
             var isAdmin = await IsAdminAsync(userId);
@@ -543,6 +567,9 @@ namespace Kerting_Api.Service
             return true;
         }
 
+        /// <summary>
+        /// Pin állapot váltás moderációs joggal.
+        /// </summary>
         public async Task<bool> SetPinnedStateAsync(int postId, int userId, bool isPinned)
         {
             var isAdmin = await IsAdminAsync(userId);
@@ -557,6 +584,9 @@ namespace Kerting_Api.Service
             return true;
         }
 
+        /// <summary>
+        /// Lock állapot váltás (indokkal) moderációs joggal.
+        /// </summary>
         public async Task<bool> SetLockedStateAsync(int postId, int userId, bool isLocked, string? reason)
         {
             var isAdmin = await IsAdminAsync(userId);
@@ -572,6 +602,9 @@ namespace Kerting_Api.Service
             return true;
         }
 
+        /// <summary>
+        /// Új komment vagy válasz létrehozása mélységkorláttal.
+        /// </summary>
         public async Task<object> AddCommentAsync(int postId, int userId, string message, int? parentCommentId)
         {
             var post = await _context.ForumPost.FirstOrDefaultAsync(p => p.Id == postId);
@@ -610,6 +643,9 @@ namespace Kerting_Api.Service
             return new { comment.Id };
         }
 
+        /// <summary>
+        /// Komment soft-delete jogosultság ellenőrzéssel.
+        /// </summary>
         public async Task<bool> DeleteCommentAsync(int commentId, int userId)
         {
             var comment = await _context.ForumComment
@@ -633,6 +669,9 @@ namespace Kerting_Api.Service
             return true;
         }
 
+        /// <summary>
+        /// Törölt komment visszaállítása (csak admin).
+        /// </summary>
         public async Task<bool> RestoreCommentAsync(int commentId, int userId)
         {
             var isAdmin = await IsAdminAsync(userId);
@@ -654,6 +693,9 @@ namespace Kerting_Api.Service
             return true;
         }
 
+        /// <summary>
+        /// Post like/dislike reakció váltás.
+        /// </summary>
         public async Task<bool> TogglePostReactionAsync(int postId, int userId, bool isLike)
         {
             var post = await _context.ForumPost.FirstOrDefaultAsync(p => p.Id == postId);
@@ -686,6 +728,9 @@ namespace Kerting_Api.Service
             return true;
         }
 
+        /// <summary>
+        /// Komment like/dislike reakció váltás.
+        /// </summary>
         public async Task<bool> ToggleCommentReactionAsync(int commentId, int userId, bool isLike)
         {
             var comment = await _context.ForumComment
@@ -721,6 +766,7 @@ namespace Kerting_Api.Service
             return true;
         }
 
+        // Admin jogosultság ellenőrzés user role alapján.
         private async Task<bool> IsAdminAsync(int userId)
         {
             return await _context.User
@@ -729,6 +775,7 @@ namespace Kerting_Api.Service
                 .FirstOrDefaultAsync();
         }
 
+            // Címkék normalizálása: trim, üres elemek dobása, duplikátumok kiszűrése.
         private static List<string> NormalizeTags(List<string>? tags)
         {
             return (tags ?? new List<string>())
@@ -738,12 +785,14 @@ namespace Kerting_Api.Service
                 .ToList();
         }
 
+            // Ellenőrzi, hogy a csatolt galéria kép a post tulajdonosának nem törölt eleme-e.
         private async Task<bool> IsAttachmentValidAsync(int ownerUserId, int galleryItemId)
         {
             return await _context.GalleryItem
                 .AnyAsync(g => g.Id == galleryItemId && g.UserId == ownerUserId && !g.IsDeleted);
         }
 
+            // Post tagok teljes újraszinkronizálása (remove-all + insert-current).
         private async Task UpsertPostTagsAsync(int postId, int userId, List<string>? tagNames)
         {
             var normalizedTags = NormalizeTags(tagNames);
@@ -781,6 +830,7 @@ namespace Kerting_Api.Service
             }
         }
 
+        // Új fórum tag létrehozási jogosultság ellenőrzése role alapján.
         private async Task<bool> CanCreateForumTagAsync(int userId)
         {
             var roleData = await _context.User
@@ -799,6 +849,7 @@ namespace Kerting_Api.Service
             return roleData.RoleName.Contains("kert");
         }
 
+        // Komment mélység meghatározása parent-lánc bejárással.
         private async Task<int> GetCommentDepthAsync(int commentId)
         {
             var depth = 1;
@@ -812,6 +863,7 @@ namespace Kerting_Api.Service
             return depth;
         }
 
+        // Komment szerializáció a részletes válaszobjektum struktúrájához.
         private static object SerializeComment(
             ForumComment comment,
             Libary.Model.User.User user,
@@ -886,6 +938,7 @@ namespace Kerting_Api.Service
             };
         }
 
+        // Kiszámítja a komment mélységét egy ismert parent map alapján.
         private static int GetDepthFromPath(IDictionary<int, int?> parentMap, ForumComment comment)
         {
             var depth = 1;
@@ -898,6 +951,7 @@ namespace Kerting_Api.Service
             return depth;
         }
 
+        // Felhasználónév kirajzolása: teljes név, vagy biztonságos visszalépő érték.
         private static string BuildUserDisplayName(Libary.Model.User.User user, string fallbackUsername)
         {
             if (string.IsNullOrWhiteSpace(user.VezetekNev) || string.IsNullOrWhiteSpace(user.KeresztNev))

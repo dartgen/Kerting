@@ -11,11 +11,11 @@ const lazyLoad = (el: HTMLImageElement, binding: DirectiveBinding<string | LazyO
 
   if (!src) return
 
-  // Set placeholder if provided
+  // Placeholder beállítása, ha érkezett egyedi érték
   if (options.placeholder) {
     el.src = options.placeholder
   } else {
-    // Default: small blurred placeholder (data URI)
+    // Alapértelmezés: kis, elmosott placeholder (data URI)
     el.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect fill="%23666" width="400" height="300"/%3E%3C/svg%3E'
   }
 
@@ -33,7 +33,7 @@ const lazyLoad = (el: HTMLImageElement, binding: DirectiveBinding<string | LazyO
             img.style.filter = 'blur(0px)'
             img.style.transition = 'filter 0.3s ease-in-out'
 
-            // Handle image load/error
+            // Kép betöltési hiba/siker kezelése.
             img.onload = () => {
               img.classList.add('loaded')
               observer.unobserve(img)
@@ -56,7 +56,7 @@ const lazyLoad = (el: HTMLImageElement, binding: DirectiveBinding<string | LazyO
 
   observer.observe(el)
 
-  // Cleanup
+  // Erőforrás felszabadítás.
   el.__lazyLoadObserver = observer
 }
 
@@ -65,7 +65,7 @@ export const vLazy = {
     lazyLoad(el, binding)
   },
   updated(el: HTMLImageElement, binding: DirectiveBinding<string | LazyOptions>) {
-    // If src changes, reload
+    // Ha a forrás változik, újratöltjük a képet
     if (el.dataset.src !== binding.value) {
       if (el.__lazyLoadObserver) {
         el.__lazyLoadObserver.unobserve(el)
@@ -81,7 +81,7 @@ export const vLazy = {
   }
 }
 
-// Extend HTMLImageElement interface
+// HTMLImageElement interfész kiterjesztése a directive belső observer tárolásához.
 declare global {
   interface HTMLImageElement {
     __lazyLoadObserver?: IntersectionObserver

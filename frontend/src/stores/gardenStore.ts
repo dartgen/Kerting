@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { authService } from '@/services/authService'
 
+// Főoldali kiemelt szakember kártyamodell.
 export interface Professional {
   id: number
   name: string
@@ -11,6 +12,7 @@ export interface Professional {
   ertekelesSzam: number
 }
 
+// Főoldali minta referenciamunka modell.
 export interface Work {
   id: number
   title: string
@@ -18,11 +20,18 @@ export interface Work {
   highlight?: string
 }
 
+// Garden store:
+// landing page adatai (kiemelt szakemberek + minta munkák) egy helyen.
 export const useGardenStore = defineStore('garden', () => {
+  // API-ból érkező kiemelt szakemberek listája.
   const professionals = ref<Professional[]>([])
+
+  // Töltési/állapotjelző flag-ek UI-hoz.
   const featuredLoading = ref(false)
   const featuredError = ref<string | null>(null)
 
+  // Kiemelt felhasználók letöltése a carouselhez.
+  // A mapping itt történik a backend DTO -> frontend kártyamodell között.
   const loadFeaturedProfessionals = async () => {
     featuredLoading.value = true
     featuredError.value = null
@@ -38,6 +47,7 @@ export const useGardenStore = defineStore('garden', () => {
           ertekeles: item.ertekeles ?? 0,
           ertekelesSzam: item.ertekelesSzam ?? 0,
         }))
+        // Frontenden kiszűrjük a hiányos elemeket, hogy ne törjön a kártya layout.
         .filter((item) => item.name.trim().length > 0 && item.desc.trim().length > 0)
     } catch (error) {
       console.error('Nem sikerült betölteni a kiemelt felhasználókat:', error)
@@ -48,6 +58,7 @@ export const useGardenStore = defineStore('garden', () => {
     }
   }
 
+  // Statikus minta munkák (demonstrációs tartalom a főoldalhoz).
   const works = ref<Work[]>([
     {
       id: 1,

@@ -12,6 +12,9 @@ namespace Kerting_Api.Controller
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
+    /// <summary>
+    /// Fórum végpontok: feed, post részlet, kommentek, reakciók és moderációs műveletek.
+    /// </summary>
     public class ForumController : ControllerBase
     {
         private readonly IForumService _forumService;
@@ -21,14 +24,19 @@ namespace Kerting_Api.Controller
             _forumService = forumService;
         }
 
+        // Kötelező user ID claim (authorize-kötött végpontokhoz).
         private int GetCurrentUserId() => int.Parse(User.FindFirst("Id")?.Value ?? "0");
 
+        // Opcionális user ID claim (allow-anonymous végpontoknál is használható).
         private int? TryGetCurrentUserId()
         {
             var rawId = User.FindFirst("Id")?.Value;
             return int.TryParse(rawId, out var userId) ? userId : null;
         }
 
+        /// <summary>
+        /// Post létrehozás/frissítés kérésadat.
+        /// </summary>
         public sealed class UpsertForumPostRequest
         {
             [Required]
@@ -42,6 +50,9 @@ namespace Kerting_Api.Controller
             public List<string>? Tags { get; set; }
         }
 
+        /// <summary>
+        /// Új komment vagy válasz kérésadat.
+        /// </summary>
         public sealed class AddCommentRequest
         {
             [Required]
@@ -51,6 +62,9 @@ namespace Kerting_Api.Controller
             public int? ParentCommentId { get; set; }
         }
 
+        /// <summary>
+        /// Post lock/unlock állapot kérésadat.
+        /// </summary>
         public sealed class LockStateRequest
         {
             public bool IsLocked { get; set; }
@@ -58,6 +72,9 @@ namespace Kerting_Api.Controller
             public string? Reason { get; set; }
         }
 
+        /// <summary>
+        /// Fórum feed lekérése szűrőkkel és lapozással.
+        /// </summary>
         [HttpGet("feed")]
         [AllowAnonymous]
         public async Task<IActionResult> GetFeed(
@@ -84,6 +101,9 @@ namespace Kerting_Api.Controller
             return Ok(result);
         }
 
+        /// <summary>
+        /// Egy post részlet lekérése komment-lapozással.
+        /// </summary>
         [HttpGet("{id}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetById(
@@ -104,6 +124,9 @@ namespace Kerting_Api.Controller
             return result is null ? NotFound() : Ok(result);
         }
 
+        /// <summary>
+        /// Egy kommenthez tartozó válaszok lapozott lekérése.
+        /// </summary>
         [HttpGet("comment/{commentId}/replies")]
         [AllowAnonymous]
         public async Task<IActionResult> GetReplies(
@@ -116,6 +139,9 @@ namespace Kerting_Api.Controller
             return Ok(result);
         }
 
+        /// <summary>
+        /// Új fórum post létrehozása.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] UpsertForumPostRequest request)
         {
@@ -139,6 +165,9 @@ namespace Kerting_Api.Controller
             }
         }
 
+        /// <summary>
+        /// Meglévő post frissítése.
+        /// </summary>
         [HttpPatch("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] UpsertForumPostRequest request)
         {
@@ -153,6 +182,9 @@ namespace Kerting_Api.Controller
             return success ? Ok() : NotFound();
         }
 
+        /// <summary>
+        /// Post soft-delete.
+        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
@@ -160,6 +192,9 @@ namespace Kerting_Api.Controller
             return success ? Ok() : NotFound();
         }
 
+        /// <summary>
+        /// Törölt post visszaállítása.
+        /// </summary>
         [HttpPatch("{id}/restore")]
         public async Task<IActionResult> Restore(int id)
         {
@@ -167,6 +202,9 @@ namespace Kerting_Api.Controller
             return success ? Ok() : NotFound();
         }
 
+        /// <summary>
+        /// Post pin állapotának módosítása (moderáció).
+        /// </summary>
         [HttpPatch("{id}/pin")]
         public async Task<IActionResult> SetPinnedState(int id, [FromQuery] bool isPinned)
         {
@@ -174,6 +212,9 @@ namespace Kerting_Api.Controller
             return success ? Ok() : NotFound();
         }
 
+        /// <summary>
+        /// Post lock állapotának módosítása (moderáció).
+        /// </summary>
         [HttpPatch("{id}/lock")]
         public async Task<IActionResult> SetLockedState(int id, [FromBody] LockStateRequest request)
         {
@@ -181,6 +222,9 @@ namespace Kerting_Api.Controller
             return success ? Ok() : NotFound();
         }
 
+        /// <summary>
+        /// Like/dislike reakció váltás post szinten.
+        /// </summary>
         [HttpPost("{id}/react")]
         public async Task<IActionResult> TogglePostReaction(int id, [FromQuery] bool isLike)
         {
@@ -188,6 +232,9 @@ namespace Kerting_Api.Controller
             return success ? Ok() : NotFound();
         }
 
+        /// <summary>
+        /// Új komment/válasz létrehozása egy posthoz.
+        /// </summary>
         [HttpPost("{id}/comment")]
         public async Task<IActionResult> AddComment(int id, [FromBody] AddCommentRequest request)
         {
@@ -206,6 +253,9 @@ namespace Kerting_Api.Controller
             }
         }
 
+        /// <summary>
+        /// Komment törlése.
+        /// </summary>
         [HttpDelete("comment/{commentId}")]
         public async Task<IActionResult> DeleteComment(int commentId)
         {
@@ -213,6 +263,9 @@ namespace Kerting_Api.Controller
             return success ? Ok() : NotFound();
         }
 
+        /// <summary>
+        /// Törölt komment visszaállítása.
+        /// </summary>
         [HttpPatch("comment/{commentId}/restore")]
         public async Task<IActionResult> RestoreComment(int commentId)
         {
@@ -220,6 +273,9 @@ namespace Kerting_Api.Controller
             return success ? Ok() : NotFound();
         }
 
+        /// <summary>
+        /// Like/dislike reakció váltás komment szinten.
+        /// </summary>
         [HttpPost("comment/{commentId}/react")]
         public async Task<IActionResult> ToggleCommentReaction(int commentId, [FromQuery] bool isLike)
         {

@@ -68,12 +68,22 @@
 import { ref } from 'vue';
 import apiClient from '@/services/axios';
 
+// Felhasználó kiválasztó modál csapattag bővítéshez.
+// A komponens keresést futtat és egy kiválasztott user objektumot ad vissza.
 const emit = defineEmits(['close', 'select']);
+
+interface SearchUser {
+  id: number | string;
+  nev: string;
+  szakma?: string;
+  avatar?: string | null;
+}
 
 const kereses = ref('');
 const isSearching = ref(false);
-const users = ref<any[]>([]);
-let timeoutId: any = null;
+const users = ref<SearchUser[]>([]);
+// Egyszerű debounce az API hívások számának csökkentésére gépelés közben.
+let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
 const bezaras = () => emit('close');
 
@@ -85,11 +95,11 @@ const hideImage = (event: Event) => {
   }
 };
 
-// Javított: undefined visszatérési érték
+// Avatar URL összeállítás profilképekhez (abszolút és relatív input támogatással).
 const getImageUrl = (fileName?: string | null): string | undefined => {
   if (!fileName || fileName.trim() === '') return undefined;
 
-  // Biztosíték: Ha már eleve teljes link lenne
+  // Ha már teljes URL érkezik, azt változatlanul használjuk.
   if (fileName.startsWith('http')) return fileName;
 
   const axiosBaseUrl = apiClient.defaults.baseURL;
@@ -98,7 +108,8 @@ const getImageUrl = (fileName?: string | null): string | undefined => {
   return `${new URL(axiosBaseUrl).origin}/resources/Profiles/${fileName}`;
 };
 
-const kivalaszt = (user: any) => {
+// Kiválasztáskor normalizált user objektumot küldünk vissza a szülőnek.
+const kivalaszt = (user: SearchUser) => {
   const processedUser = {
     ...user,
     avatar: getImageUrl(user.avatar)
@@ -107,12 +118,16 @@ const kivalaszt = (user: any) => {
   bezaras();
 };
 
+// Publikus profil megnyitása új fülön, hogy a kiválasztó modál munkafolyamata ne vesszen el.
 const profilMegnyitasa = (userId: string | number) => {
   window.open(`/user/${userId}`, '_blank');
 };
 
+// Debounce-olt keresésindítás: 2 karakternél rövidebb inputra nem kérdezünk API-t.
 const keresesInditasa = () => {
-  clearTimeout(timeoutId);
+  if (timeoutId !== null) {
+    clearTimeout(timeoutId);
+  }
 
   if (kereses.value.trim().length < 2) {
     users.value = [];
@@ -122,9 +137,10 @@ const keresesInditasa = () => {
 
   isSearching.value = true;
 
+  // 500ms várakozás után fut a tényleges backend keresés.
   timeoutId = setTimeout(async () => {
     try {
-      const response = await apiClient.get(`/search?q=${kereses.value}`);
+      const response = await apiClient.get<SearchUser[]>(`/search?q=${kereses.value}`);
       users.value = response.data;
     } catch (error) {
       console.error("Hiba a felhasználók keresésekor:", error);

@@ -1,3 +1,4 @@
+// Rövid felhasználói adatmodell work nézetekhez és listákhoz.
 export interface WorkUserSummary {
   id: number;
   vezetekNev?: string;
@@ -9,12 +10,14 @@ export interface WorkUserSummary {
   imgString?: string;
 }
 
+// Backend címke-kapcsoló struktúra (tag link + activity név).
 export interface WorkTagLink {
   tag?: {
     activity?: string;
   };
 }
 
+// Work lista szűrők kliens oldali paraméterezéshez.
 export interface WorkFilters {
   priceMin?: number;
   priceMax?: number;
@@ -24,11 +27,13 @@ export interface WorkFilters {
   status?: string[];
 }
 
+// Kép metaadat frissítés (kiemelt kép, párosított before/after kapcsolat).
 export interface WorkImageMetadataUpdate {
   isShowcase?: boolean;
   relatedImageId?: number | null;
 }
 
+// Fő work entitás a részletes oldalakhoz és szerkesztő felületekhez.
 export interface Work {
   id?: number;
   authorId?: number;
@@ -48,6 +53,7 @@ export interface Work {
   isCurrentUserRelated?: boolean;
 }
 
+// Jelentkezés rekord egy adott munkára.
 export interface WorkApplicant {
   id?: number;
   workId: number;
@@ -58,6 +64,7 @@ export interface WorkApplicant {
   createdAtUtc?: string;
 }
 
+// Work-höz tartozó TODO elem (kis feladatlista).
 export interface WorkTodo {
   id?: number;
   workId?: number;
@@ -67,6 +74,7 @@ export interface WorkTodo {
   doneByUserId?: number;
 }
 
+// Work képadat rekord galéria/lista megjelenítéshez.
 export interface WorkImage {
   id?: number;
   workId: number;
@@ -75,6 +83,7 @@ export interface WorkImage {
   uploadedAtUtc?: string;
 }
 
+// Kiemelt work rekord (homepage/admin featured lista).
 export interface FeaturedWork {
   id?: number;
   workId: number;
@@ -82,6 +91,7 @@ export interface FeaturedWork {
   featuredAtUtc?: string;
 }
 
+// Lapozott work lista válaszmodell az API kompatibilitáshoz.
 export interface PaginatedWorks {
   items: Work[];
   totalCount: number;

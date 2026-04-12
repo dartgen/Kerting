@@ -1,8 +1,8 @@
 import { isAxiosError } from 'axios'
 
 /**
- * HTTP Error Handler Utility
- * Centralizált módszer az API errorok kezelésére
+ * HTTP hibakezelo seged.
+ * Kozponti ponton alakitja egységes, UI-barat szerkezetté az Axios hibakat.
  */
 
 export interface ApiError {
@@ -20,7 +20,8 @@ interface ErrorPayload {
 }
 
 /**
- * Feldolgozza az Axios hibákat és szép hibaüzenetet generál
+ * Axios hiba -> egységes ApiError modell.
+ * A cél, hogy a komponenseknek ne kelljen minden státuszkódot külön kezelni.
  */
 export function handleHttpError(error: unknown): ApiError {
   if (!isAxiosError<ErrorPayload>(error)) {
@@ -33,7 +34,7 @@ export function handleHttpError(error: unknown): ApiError {
     }
   }
 
-  // Network error (nincs response)
+  // Halozati hiba: nincs HTTP valasz (offline, timeout, CORS, DNS, stb.).
   if (!error.response) {
     const apiError: ApiError = {
       status: 0,
@@ -46,7 +47,7 @@ export function handleHttpError(error: unknown): ApiError {
 
   const { status, data } = error.response
 
-  // Validációs hiba (400)
+  // Validacios hiba (400): jellemzoen hibas form-input vagy backend szabalysertes.
   if (status === 400) {
     const apiError: ApiError = {
       status,
@@ -58,7 +59,7 @@ export function handleHttpError(error: unknown): ApiError {
     return apiError
   }
 
-  // Auth hiba (401) — már az interceptor kezeli, de ha mégis ide jut
+  // Auth hiba (401): alapvetoen interceptor kezeli, ez a masodlagos vedovonal.
   if (status === 401) {
     const apiError: ApiError = {
       status,
@@ -69,7 +70,7 @@ export function handleHttpError(error: unknown): ApiError {
     return apiError
   }
 
-  // Permission hiba (403)
+  // Jogosultsagi hiba (403).
   if (status === 403) {
     const apiError: ApiError = {
       status,
@@ -80,7 +81,7 @@ export function handleHttpError(error: unknown): ApiError {
     return apiError
   }
 
-  // Server error (5xx)
+  // Szerver oldali hiba (5xx).
   if (status >= 500) {
     const apiError: ApiError = {
       status,
@@ -92,7 +93,7 @@ export function handleHttpError(error: unknown): ApiError {
     return apiError
   }
 
-  // Általános hiba
+  // Általános visszalépő kezelés (egyéb státuszkódok).
   const apiError: ApiError = {
     status,
     message: data?.message || `Hiba: ${status}`,
@@ -104,7 +105,8 @@ export function handleHttpError(error: unknown): ApiError {
 }
 
 /**
- * Field-specific validation errors kezelése (ha a backend azt ad vissza)
+ * Mező-szintű validációs hibák kinyerése backend kérésadatból.
+ * A visszaadott objektum kulcsa a mezőnév, értéke az első megjelenítendő hibaüzenet.
  */
 export function extractFieldErrors(error: unknown): Record<string, string> {
   const fieldErrors: Record<string, string> = {}

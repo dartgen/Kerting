@@ -18,7 +18,7 @@ const route = useRoute();
 const router = useRouter();
 const isOwnWorksView = computed(() => route.meta.workScope === 'own');
 
-// Pagination state
+// Lapozási állapot: a backend paginált válasza és a kliens oldali lapváltások.
 const currentPage = ref(1);
 const pageSize = 6;
 const totalPages = ref(1);
@@ -33,7 +33,7 @@ interface AdvancedWorkFilters {
   status: string[];
 }
 
-// Filtering state
+// Összetett szűrési állapot (ár, dátum, célközönség, státusz).
 const advancedFilters = ref<AdvancedWorkFilters>({
   priceMin: undefined,
   priceMax: undefined,
@@ -68,8 +68,8 @@ const loadPage = async (page: number) => {
     const res = isOwnWorksView.value
       ? await workService.getMyWorks(page, pageSize)
       : await workService.getVisibleWorks(page, pageSize);
-    // Handle both paginated response (backend returns object with items/totalPages)
-    // and array response (fallback for older API)
+
+    // Kompatibilitás: kezeli az új paginált formátumot és a régi tömbös választ is.
     if (Array.isArray(res.data)) {
       works.value = res.data;
       totalPages.value = 1;
@@ -79,7 +79,7 @@ const loadPage = async (page: number) => {
       totalPages.value = res.data.totalPages;
       totalCount.value = res.data.totalCount;
     } else {
-      // Fallback: treat as empty result
+      // Hibás vagy üres kérésadat esetén biztonságos visszalépő állapot.
       works.value = [];
       totalPages.value = 1;
       totalCount.value = 0;
@@ -146,26 +146,26 @@ const filteredWorks = computed(() => {
   const filters = advancedFilters.value;
 
   let result = works.value.filter((work) => {
-    // Text search
+    // Szöveges találat címben vagy leírásban.
     const matchesText =
       !query ||
       work.title.toLowerCase().includes(query) ||
       work.description.toLowerCase().includes(query);
 
-    // Tag filter
+    // Tag alapú szűrés activity név szerint.
     const workTagNames = (work.tags ?? [])
       .map((item) => item.tag?.activity?.trim())
       .filter((tag): tag is string => Boolean(tag));
     const matchesTags =
       activeTags.size === 0 || workTagNames.some((tag) => activeTags.has(tag));
 
-    // Price filter
+    // Árszűrés minimum/maximum határral.
     const price = work.basePrice ?? 0;
     const matchesPrice =
       (filters.priceMin === undefined || price >= filters.priceMin) &&
       (filters.priceMax === undefined || price <= filters.priceMax);
 
-    // Date filter
+    // Dátum szerinti szűrés opcionális tól-ig mezőkkel.
     let matchesDate = true;
     if (filters.createdFrom || filters.createdTo) {
       const workDate = work.createdAtUtc ? new Date(work.createdAtUtc) : new Date();
@@ -179,12 +179,12 @@ const filteredWorks = computed(() => {
       }
     }
 
-    // Audience filter
+    // Célközönség szerinti szűrés.
     const matchesAudience =
       filters.targetAudience.length === 0 ||
       filters.targetAudience.includes(work.targetAudience);
 
-    // Status filter (currently only shows Open, but can be extended)
+    // Státusz szerinti szűrés; bővíthető további értékekkel.
     const matchesStatus =
       filters.status.length === 0 ||
       filters.status.includes(work.status || 'Open');
@@ -192,7 +192,7 @@ const filteredWorks = computed(() => {
     return matchesText && matchesTags && matchesPrice && matchesDate && matchesAudience && matchesStatus;
   });
 
-  // Sorting
+  // Rendezés a kiválasztott kritérium alapján.
   result = [...result].sort((a, b) => {
     switch (sortBy.value) {
       case 'priceAsc': {
@@ -290,8 +290,6 @@ const hasActiveFilters = computed(
     advancedFilters.value.status.length > 0
 );
 
-const showCreateButton = computed(() => canCreateWork.value && !isOwnWorksView.value);
-
 const emptyStateText = computed(() =>
   isOwnWorksView.value
     ? 'Még nincs olyan munkád, amelyhez kapcsolódnál.'
@@ -324,7 +322,8 @@ const goToPage = (page: number) => {
 
 const handleFiltersUpdate = (newFilters: AdvancedWorkFilters) => {
   advancedFilters.value = newFilters;
-  currentPage.value = 1; // Reset to page 1 when filters change
+  // Szűrőváltásnál mindig az első oldalról indulunk újra.
+  currentPage.value = 1;
 };
 
 const handleFiltersReset = () => {
@@ -337,7 +336,8 @@ const handleFiltersReset = () => {
     status: []
   };
   currentPage.value = 1;
-  clearFilters(); // Also clear text search and tag filters
+  // Az advanced szűrők mellett a szöveges/tag szűrést is nullázzuk.
+  clearFilters();
 };
 </script>
 
@@ -345,7 +345,7 @@ const handleFiltersReset = () => {
   <InnerPageLayout>
     <PageTitle :title="pageTitle" />
 
-    <!-- Mobile Filter Toggle -->
+    <!-- Mobil nézet: szűrőpanel ki/be kapcsolása -->
     <div class="mb-4 flex lg:hidden">
       <button
         @click="showFilters = !showFilters"
@@ -359,7 +359,7 @@ const handleFiltersReset = () => {
     </div>
 
     <div class="grid grid-cols-1 gap-6 min-h-0 flex-1 lg:grid-cols-[280px_1fr] lg:gap-16">
-      <!-- Mobile Collapsible Filters -->
+      <!-- Mobil nézet összecsukható szűrők -->
       <Transition name="slide">
         <aside
           v-if="showFilters"
@@ -674,7 +674,7 @@ const handleFiltersReset = () => {
           <p class="mt-0.5 text-xs text-earth-300/90">Találatok: {{ filteredWorks.length }} / {{ works.length }}</p>
         </div>
 
-        <!-- Works List -->
+        <!-- Munkák listája -->
         <div v-if="loading" class="text-center py-6">
           Várj egy kicsit, munkák betöltése...
         </div>

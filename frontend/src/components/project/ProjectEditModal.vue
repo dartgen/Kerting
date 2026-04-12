@@ -72,16 +72,19 @@
 
 <script setup lang="ts">
 import { reactive, computed } from 'vue';
+import type { Project } from '@/types/project';
 
+// Ugyanaz a modál szolgál új projekt létrehozására és meglévő projekt szerkesztésére.
 const props = defineProps<{
-  editData?: any;
+  editData?: Partial<Project> | null;
 }>();
 
+// A szülő dönt a tényleges mentésről, itt csak az űrlapadatot állítjuk össze és küldjük fel.
 const emit = defineEmits(['close', 'save']);
 
 const isEditMode = computed(() => !!props.editData);
 
-// Inicializálás meglévő adatokkal (szerkesztés) vagy üresen (új)
+// Űrlap inicializálása: szerkesztésnél a meglévő adatokból, létrehozásnál alapértékekből.
 const urlapAdat = reactive({
   id: props.editData?.id || null,
   title: props.editData?.title || '',
@@ -94,6 +97,7 @@ const urlapAdat = reactive({
 
 const bezaras = () => emit('close');
 
+// Minimalista kliens oldali védelem: üres címmel nem engedünk menteni.
 const mentes = () => {
   if (!urlapAdat.title.trim()) return;
   emit('save', { ...urlapAdat });

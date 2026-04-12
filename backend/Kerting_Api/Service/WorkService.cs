@@ -1,4 +1,4 @@
-using Kerting_Api.Interface;
+﻿using Kerting_Api.Interface;
 using Kerting_Api.DTO;
 using Libary;
 using Libary.Model.Work;
@@ -15,6 +15,11 @@ using System.Threading.Tasks;
 
 namespace Kerting_Api.Service
 {
+    /// <summary>
+    /// Work modul üzleti logikája.
+    /// Ebben az osztályban történik a szűrés, jogosultság, workflow státuszkezelés,
+    /// jelentkezési folyamat és képkezelés teljes backend implementációja.
+    /// </summary>
     public class WorkService : IWorkService
     {
         private readonly GenericInterface<Work> _workRepo;
@@ -40,6 +45,9 @@ namespace Kerting_Api.Service
             _context = context;
         }
 
+        /// <summary>
+        /// Régi, visszafelé kompatibilis nyitott munka lista részletes include-okkal.
+        /// </summary>
         public async Task<IEnumerable<Work>> GetAllOpenWorksAsync()
         {
             return await _context.Work
@@ -50,16 +58,26 @@ namespace Kerting_Api.Service
                 .ToListAsync();
         }
 
+        /// <summary>
+        /// Userre szabott látható listanézet:
+        /// nyitott + saját + elfogadott jelentkezésként kapcsolódó munkák.
+        /// </summary>
         public async Task<PaginatedResponse<WorkListItemDto>> GetVisibleWorksAsync(int userId, int page = 1, int pageSize = 6, WorkFilterParams? filters = null)
         {
             return await GetUserWorkListAsync(userId, page, pageSize, filters, ownOnly: false);
         }
 
+        /// <summary>
+        /// A user saját/releváns munkái külön feedben.
+        /// </summary>
         public async Task<PaginatedResponse<WorkListItemDto>> GetMyWorksAsync(int userId, int page = 1, int pageSize = 6, WorkFilterParams? filters = null)
         {
             return await GetUserWorkListAsync(userId, page, pageSize, filters, ownOnly: true);
         }
 
+        /// <summary>
+        /// Nyitott munkák lapozott listája általános feedhez.
+        /// </summary>
         public async Task<PaginatedResponse<Work>> GetAllOpenWorksAsync(int page = 1, int pageSize = 6, WorkFilterParams? filters = null)
         {
             var pagination = new PaginationParams { Page = page, PageSize = pageSize };
@@ -70,15 +88,15 @@ namespace Kerting_Api.Service
                 .Include(w => w.Tags).ThenInclude(wt => wt.Tag)
                 .AsQueryable();
 
-            // Base filter: Open status
+            // Alapszabály: csak Open munkák.
             query = query.Where(w => w.Status == "Open");
 
             query = ApplyAdvancedFilters(query, filters);
 
-            // Get total count before pagination
+            // Lapozás előtt összes elemszám, hogy pontos paginációs metadata menjen vissza.
             var totalCount = await query.CountAsync();
 
-            // Apply pagination
+            // Skip/Take szerinti adatlapozás.
             var skip = (pagination.Page - 1) * pagination.PageSize;
             var items = await query
                 .OrderByDescending(w => w.CreatedAtUtc)
@@ -90,6 +108,9 @@ namespace Kerting_Api.Service
             return new PaginatedResponse<Work>(items, totalCount, pagination.Page, pagination.PageSize);
         }
 
+        /// <summary>
+        /// Admin oldali publikus munkák listája (jellemzően moderációs/kiemelési célra).
+        /// </summary>
         public async Task<IEnumerable<Work>> GetAdminPublicWorksAsync()
         {
             return await _context.Work
@@ -101,6 +122,16 @@ namespace Kerting_Api.Service
                 .ToListAsync();
         }
 
+        /// <summary>
+        /// Admin szerepkör ellenőrzése user ID alapján.
+        /// </summary>
+        public async Task<bool> IsAdminAsync(int userId)
+        {
+            var user = await _context.User.AsNoTracking().FirstOrDefaultAsync(x => x.Id == userId);
+            return user?.RoleId == 1;
+        }
+
+        // Közös listázó belső implementáció, amelyet a "visible" és "my" végpont is használ.
         private async Task<PaginatedResponse<WorkListItemDto>> GetUserWorkListAsync(int userId, int page, int pageSize, WorkFilterParams? filters, bool ownOnly)
         {
             var pagination = new PaginationParams { Page = page, PageSize = pageSize };
@@ -112,6 +143,8 @@ namespace Kerting_Api.Service
                 .Include(w => w.Applicants)
                 .AsQueryable();
 
+            // ownOnly=true: szerző vagy elfogadott jelentkező által kapcsolódó munkák.
+            // ownOnly=false: plusz a nyitott munkák is látszanak a feedben.
             query = ownOnly
                 ? query.Where(w => w.AuthorId == userId || w.Applicants.Any(a => a.UserId == userId && a.Status == "Accepted"))
                 : query.Where(w => w.Status == "Open" || w.AuthorId == userId || w.Applicants.Any(a => a.UserId == userId && a.Status == "Accepted"));
@@ -133,6 +166,7 @@ namespace Kerting_Api.Service
             return new PaginatedResponse<WorkListItemDto>(items, totalCount, pagination.Page, pagination.PageSize);
         }
 
+        // Opcionális haladó szűrők alkalmazása dinamikus queryre.
         private IQueryable<Work> ApplyAdvancedFilters(IQueryable<Work> query, WorkFilterParams? filters)
         {
             if (filters == null)
@@ -162,6 +196,8 @@ namespace Kerting_Api.Service
             return query;
         }
 
+        // Entitás -> listanézet DTO map.
+        // Itt áll elő az IsCurrentUserRelated flag, ami frontend badge megjelenítéshez kell.
         private static WorkListItemDto MapToListItem(Work work, int currentUserId)
         {
             return new WorkListItemDto
@@ -203,6 +239,10 @@ namespace Kerting_Api.Service
             };
         }
 
+        /// <summary>
+        /// Munka részletes lekérdezése include-okkal.
+        /// Visszalépő ág van arra az esetre, ha egy kapcsolódó tábla/oszlop még nincs meg.
+        /// </summary>
         public async Task<Work> GetWorkByIdAsync(int id)
         {
             try
@@ -226,9 +266,9 @@ namespace Kerting_Api.Service
 
                 return work;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                // Fallback: try with minimal includes
+                // Visszalépő út: minimál lekérdezés, hogy legalább az alap munkaobjektum visszatérjen.
                 try
                 {
                     return await _context.Work
@@ -241,15 +281,19 @@ namespace Kerting_Api.Service
             }
         }
 
+        /// <summary>
+        /// Új munka létrehozása.
+        /// Jogosultsági szabály: admin vagy kertes/gardener jellegű szerepkör írhat ki munkát.
+        /// </summary>
         public async Task<Work> CreateWorkAsync(Work work)
         {
             var user = await _context.User.FindAsync(work.AuthorId);
-            if (user == null) throw new InvalidOperationException("Felhasználó nem található.");
+            if (user == null) throw new InvalidOperationException("FelhasznÃ¡lÃ³ nem talÃ¡lhatÃ³.");
             var role = await _context.Role.FindAsync(user.RoleId);
 
             if (role == null)
             {
-                throw new InvalidOperationException("A felhasználó szerepköre nem található.");
+                throw new InvalidOperationException("A felhasznÃ¡lÃ³ szerepkÃ¶re nem talÃ¡lhatÃ³.");
             }
 
             var normalizedRoleName = NormalizeText(role.Name);
@@ -260,10 +304,10 @@ namespace Kerting_Api.Service
 
             if (!canCreateWork)
             {
-                throw new UnauthorizedAccessException("Nincs jogosultságod munka kiírására ezzel a szerepkörrel.");
+                throw new UnauthorizedAccessException("Nincs jogosultsÃ¡god munka kiÃ­rÃ¡sÃ¡ra ezzel a szerepkÃ¶rrel.");
             }
 
-            // Set default values if not provided
+            // Alapértelmezett státusz/időbélyeg beállítása, ha kliens oldalon kimaradt.
             if (string.IsNullOrEmpty(work.Status))
             {
                 work.Status = "Open";
@@ -276,6 +320,7 @@ namespace Kerting_Api.Service
             _context.Work.Add(work);
             await _context.SaveChangesAsync();
 
+            // Címkék normalizálása és kapcsolótábla feltöltése.
             var cimkek = work.Cimkek?
                 .Select(cimke => cimke?.Trim())
                 .Where(cimke => !string.IsNullOrWhiteSpace(cimke))
@@ -302,6 +347,9 @@ namespace Kerting_Api.Service
             return work;
         }
 
+        /// <summary>
+        /// Munka adatainak szerkesztése, beleértve a címke-kapcsolatokat is.
+        /// </summary>
         public async Task<Work> UpdateWorkAsync(int id, Work work)
         {
             var existingWork = await _context.Work.Include(w => w.Tags).FirstOrDefaultAsync(w => w.Id == id);
@@ -317,6 +365,7 @@ namespace Kerting_Api.Service
                 existingWork.TargetAudience = work.TargetAudience;
                 existingWork.UpdatedAtUtc = DateTime.UtcNow;
 
+                // Régi címke-kapcsolatok törlése, majd újraépítés.
                 _context.WorkTag.RemoveRange(existingWork.Tags);
                 
                 var cimkek = work.Cimkek?
@@ -348,6 +397,9 @@ namespace Kerting_Api.Service
             return existingWork;
         }
 
+        /// <summary>
+        /// Munka törlése.
+        /// </summary>
         public async Task DeleteWorkAsync(int id)
         {
             var work = await _context.Work.FindAsync(id);
@@ -358,20 +410,24 @@ namespace Kerting_Api.Service
             }
         }
 
+        /// <summary>
+        /// Jelentkezés kezdeményezése munkára.
+        /// Ellenőrzi az önjelentkezés tiltást, szerepkört és duplikált jelentkezést.
+        /// </summary>
         public async Task<WorkApplicant> ApplyForWorkAsync(int workId, int userId, decimal? offeredPrice)
         {
             var work = await _context.Work.FindAsync(workId);
-            if (work == null) throw new InvalidOperationException("Munka nem található.");
-            if (work.AuthorId == userId) throw new InvalidOperationException("Saját munkádra nem jelentkezhetsz!");
+            if (work == null) throw new InvalidOperationException("Munka nem talÃ¡lhatÃ³.");
+            if (work.AuthorId == userId) throw new InvalidOperationException("SajÃ¡t munkÃ¡dra nem jelentkezhetsz!");
 
             var user = await _context.User.FindAsync(userId);
-            if (user == null) throw new InvalidOperationException("Felhasználó nem található.");
+            if (user == null) throw new InvalidOperationException("FelhasznÃ¡lÃ³ nem talÃ¡lhatÃ³.");
             
             var role = await _context.Role.FindAsync(user.RoleId);
 
             if (role == null)
             {
-                throw new InvalidOperationException("A felhasználó szerepköre nem található.");
+                throw new InvalidOperationException("A felhasznÃ¡lÃ³ szerepkÃ¶re nem talÃ¡lhatÃ³.");
             }
 
             var normalizedRoleName = NormalizeText(role.Name);
@@ -384,11 +440,11 @@ namespace Kerting_Api.Service
 
             if (!canApply)
             {
-                throw new UnauthorizedAccessException("Csak kertészek jelentkezhetnek!");
+                throw new UnauthorizedAccessException("Csak kertÃ©szek jelentkezhetnek!");
             }
 
             var alreadyApplied = await _context.WorkApplicant.AnyAsync(a => a.WorkId == workId && a.UserId == userId);
-            if (alreadyApplied) throw new InvalidOperationException("Már jelentkeztél erre a munkára!");
+            if (alreadyApplied) throw new InvalidOperationException("MÃ¡r jelentkeztÃ©l erre a munkÃ¡ra!");
 
             var applicant = new WorkApplicant
             {
@@ -402,6 +458,9 @@ namespace Kerting_Api.Service
             return applicant;
         }
 
+        /// <summary>
+        /// Jelentkezők listázása egy munkához.
+        /// </summary>
         public async Task<IEnumerable<WorkApplicant>> GetWorkApplicantsAsync(int workId)
         {
             return await _context.WorkApplicant
@@ -412,6 +471,10 @@ namespace Kerting_Api.Service
                 .ToListAsync();
         }
 
+            /// <summary>
+            /// Jelentkező elfogadása.
+            /// Ha ez az első elfogadott jelentkező és a munka Open, akkor InProgress-re vált.
+            /// </summary>
         public async Task<WorkApplicant> AcceptApplicantAsync(int applicantId)
         {
             var applicant = await _context.WorkApplicant
@@ -422,7 +485,7 @@ namespace Kerting_Api.Service
             {
                 applicant.Status = "Accepted";
                 
-                // If it's the first accepted person and work is Open, change to InProgress
+                // Ha ez az első elfogadott jelentkező és a munka Open, akkor InProgress-re váltunk
                 if (applicant.Work.Status == "Open")
                 {
                     applicant.Work.Status = "InProgress";
@@ -434,17 +497,20 @@ namespace Kerting_Api.Service
             return applicant;
         }
 
+        /// <summary>
+        /// Teendő hozzáadása: csak szerző vagy elfogadott jelentkező végezheti.
+        /// </summary>
         public async Task<WorkTodo> AddTodoAsync(int workId, WorkTodo todo, int userId)
         {
             var work = await _context.Work.Include(w => w.Applicants).FirstOrDefaultAsync(w => w.Id == workId);
-            if (work == null) throw new Exception("Munka nem található");
+            if (work == null) throw new Exception("Munka nem talÃ¡lhatÃ³");
 
             bool isAuthor = work.AuthorId == userId;
             bool isAcceptedApplicant = work.Applicants.Any(a => a.UserId == userId && a.Status == "Accepted");
 
             if (!isAuthor && !isAcceptedApplicant)
             {
-                throw new Exception("Nincs jogosultságod teendőt hozzáadni ehhez a munkához.");
+                throw new Exception("Nincs jogosultsÃ¡god teendÅ‘t hozzÃ¡adni ehhez a munkÃ¡hoz.");
             }
 
             todo.WorkId = workId;
@@ -454,6 +520,9 @@ namespace Kerting_Api.Service
             return todo;
         }
 
+        /// <summary>
+        /// Teendő teljesített állapotra állítása user nyommal és üzenettel.
+        /// </summary>
         public async Task<WorkTodo> ToggleTodoAsync(int todoId, int userId, string doneMessage)
         {
             var todo = await _context.WorkTodo
@@ -468,7 +537,7 @@ namespace Kerting_Api.Service
 
                 if (!isAuthor && !isAcceptedApplicant)
                 {
-                    throw new Exception("Nincs jogosultságod módosítani ezt a feladatot.");
+                    throw new Exception("Nincs jogosultsÃ¡god mÃ³dosÃ­tani ezt a feladatot.");
                 }
 
                 todo.IsDone = true;
@@ -479,6 +548,10 @@ namespace Kerting_Api.Service
             return todo;
         }
 
+        /// <summary>
+        /// Egy kép feltöltése és adatbázisba mentése.
+        /// A fájlnév időbélyeges, hogy ütközés ne legyen azonos munkához sem.
+        /// </summary>
         public async Task<WorkImage> UploadWorkImageAsync(int workId, IFormFile image, string directoryPath)
         {
             if (image == null || image.Length == 0) return null;
@@ -508,6 +581,9 @@ namespace Kerting_Api.Service
             return workImage;
         }
 
+        /// <summary>
+        /// Kiemelt kép flag kapcsolása.
+        /// </summary>
         public async Task<bool> ToggleShowcaseImageAsync(int imageId)
         {
             var image = await _context.WorkImage.FindAsync(imageId);
@@ -520,6 +596,9 @@ namespace Kerting_Api.Service
             return false;
         }
 
+        /// <summary>
+        /// Munka státusz állítása explicit értékre.
+        /// </summary>
         public async Task<Work> SetWorkStatusAsync(int workId, string status)
         {
             var work = await _context.Work.FindAsync(workId);
@@ -532,6 +611,9 @@ namespace Kerting_Api.Service
             return work;
         }
 
+        /// <summary>
+        /// Kiemelt munkák listázása kapcsolódó author/kép adatokkal.
+        /// </summary>
         public async Task<IEnumerable<FeaturedWork>> GetFeaturedWorksAsync()
         {
             return await _context.FeaturedWork
@@ -543,11 +625,14 @@ namespace Kerting_Api.Service
                 .ToListAsync();
         }
 
+            /// <summary>
+            /// Munka kiemelése, csak Public státusz esetén.
+            /// </summary>
         public async Task<FeaturedWork> FeatureWorkAsync(int workId)
         {
             var work = await _context.Work.FindAsync(workId);
             if (work == null || work.Status != "Public") 
-                return null; // Only Public works can be featured
+                return null; // Csak Public státuszú munka emelhető ki.
 
             var existingFeature = await _context.FeaturedWork.FirstOrDefaultAsync(fw => fw.WorkId == workId);
             if (existingFeature != null) return existingFeature;
@@ -558,6 +643,9 @@ namespace Kerting_Api.Service
             return featured;
         }
 
+        /// <summary>
+        /// Kiemelés törlése.
+        /// </summary>
         public async Task RemoveFeaturedWorkAsync(int id)
         {
             var featured = await _context.FeaturedWork.FindAsync(id);
@@ -568,7 +656,10 @@ namespace Kerting_Api.Service
             }
         }
 
-        // Phase 4: Bulk Image Upload
+        /// <summary>
+        /// Bulk képfeltöltés egy munkához.
+        /// Minden kép saját rekordot kap WorkImage táblában.
+        /// </summary>
         public async Task<IEnumerable<WorkImage>> UploadWorkImagesAsync(int workId, IFormFileCollection files, string directoryPath)
         {
             if (files == null || files.Count == 0)
@@ -598,6 +689,7 @@ namespace Kerting_Api.Service
                     var image = new WorkImage
                     {
                         WorkId = workId,
+                        // A frontend érdekében teljes /resources URL-rész mentődik.
                         ImageUrl = $"/resources/Work/{fileName}",
                         IsShowcase = false,
                         UploadedAtUtc = DateTime.UtcNow
@@ -612,7 +704,10 @@ namespace Kerting_Api.Service
             return uploadedImages;
         }
 
-        // Phase 4: Delete Image
+        /// <summary>
+        /// Kép törlése adatbázisból és fájlrendszerből.
+        /// Csak a munka szerzője törölhet.
+        /// </summary>
         public async Task DeleteWorkImageAsync(int imageId, int userId)
         {
             var image = await _context.WorkImage
@@ -625,7 +720,7 @@ namespace Kerting_Api.Service
             if (image.Work?.AuthorId != userId)
                 throw new UnauthorizedAccessException("Only the work author can delete images.");
 
-            // Delete file from disk
+            // Fájl törlése a lemezről is, hogy ne maradjon árva média.
             if (!string.IsNullOrEmpty(image.ImageUrl))
             {
                 var filePath = Path.Combine(Directory.GetCurrentDirectory(), "Resources", "Work", Path.GetFileName(image.ImageUrl));
@@ -637,7 +732,9 @@ namespace Kerting_Api.Service
             await _context.SaveChangesAsync();
         }
 
-        // Phase 4: Update Image Metadata (showcase, pairing)
+        /// <summary>
+        /// Kép metadata frissítése (showcase és opcionális related kép).
+        /// </summary>
         public async Task<WorkImage> UpdateImageMetadataAsync(int imageId, WorkImage metadata)
         {
             var image = await _context.WorkImage.FindAsync(imageId);
@@ -652,7 +749,10 @@ namespace Kerting_Api.Service
             return image;
         }
 
-        // Phase 4: Link Image Pair (before/after)
+        /// <summary>
+        /// Két kép párosítása before/after nézethez.
+        /// Kereszt-hivatkozást mindkét rekordban beállítjuk.
+        /// </summary>
         public async Task<bool> LinkImagePairAsync(int imageId, int relatedImageId)
         {
             var image = await _context.WorkImage.FindAsync(imageId);
@@ -664,7 +764,7 @@ namespace Kerting_Api.Service
             if (image.WorkId != relatedImage.WorkId)
                 throw new InvalidOperationException("Both images must belong to the same work.");
 
-            // Create bidirectional link
+            // Kétirányú kapcsolat, hogy bármelyik kép felől bejárható legyen a pár.
             image.RelatedImageId = relatedImageId;
             relatedImage.RelatedImageId = imageId;
 
@@ -672,7 +772,10 @@ namespace Kerting_Api.Service
             return true;
         }
 
-        // Phase 6: Reject Applicant
+        /// <summary>
+        /// Jelentkező elutasítása.
+        /// Csak a munka szerzője teheti, és csak Pending állapotból.
+        /// </summary>
         public async Task<WorkApplicant> RejectApplicantAsync(int applicantId, int userId)
         {
             var applicant = await _context.WorkApplicant
@@ -693,7 +796,9 @@ namespace Kerting_Api.Service
             return applicant;
         }
 
-        // Phase 6: Withdraw Application
+        /// <summary>
+        /// Saját jelentkezés visszavonása Pending állapotban.
+        /// </summary>
         public async Task<WorkApplicant> WithdrawApplicationAsync(int applicantId, int userId)
         {
             var applicant = await _context.WorkApplicant
@@ -713,6 +818,7 @@ namespace Kerting_Api.Service
             return applicant;
         }
 
+        // Ékezet- és kis/nagybetű-független role név összehasonlításhoz.
         private static string NormalizeText(string? input)
         {
             if (string.IsNullOrWhiteSpace(input)) return string.Empty;

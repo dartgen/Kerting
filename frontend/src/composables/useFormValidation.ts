@@ -2,19 +2,28 @@ import { reactive, computed } from 'vue'
 import { validateField, validateForm } from '@/validators'
 import type { FormValidationRules } from '@/validators'
 
+// A composable bemeneti opciói:
+// - initialValues: mező kezdőértékek,
+// - rules: mező-szintű validációs szabályok.
 export interface UseFormValidationOptions {
   initialValues: Record<string, string>
   rules: FormValidationRules
 }
 
+// Újrahasználható form validáció composable.
+// A komponensek ugyanazzal az API-val tudják kezelni a mezőfrissítést,
+// hibatárolást és submit előtti teljes validációt.
 export function useFormValidation(options: UseFormValidationOptions) {
   const { initialValues, rules } = options
 
+  // Reaktív form adatok.
   const formData = reactive<Record<string, string>>({ ...initialValues })
+
+  // Mező-szintű hibalista: kulcs = mezőnév, érték = hibaüzenetek tömbje.
   const fieldErrors = reactive<Record<string, string[]>>({})
 
   /**
-   * Egy mező validálása
+  * Egyetlen mező validálása a hozzá tartozó szabály alapján.
    */
   function validateSingleField(fieldName: string) {
     if (!rules[fieldName]) return true
@@ -31,22 +40,24 @@ export function useFormValidation(options: UseFormValidationOptions) {
   }
 
   /**
-   * Teljes form validálása
+   * Teljes form validálása.
+   * A korábbi hibák törlése után friss hibalistát épít.
    */
   function validateFormData(): boolean {
     const errors = validateForm(formData, rules)
 
-    // Clear previous errors
+    // Előző hibák törlése.
     Object.keys(fieldErrors).forEach(key => delete fieldErrors[key])
 
-    // Set new errors
+    // Új hibák beállítása.
     Object.assign(fieldErrors, errors)
 
     return Object.keys(errors).length === 0
   }
 
   /**
-   * Field update és auto-validáció
+   * Mező frissítése, és opcionálisan azonnali újravalidálás,
+   * ha volt már hiba ezen a mezőn.
    */
   function updateField(fieldName: string, value: string, validateOnChange = true) {
     formData[fieldName] = value
@@ -57,7 +68,7 @@ export function useFormValidation(options: UseFormValidationOptions) {
   }
 
   /**
-   * Reset form
+  * Form visszaállítása alapállapotra + hibák törlése.
    */
   function resetForm() {
     Object.assign(formData, initialValues)
@@ -65,12 +76,12 @@ export function useFormValidation(options: UseFormValidationOptions) {
   }
 
   /**
-   * Computed property — van-e hiba
+    * Van-e legalább egy mező hiba.
    */
   const hasErrors = computed(() => Object.keys(fieldErrors).length > 0)
 
   /**
-   * Computed property — teljes form beküldéshez ready
+    * A form elküldhető állapotban van-e.
    */
   const isFormValid = computed(() => !hasErrors.value && Object.keys(formData).length > 0)
 

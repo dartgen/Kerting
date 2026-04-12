@@ -36,15 +36,18 @@ const router = useRouter()
 const authStore = useAuthStore()
 const toastStore = useToastStore()
 
+// Nézetmódok és jogosultsági segéd-computedek.
 const isDetailMode = computed(() => props.mode === 'detail')
 const isForumListRoute = computed(() => route.name === 'forum' && !isDetailMode.value)
 const isAdmin = computed(() => authStore.profilAdatok?.roleId === 1)
 
 const showFilters = ref(false)
 
+// Metadata a szűrőkhöz (szerepkörök, címkék).
 const roles = ref<RoleDto[]>([])
 const allTags = ref<string[]>([])
 
+// Feed szűrő állapot, URL queryvel szinkronizálva.
 const filters = reactive({
   sort: 'latest' as ForumSort,
   search: '',
@@ -54,12 +57,14 @@ const filters = reactive({
 })
 const showDeleted = ref(false)
 
+// Listanézet feed állapot.
 const feedItems = ref<ForumFeedItem[]>([])
 const feedPage = ref(1)
 const feedHasMore = ref(false)
 const feedLoading = ref(false)
 const reactingPostIds = ref<Record<number, boolean>>({})
 
+// Létrehozás űrlap állapot.
 const showCreateForm = ref(false)
 const createForm = reactive({
   title: '',
@@ -70,6 +75,7 @@ const createTags = ref<string[]>([])
 const savingPost = ref(false)
 const showTagSuggestions = ref(false)
 
+// Szerkesztés modál állapot.
 const editingPostId = ref<number | null>(null)
 const editForm = reactive({
   title: '',
@@ -80,6 +86,7 @@ const editTags = ref<string[]>([])
 const editSaving = ref(false)
 const editShowTagSuggestions = ref(false)
 
+// Saját galéria picker állapot.
 const ownGalleryItems = ref<OwnGalleryItem[]>([])
 const selectedGalleryItemId = ref<number | null>(null)
 const editSelectedGalleryItemId = ref<number | null>(null)
@@ -88,6 +95,7 @@ const pickerOpen = ref(false)
 const pickerLoading = ref(false)
 const pickerLoaded = ref(false)
 
+// Részletnézet + kommentfolyam állapot.
 const detail = ref<ForumDetail | null>(null)
 const detailLoading = ref(false)
 const loadingMoreComments = ref(false)
@@ -132,6 +140,7 @@ const filteredEditTagSuggestions = computed(() => {
     .slice(0, 8)
 })
 
+// A fórum komponensekhez egységes kép URL feloldás.
 const getFullImageUrl = (url?: string | null) => resolveFullImageUrl(String(api.defaults.baseURL || ''), url)
 
 const getCurrentUserId = () => {
@@ -155,6 +164,7 @@ const getCurrentUserProfileImageUrl = () => {
   return fileName ? getFullImageUrl(`/resources/profiles/${fileName}`) : null
 }
 
+// API válaszokból esetenként eltérő ID mezőnév jön (id / Id), ezt normalizáljuk.
 const extractCreatedCommentId = (responseData: unknown) => {
   if (!responseData || typeof responseData !== 'object') return undefined
   const candidate = responseData as { id?: unknown; Id?: unknown }
@@ -162,6 +172,7 @@ const extractCreatedCommentId = (responseData: unknown) => {
   return Number.isFinite(numeric) ? numeric : undefined
 }
 
+// Optimista UI-hoz lokális komment objektumot építünk.
 const createLocalComment = (message: string, id?: number, parentCommentId?: number | null): ForumComment => ({
   id: id ?? -Date.now(),
   parentCommentId: parentCommentId ?? null,
@@ -183,6 +194,7 @@ const createLocalComment = (message: string, id?: number, parentCommentId?: numb
   replies: []
 })
 
+// Query -> filter állapot szinkron a listanézet inicializálásakor.
 const syncFiltersFromQuery = () => {
   if (!isForumListRoute.value) return
 
@@ -197,6 +209,7 @@ const syncFiltersFromQuery = () => {
   filters.selectedTags = tagNames.map(v => String(v).trim()).filter(Boolean)
 }
 
+// Filter állapot -> query szinkron, hogy a linkelhetőség megmaradjon.
 const syncQueryFromFilters = () => {
   if (!isForumListRoute.value) return
 
@@ -235,6 +248,7 @@ const syncQueryFromFilters = () => {
   })
 }
 
+// Szűrő metadata inicializálása.
 const loadMeta = async () => {
   const [roleRes, tagRes] = await Promise.all([authService.getRoles(), authService.GetCimekek()])
   roles.value = (roleRes.data || []).map(role => ({
@@ -247,6 +261,7 @@ const loadMeta = async () => {
     .filter(Boolean)
 }
 
+  // Fórum feed lekérése, opcionális laphozzáfűzéssel.
 const fetchFeed = async (append = false) => {
   if (feedLoading.value) return
   feedLoading.value = true
@@ -289,6 +304,7 @@ const fetchFeed = async (append = false) => {
   }
 }
 
+// Post részlet és kommentfolyam lekérése (kurzoros kommentlapozással).
 const fetchDetail = async (appendComments = false) => {
   if (!isDetailMode.value) return
 
@@ -343,6 +359,7 @@ const mapComment = (raw: ForumComment): ForumComment => ({
   replies: (raw.replies || []).map(mapComment)
 })
 
+// Szűrő toggles: role/tag listák karbantartása.
 const toggleRole = (roleId: number) => {
   if (selectedRoleSet.value.has(roleId)) {
     filters.selectedRoleIds = filters.selectedRoleIds.filter(id => id !== roleId)
@@ -362,6 +379,7 @@ const toggleTag = (tag: string) => {
   filters.selectedTags = [...filters.selectedTags, normalized]
 }
 
+// Létrehozó/szerkesztő címke kezelés (duplikátumszűrés + jogosultság).
 const addCreateTag = () => {
   const tag = createForm.tagInput.trim()
   if (!tag) return
@@ -424,6 +442,7 @@ const removeEditTag = (tag: string) => {
   editTags.value = editTags.value.filter(t => t.toLowerCase() !== tag.toLowerCase())
 }
 
+// Navigáció listából részletbe, aktuális query állapot átvitelével.
 const openDetail = (postId: number) => {
   syncQueryFromFilters()
   router.push({
@@ -524,6 +543,7 @@ const closeEditPost = () => {
   editShowTagSuggestions.value = false
 }
 
+// Bejegyzés szerkesztés mentése.
 const submitEditPost = async () => {
   if (!editingPostId.value || editSaving.value) return
 
@@ -555,6 +575,7 @@ const submitEditPost = async () => {
   }
 }
 
+// Rekurzív kereső segédfüggvény nested kommentfa elemeihez.
 const findCommentById = (comments: ForumComment[], commentId: number): ForumComment | null => {
   for (const comment of comments) {
     if (comment.id === commentId) return comment
@@ -564,6 +585,7 @@ const findCommentById = (comments: ForumComment[], commentId: number): ForumComm
   return null
 }
 
+// Új bejegyzés létrehozása és feed frissítése.
 const submitCreatePost = async () => {
   if (savingPost.value) return
 
@@ -602,6 +624,7 @@ const submitCreatePost = async () => {
   }
 }
 
+// Moderációs műveletek (törlés, visszaállítás, pin, lock).
 const deletePost = async (postId: number) => {
   if (!window.confirm('Biztosan törlöd ezt a bejegyzést?')) return
   try {
@@ -658,6 +681,7 @@ const toggleLocked = async (postId: number, target: boolean) => {
   }
 }
 
+// Optimista reakciófrissítés a részletnézetben.
 const reactPost = async (isLike: boolean) => {
   if (!detail.value) return
 
@@ -683,6 +707,7 @@ const reactPost = async (isLike: boolean) => {
   }
 }
 
+// Optimista reakciófrissítés feed kártyán, majd szinkron a szerver válasszal.
 const reactPostPreview = async (payload: { postId: number; isLike: boolean }) => {
   if (reactingPostIds.value[payload.postId]) return
 
@@ -725,6 +750,7 @@ const reactPostPreview = async (payload: { postId: number; isLike: boolean }) =>
   }
 }
 
+// Komment reakcio kezeles visszagorgetheto optimista logikaval.
 const reactComment = async (commentId: number, isLike: boolean) => {
   if (!detail.value) return
 
@@ -753,6 +779,7 @@ const reactComment = async (commentId: number, isLike: boolean) => {
   }
 }
 
+// Uj gyoker komment kuldese (optimista lokalis beszuras).
 const submitComment = async () => {
   if (!detail.value) return
   const message = detailCommentDraft.value.trim()
@@ -772,6 +799,7 @@ const submitComment = async () => {
   }
 }
 
+// Valasz komment kuldese parent hozzarendelessel.
 const submitReply = async (parentCommentId: number) => {
   if (!detail.value) return
   const message = replyDraft.value.trim()
@@ -796,6 +824,7 @@ const submitReply = async (parentCommentId: number) => {
   }
 }
 
+// Komment moderáció (törlés/visszaállítás) + újratöltés.
 const deleteComment = async (commentId: number) => {
   if (!window.confirm('Biztosan törlöd ezt a hozzászólást?')) return
   try {
@@ -821,6 +850,7 @@ const toggleReplies = (commentId: number) => {
   replyVisibility.value[commentId] = !replyVisibility.value[commentId]
 }
 
+// További válaszok kurzoros lapozása egy adott kommenthez.
 const loadMoreReplies = async (comment: ForumComment) => {
   if (loadingReplies.value[comment.id]) return
 
@@ -846,6 +876,7 @@ const loadMoreReplies = async (comment: ForumComment) => {
   }
 }
 
+// Szűrők változásakor automatikus feed újratöltés.
 watch(
   () => [filters.sort, filters.search, filters.maxAgeDays, showDeleted.value, JSON.stringify(filters.selectedRoleIds), JSON.stringify(filters.selectedTags)],
   async () => {
@@ -854,6 +885,7 @@ watch(
   }
 )
 
+// Soft-deleted kapcsolo hatasa detail nezetben azonnal ujraszamitando.
 watch(
   () => showDeleted.value,
   async () => {
@@ -863,6 +895,7 @@ watch(
   }
 )
 
+// Dinamikus route param valtas (masik post) eseten detail refresh.
 watch(
   () => route.params.id,
   async () => {
@@ -871,6 +904,7 @@ watch(
   }
 )
 
+// Komponens inditasa: mode alapjan feed vagy detail inicializalas.
 onMounted(async () => {
   if (isDetailMode.value) {
     try {

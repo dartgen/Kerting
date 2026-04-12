@@ -11,6 +11,9 @@ namespace Kerting_Api.Controller
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
+    /// <summary>
+    /// Projekt végpontok: projekt CRUD, feladatkezelés és meghívók workflow.
+    /// </summary>
     public class ProjectController : ControllerBase
     {
         private readonly IProjectService _projectService;
@@ -20,14 +23,15 @@ namespace Kerting_Api.Controller
             _projectService = projectService;
         }
 
-        // Segédfüggvény: Kinyeri a bejelentkezett user ID-ját a tokenből
+        // Segédfüggvény: bejelentkezett user ID kiolvasása tokenből.
         private string GetCurrentUserId()
         {
-            // A JWT tokenedben lévő "Id" claim-et olvassuk ki, így biztosan a számszerű ID-t (pl. "10") kapjuk!
             return User.FindFirst("Id")?.Value ?? "";
         }
 
-        // GET: api/project
+        /// <summary>
+        /// Bejelentkezett user projektjeinek listázása.
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetMyProjects()
         {
@@ -38,7 +42,9 @@ namespace Kerting_Api.Controller
             return Ok(projects);
         }
 
-        // POST: api/project
+        /// <summary>
+        /// Új projekt létrehozása.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> CreateProject([FromBody] ProjectDto projectDto)
         {
@@ -47,7 +53,9 @@ namespace Kerting_Api.Controller
             return Ok(newProject);
         }
 
-        // PUT: api/project/5
+        /// <summary>
+        /// Meglévő projekt frissítése.
+        /// </summary>
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateProject(int id, [FromBody] ProjectDto projectDto)
         {
@@ -57,18 +65,20 @@ namespace Kerting_Api.Controller
             return Ok(updatedProject);
         }
 
-        // DELETE: api/project/5
+        /// <summary>
+        /// Projekt törlése jogosultság-ellenőrzéssel.
+        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProject(int id)
         {
             var userId = GetCurrentUserId();
             await _projectService.DeleteProjectAsync(id, userId);
-            return NoContent(); // 204 No Content (sikeres törlés)
+            return NoContent();
         }
 
-        // --- FELADATOK (TASKS) VÉGPONTJAI ---
-
-        // POST: api/project/5/tasks
+        /// <summary>
+        /// Új feladat létrehozása projekten belül.
+        /// </summary>
         [HttpPost("{projectId}/tasks")]
         public async Task<IActionResult> CreateTask(int projectId, [FromBody] TaskDto taskDto)
         {
@@ -76,16 +86,21 @@ namespace Kerting_Api.Controller
             return Ok(savedTask);
         }
 
-        // PUT: api/project/5/tasks/10
+        /// <summary>
+        /// Meglévő feladat frissítése.
+        /// </summary>
         [HttpPut("{projectId}/tasks/{taskId}")]
         public async Task<IActionResult> UpdateTask(int projectId, int taskId, [FromBody] TaskDto taskDto)
         {
-            taskDto.Id = taskId; // Biztosítjuk, hogy az ID egyezzen
+            // Biztosítjuk, hogy az útvonalban kapott ID és a kérésadat ID egyezzen.
+            taskDto.Id = taskId;
             var savedTask = await _projectService.SaveTaskAsync(projectId, taskDto);
             return Ok(savedTask);
         }
 
-        // DELETE: api/project/5/tasks/10
+        /// <summary>
+        /// Feladat törlése projektből.
+        /// </summary>
         [HttpDelete("{projectId}/tasks/{taskId}")]
         public async Task<IActionResult> DeleteTask(int projectId, int taskId)
         {
@@ -93,21 +108,21 @@ namespace Kerting_Api.Controller
             return NoContent();
         }
 
-        // ==========================================
-        // --- MEGHÍVÓK KEZELÉSE (EZ HIÁNYZOTT!) ---
-        // ==========================================
-
-        // POST: api/Project/5/invite
+        /// <summary>
+        /// Tag meghívása projektbe.
+        /// </summary>
         [HttpPost("{projectId}/invite")]
         public async Task<IActionResult> InviteMember(int projectId, [FromBody] string userIdToInvite)
         {
-            // Eltávolítjuk a felesleges idézőjeleket a JSON stringből (mivel az Axios sima stringként küldi)
+            // Az axios plain string kérésadata miatt levágjuk az esetleges idézőjeleket.
             var cleanUserId = userIdToInvite.Replace("\"", "");
             await _projectService.InviteMemberAsync(projectId, cleanUserId);
             return Ok();
         }
 
-        // POST: api/Project/5/accept
+        /// <summary>
+        /// Meghívó elfogadása.
+        /// </summary>
         [HttpPost("{projectId}/accept")]
         public async Task<IActionResult> AcceptInvite(int projectId)
         {
@@ -116,7 +131,9 @@ namespace Kerting_Api.Controller
             return Ok();
         }
 
-        // POST: api/Project/5/reject
+        /// <summary>
+        /// Meghívó visszautasítása.
+        /// </summary>
         [HttpPost("{projectId}/reject")]
         public async Task<IActionResult> RejectInvite(int projectId)
         {

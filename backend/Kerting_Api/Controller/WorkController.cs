@@ -13,17 +13,22 @@ namespace Kerting_Api.Controller
 {
     [Route("api/[controller]")]
     [ApiController]
+    /// <summary>
+    /// Work modul HTTP vezérlője.
+    /// Feladata a kérés/válasz szint kezelése: auth, paraméter validáció, HTTP státuszkódok,
+    /// míg a tényleges üzleti logikát a WorkService valósítja meg.
+    /// </summary>
     public class WorkController : ControllerBase
     {
         private readonly IWorkService _workService;
-        private readonly KertingDbContext _context;
 
-        public WorkController(IWorkService workService, KertingDbContext context)
+        public WorkController(IWorkService workService)
         {
             _workService = workService;
-            _context = context;
         }
 
+        // A query paraméterekből egységes szűrőobjektumot készít,
+        // így a különböző listázó végpontok ugyanazzal a logikával dolgoznak.
         private static WorkFilterParams BuildWorkFilters(
             decimal? priceMin,
             decimal? priceMax,
@@ -43,6 +48,8 @@ namespace Kerting_Api.Controller
             };
         }
 
+        // SQL schema mismatch detektálás:
+        // segít kulturált visszalépő választ adni, ha a patch script(ek) még nem futottak le.
         private static bool IsWorkSchemaMismatch(Exception ex)
         {
             Exception? current = ex;
@@ -67,6 +74,7 @@ namespace Kerting_Api.Controller
             return false;
         }
 
+        // Egyszerű segédfüggvény az admin végpontok védelméhez.
         private async Task<bool> IsAdminAsync()
         {
             var userIdString = User.FindFirst("Id")?.Value;
@@ -75,10 +83,13 @@ namespace Kerting_Api.Controller
                 return false;
             }
 
-            var user = await _context.User.AsNoTracking().FirstOrDefaultAsync(x => x.Id == userId);
-            return user?.RoleId == 1;
+            return await _workService.IsAdminAsync(userId);
         }
 
+        /// <summary>
+        /// Nyitott munkák listázása lapozással és opcionális szűrőkkel.
+        /// Publikus végpont, ezért bejelentkezés nélkül is elérhető.
+        /// </summary>
         [HttpGet("open")]
         public async Task<IActionResult> GetOpenWorks(
             [FromQuery] int page = 1, 
@@ -107,7 +118,8 @@ namespace Kerting_Api.Controller
             }
             catch (Exception ex)
             {
-                // If schema is not patched yet, keep frontend usable with an empty paginated response.
+                // Ha a Work tábla vagy oszlopok még hiányoznak,
+                // a frontend stabilitás érdekében üres lista megy vissza figyelmeztető headerrel.
                 if (ex.Message.Contains("Invalid object name", StringComparison.OrdinalIgnoreCase))
                 {
                     Response.Headers.Append("X-Work-Warning", "Work tables are missing. Run sql/work_patch.sql.");
@@ -118,6 +130,10 @@ namespace Kerting_Api.Controller
             }
         }
 
+        /// <summary>
+        /// Bejelentkezett user szemszögéből látható munkák listázása.
+        /// Beleértve saját munkákat és elfogadott jelentkezéshez kötött munkákat is.
+        /// </summary>
         [HttpGet("visible")]
         [Authorize]
         public async Task<IActionResult> GetVisibleWorks(
@@ -151,6 +167,9 @@ namespace Kerting_Api.Controller
             }
         }
 
+        /// <summary>
+        /// A user saját munka-nézetéhez tartozó lista végpont.
+        /// </summary>
         [HttpGet("my")]
         [Authorize]
         public async Task<IActionResult> GetMyWorks(
@@ -184,6 +203,10 @@ namespace Kerting_Api.Controller
             }
         }
 
+        /// <summary>
+        /// Admin publikus munkalista.
+        /// Kizárólag admin jogosultsággal hívható.
+        /// </summary>
         [HttpGet("admin/public")]
         [Authorize]
         public async Task<IActionResult> GetAdminPublicWorks()
@@ -210,6 +233,9 @@ namespace Kerting_Api.Controller
             }
         }
 
+        /// <summary>
+        /// Egy munka részletes adatainak lekérdezése ID alapján.
+        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetWork(int id)
         {
@@ -218,6 +244,9 @@ namespace Kerting_Api.Controller
             return Ok(work);
         }
 
+        /// <summary>
+        /// A megadott munkához tartozó jelentkezők listája.
+        /// </summary>
         [HttpGet("{id}/applicants")]
         public async Task<IActionResult> GetApplicants(int id)
         {
@@ -225,6 +254,10 @@ namespace Kerting_Api.Controller
             return Ok(applicants);
         }
 
+        /// <summary>
+        /// Új munka létrehozása a bejelentkezett user nevében.
+        /// A szerző azonosítóját mindig tokenből vesszük, nem kliens inputból.
+        /// </summary>
         [HttpPost]
         [Authorize]
         public async Task<IActionResult> CreateWork([FromBody] Work work)
@@ -257,6 +290,10 @@ namespace Kerting_Api.Controller
             }
         }
 
+        /// <summary>
+        /// Munka szerkesztése.
+        /// Alapelv: szerző vagy admin módosíthat.
+        /// </summary>
         [HttpPut("{id}")]
         [Authorize]
         public async Task<IActionResult> UpdateWork(int id, [FromBody] Work work)
@@ -268,7 +305,7 @@ namespace Kerting_Api.Controller
             var existingWork = await _workService.GetWorkByIdAsync(id);
             if (existingWork == null) return NotFound();
             
-            // Only Author or Admin can edit. We don't have Admin check here perfectly without role inject, but let's assume if it reaches here and not the author, return Forbid
+            // Csak a szerző vagy admin módosíthat.
             if (existingWork.AuthorId != userId && !User.IsInRole("Admin"))
             {
                 return Forbid();
@@ -278,6 +315,9 @@ namespace Kerting_Api.Controller
             return Ok(result);
         }
 
+        /// <summary>
+        /// Munka törlése szerző vagy admin jogosultsággal.
+        /// </summary>
         [HttpDelete("{id}")]
         [Authorize]
         public async Task<IActionResult> DeleteWork(int id)
@@ -298,6 +338,11 @@ namespace Kerting_Api.Controller
             return Ok();
         }
 
+        /// <summary>
+        /// Jelentkezés munkára.
+        /// Több kérésadat-formátumot fogad a visszafelé kompatibilitás miatt
+        /// (objektum: { offeredPrice } vagy közvetlen decimal/string).
+        /// </summary>
         [HttpPost("{id}/apply")]
         [Authorize]
         public async Task<IActionResult> ApplyForWork(int id, [FromBody] JsonElement request)
@@ -307,12 +352,14 @@ namespace Kerting_Api.Controller
 
             decimal? offeredPrice = null;
 
+            // Kompatibilitás: közvetlen szám formátum kezelése.
             if (request.ValueKind == JsonValueKind.Number && request.TryGetDecimal(out var directDecimal))
             {
                 offeredPrice = directDecimal;
             }
             else if (request.ValueKind == JsonValueKind.Object)
             {
+                // Kompatibilitás: camelCase és PascalCase mezőnév támogatás.
                 if (request.TryGetProperty("offeredPrice", out var offeredPriceNode) || request.TryGetProperty("OfferedPrice", out offeredPriceNode))
                 {
                     if (offeredPriceNode.ValueKind == JsonValueKind.Number && offeredPriceNode.TryGetDecimal(out var objectDecimal))
@@ -349,6 +396,9 @@ namespace Kerting_Api.Controller
             }
         }
 
+        /// <summary>
+        /// Jelentkező elfogadása a munkára.
+        /// </summary>
         [HttpPost("applicant/{applicantId}/accept")]
         [Authorize]
         public async Task<IActionResult> AcceptApplicant(int applicantId)
@@ -360,6 +410,9 @@ namespace Kerting_Api.Controller
             return Ok(accepted);
         }
 
+        /// <summary>
+        /// Új teendő hozzáadása egy munkához.
+        /// </summary>
         [HttpPost("{id}/todo")]
         [Authorize]
         public async Task<IActionResult> AddTodo(int id, [FromBody] WorkTodo todo)
@@ -371,6 +424,9 @@ namespace Kerting_Api.Controller
             return Ok(result);
         }
 
+        /// <summary>
+        /// Teendő teljesített állapotba állítása üzenettel.
+        /// </summary>
         [HttpPost("todo/{todoId}/toggle")]
         [Authorize]
         public async Task<IActionResult> ToggleTodo(int todoId, [FromBody] string doneMessage)
@@ -382,6 +438,9 @@ namespace Kerting_Api.Controller
             return Ok(result);
         }
 
+        /// <summary>
+        /// Egy kép feltöltése a munkához.
+        /// </summary>
         [HttpPost("{id}/image")]
         [Authorize]
         public async Task<IActionResult> UploadImage(int id, IFormFile file)
@@ -393,8 +452,11 @@ namespace Kerting_Api.Controller
             return Ok(img);
         }
 
+        /// <summary>
+        /// Kiemelt kép (showcase) flag kapcsolása.
+        /// </summary>
         [HttpPost("image/{imageId}/showcase")]
-        [Authorize(Roles = "Gardener,Admin,User")] // or logic based
+        [Authorize(Roles = "Gardener,Admin,User")] // vagy egyedi üzleti logika alapján
         public async Task<IActionResult> ToggleShowcaseImage(int imageId)
         {
             var success = await _workService.ToggleShowcaseImageAsync(imageId);
@@ -402,6 +464,9 @@ namespace Kerting_Api.Controller
             return Ok();
         }
 
+        /// <summary>
+        /// Munka státusz frissítése explicit értékre.
+        /// </summary>
         [HttpPut("{id}/status")]
         [Authorize]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] string status)
@@ -410,6 +475,9 @@ namespace Kerting_Api.Controller
             return Ok(result);
         }
 
+        /// <summary>
+        /// Kiemelt munkák listája landing/admin megjelenítéshez.
+        /// </summary>
         [HttpGet("featured")]
         public async Task<IActionResult> GetFeaturedWorks()
         {
@@ -420,7 +488,7 @@ namespace Kerting_Api.Controller
             }
             catch (Exception ex)
             {
-                // If schema is not patched yet, return empty list with warning
+                // Ha a séma még nincs patch-elve, üres listával tartjuk működőképesen a klienst.
                 if (IsWorkSchemaMismatch(ex))
                 {
                     Response.Headers.Append("X-FeaturedWork-Warning", "Work schema is outdated. Run sql/work_patch.sql and sql/image_pairing_patch.sql.");
@@ -431,6 +499,9 @@ namespace Kerting_Api.Controller
             }
         }
 
+        /// <summary>
+        /// Munka kiemelése admin jogosultsággal.
+        /// </summary>
         [HttpPost("{id}/feature")]
         [Authorize]
         public async Task<IActionResult> FeatureWork(int id)
@@ -445,6 +516,9 @@ namespace Kerting_Api.Controller
             return Ok(featured);
         }
 
+        /// <summary>
+        /// Kiemelés törlése admin joggal.
+        /// </summary>
         [HttpDelete("featured/{id}")]
         [Authorize]
         public async Task<IActionResult> RemoveFeaturedWork(int id)
@@ -458,7 +532,9 @@ namespace Kerting_Api.Controller
             return Ok();
         }
 
-        // Phase 4: Bulk Image Upload
+        /// <summary>
+        /// Bulk képfeltöltés ugyanahhoz a munkához.
+        /// </summary>
         [HttpPost("{id}/images")]
         [Authorize]
         public async Task<IActionResult> UploadImages(int id, IFormFileCollection files)
@@ -487,7 +563,9 @@ namespace Kerting_Api.Controller
             }
         }
 
-        // Phase 4: Delete Image
+        /// <summary>
+        /// Kép törlése adott munkából.
+        /// </summary>
         [HttpDelete("{workId}/image/{imageId}")]
         [Authorize]
         public async Task<IActionResult> DeleteImage(int workId, int imageId)
@@ -514,7 +592,9 @@ namespace Kerting_Api.Controller
             }
         }
 
-        // Phase 4: Update Image Metadata
+        /// <summary>
+        /// Kép metadata frissítése (pl. showcase/párosítás).
+        /// </summary>
         [HttpPatch("{workId}/image/{imageId}")]
         [Authorize]
         public async Task<IActionResult> UpdateImageMetadata(int workId, int imageId, [FromBody] WorkImage metadata)
@@ -534,7 +614,9 @@ namespace Kerting_Api.Controller
             }
         }
 
-        // Phase 4: Link Image Pair
+        /// <summary>
+        /// Két kép összekapcsolása before/after nézethez.
+        /// </summary>
         [HttpPost("image/{imageId}/link")]
         [Authorize]
         public async Task<IActionResult> LinkImagePair(int imageId, [FromBody] int relatedImageId)
@@ -554,7 +636,9 @@ namespace Kerting_Api.Controller
             }
         }
 
-        // Phase 6: Reject Applicant
+        /// <summary>
+        /// Jelentkező elutasítása.
+        /// </summary>
         [HttpPost("applicant/{applicantId}/reject")]
         [Authorize]
         public async Task<IActionResult> RejectApplicant(int applicantId)
@@ -581,7 +665,9 @@ namespace Kerting_Api.Controller
             }
         }
 
-        // Phase 6: Withdraw Application
+        /// <summary>
+        /// Saját jelentkezés visszavonása.
+        /// </summary>
         [HttpPost("applicant/{applicantId}/withdraw")]
         [Authorize]
         public async Task<IActionResult> WithdrawApplication(int applicantId)

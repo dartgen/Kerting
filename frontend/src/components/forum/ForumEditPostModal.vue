@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { OwnGalleryItem } from '@/types/forum'
 
+// A komponens kizárólag a szerkesztő modál UI-ját jeleníti meg.
+// Minden tényleges üzleti logika (API hívás, állapotkezelés, validáció) a szülő oldalon fut.
 const props = defineProps<{
   editingPostId: number | null
   titleValue: string
@@ -13,6 +15,7 @@ const props = defineProps<{
   selectedEditGalleryItem: OwnGalleryItem | null
 }>()
 
+// Az input mezők kétirányú kötését és a felhasználói műveleteket eventeken keresztül adja vissza.
 const emit = defineEmits<{
   (e: 'update:titleValue', value: string): void
   (e: 'update:descriptionValue', value: string): void

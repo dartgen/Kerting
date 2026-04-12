@@ -28,7 +28,7 @@ const loading = ref(false);
 const submitting = ref(false);
 const hasReviewed = ref(false);
 
-// Form state
+// Értékelési űrlap állapota.
 const rating = ref(0);
 const message = ref('');
 
@@ -38,13 +38,15 @@ const shouldShowReviewForm = computed(() => {
   return !hasReviewed.value && (props.isAuthor || props.isAcceptedApplicant);
 });
 
+// Meghatározza, hogy kit kell értékelni:
+// - megbízó (author) esetén az elfogadott jelentkezőt,
+// - elfogadott jelentkező esetén a megbízót.
 const reviewTarget = computed(() => {
-  // If user is author, review target is the accepted applicant
   if (props.isAuthor && props.work.applicants) {
     const accepted = props.work.applicants.find(a => a.status === 'Accepted');
     return accepted?.userId;
   }
-  // If user is applicant, review target is the author
+
   if (props.isAcceptedApplicant) {
     return props.work.authorId;
   }
@@ -58,8 +60,9 @@ const loadReviews = async () => {
   try {
     const res = await userReviewService.getReviews(reviewTarget.value);
     const data = Array.isArray(res.data) ? res.data : [res.data];
-    // Filter reviews to only show those related to this work context
-    // For now, show all reviews of the target user
+
+    // Jelenleg a cél user teljes review listáját jelenítjük meg.
+    // Később bővíthető konkrét work-kontekstusú szűrésre.
     reviews.value = data.map(r => ({
       id: r.id || 0,
       rating: r.rating || 0,
@@ -68,7 +71,7 @@ const loadReviews = async () => {
       createdAt: r.createdUtc || new Date().toISOString()
     }));
 
-    // Check if current user has already reviewed
+    // Egyszeri értékelés szabály: a szerző már adott-e review-t.
     hasReviewed.value = reviews.value.some(r => r.createdBy === authStore.felhasznalo?.felhasznaloNev);
   } catch (error) {
     console.error('Hiba a vélemények betöltésekor:', error);

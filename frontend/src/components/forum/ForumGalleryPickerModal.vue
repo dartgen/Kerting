@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { OwnGalleryItem } from '@/types/forum'
 
+// Saját galéria választó modál: csak listáz és kiválasztási eseményt küld vissza,
+// a konkrét adathozzárendelést a szülő komponens végzi.
 const props = defineProps<{
   open: boolean
   loading: boolean
@@ -8,6 +10,7 @@ const props = defineProps<{
   selectedItemId: number | null
 }>()
 
+// A modál bezárását és az elemkiválasztást eventeken keresztül adjuk át.
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'select-item', itemId: number): void

@@ -33,6 +33,7 @@ export interface Project {
   title: string;
   description?: string;
   deadline?: string;
+  chatConversationId?: number;
   status: 'ongoing' | 'archived' | 'invited';
   members: ProjectMember[];
   tasks: Task[];

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import GalleryLayout from '@/components/gallery/GalleryLayout.vue'
+
+// Publikus galéria gyűjtőoldal útvonal-komponense.
 </script>
 
 <template>

@@ -172,21 +172,47 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import apiClient from '@/services/axios';
+import type { ProjectMember, Task, Todo } from '@/types/project';
 
+// Részletes task modál:
+// állapot, költségkeret, alfeladatok és felelősök szerkesztése egy helyen.
 const props = defineProps<{
-  task: any;
-  projectMembers: Array<any>;
+  task: Task;
+  projectMembers: ProjectMember[];
   currentUserId: string;
 }>();
 
-const emit = defineEmits(['close', 'save-task']);
+// A végső mentést a szülő végzi, ezért itt minden változást eseményként küldünk fel.
+const emit = defineEmits<{
+  (e: 'close'): void;
+  (e: 'save-task', task: Task): void;
+}>();
+
 const ujTodoSzoveg = ref('');
 const ujTodoOsszeg = ref<number | null>(null);
 
+const createTaskCopy = (source: Task): Task => ({
+  ...source,
+  assignedTo: [...(source.assignedTo ?? [])],
+  todos: (source.todos ?? []).map((todo) => ({ ...todo })),
+});
+
+// A props-ból lokális másolatot készítünk, így nem mutáljuk közvetlenül a parent propot.
+const task = ref<Task>(createTaskCopy(props.task));
+
+watch(
+  () => props.task,
+  (nextTask) => {
+    task.value = createTaskCopy(nextTask);
+  },
+  { deep: true }
+);
+
 const bezaras = () => emit('close');
 
+// Törött profilkép esetén az img elemet elrejtjük, hogy az ikon visszalépő nézete látható maradjon.
 const hideImage = (event: Event) => {
   const target = event.target as HTMLElement;
   if (target) {
@@ -194,11 +220,13 @@ const hideImage = (event: Event) => {
   }
 };
 
+// A szülőnek küldjük vissza a frissített task objektumot.
 const mentes = () => {
-  emit('save-task', props.task);
+  emit('save-task', createTaskCopy(task.value));
 };
 
-// Visszatérési érték típusának beállítása string | undefined-ra
+// Profilkép útvonal építése backend origin alapján.
+// Relatív fájlnévből teljes URL készül, abszolút URL változatlanul marad.
 const getImageUrl = (fileName: string | null | undefined): string | undefined => {
   if (!fileName || fileName.trim() === '') return undefined;
   if (fileName.startsWith('http')) return fileName;
@@ -207,17 +235,20 @@ const getImageUrl = (fileName: string | null | undefined): string | undefined =>
   return `${new URL(axiosBaseUrl).origin}/resources/Profiles/${fileName}`;
 };
 
-const totalBudget = computed(() => props.task.amount || 0);
+// A task összegét tekintjük teljes budget keretnek.
+const totalBudget = computed(() => task.value.amount || 0);
 
+// A már rögzített részfeladat összegek összege.
 const usedBudget = computed(() => {
-  if (!props.task.todos) return 0;
-  return props.task.todos.reduce((sum: number, todo: any) => sum + (todo.amount || 0), 0);
+  return task.value.todos.reduce((sum, todo) => sum + (todo.amount || 0), 0);
 });
 
+// A fennmaradó szabad keret nem lehet negatív.
 const remainingBudget = computed(() => {
   return Math.max(0, totalBudget.value - usedBudget.value);
 });
 
+// Progress bar százalék számítás a költségkeret kihasználtságához.
 const budgetPercentage = computed(() => {
   if (totalBudget.value === 0) return 0;
   return Math.min(100, (usedBudget.value / totalBudget.value) * 100);
@@ -225,11 +256,13 @@ const budgetPercentage = computed(() => {
 
 const isBudgetFull = computed(() => budgetPercentage.value >= 100);
 
+// Új TODO összeg ne lépje túl a szabad keretet (ha van keret).
 const isOverBudget = computed(() => {
   if (totalBudget.value === 0) return false;
   return (ujTodoOsszeg.value || 0) > remainingBudget.value;
 });
 
+// Hozzáadás csak akkor engedélyezett, ha van szöveg és nincs budget túllépés.
 const canAddTodo = computed(() => {
   if (!ujTodoSzoveg.value.trim()) return false;
   if (isOverBudget.value) return false;
@@ -237,29 +270,30 @@ const canAddTodo = computed(() => {
 });
 
 const formatCurrency = (val: number) => new Intl.NumberFormat('hu-HU', { style: 'currency', currency: 'HUF', maximumFractionDigits: 0 }).format(val);
-const statusClass = (s: string) => s === 'done' ? 'bg-green-500/20 text-green-400 border-green-500/30' : s === 'in-progress' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-earth-800 text-earth-300 border-earth-600';
-const getStatusName = (s: string) => s === 'done' ? 'Kész' : s === 'in-progress' ? 'Folyamatban' : 'Tennivaló';
-const getMemberDetails = (id: string) => props.projectMembers.find(m => m.userId === id);
+const statusClass = (s: Task['status']) => s === 'done' ? 'bg-green-500/20 text-green-400 border-green-500/30' : s === 'in-progress' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-earth-800 text-earth-300 border-earth-600';
+const getStatusName = (s: Task['status']) => s === 'done' ? 'Kész' : s === 'in-progress' ? 'Folyamatban' : 'Tennivaló';
+const getMemberDetails = (id: string) => props.projectMembers.find((m) => m.userId === id);
 const getMemberName = (id: string) => id === props.currentUserId ? "Én" : (getMemberDetails(id)?.name || "Ismeretlen");
 
+// Nem kész elemek kerüljenek előre, így a napi munkavégzés szempontjából fontos elemek látszanak először.
 const sortedTodos = computed(() => {
-  if (!props.task.todos) return [];
-  return [...props.task.todos].sort((a, b) => {
+  return [...task.value.todos].sort((a, b) => {
     if (a.completed !== b.completed) return a.completed ? 1 : -1;
     return b.id - a.id;
   });
 });
 
+// Készültség százalék a completed státuszú TODO-k aránya alapján.
 const progress = computed(() => {
-  if (!props.task.todos || props.task.todos.length === 0) return 0;
-  return Math.round((props.task.todos.filter((t: any) => t.completed).length / props.task.todos.length) * 100);
+  if (task.value.todos.length === 0) return 0;
+  return Math.round((task.value.todos.filter((t) => t.completed).length / task.value.todos.length) * 100);
 });
 
+// Új részfeladatot ad a taskhoz, majd mentést kér a szülőtől.
 const ujTodoHozzaadasa = () => {
   if (!canAddTodo.value) return;
 
-  if (!props.task.todos) props.task.todos = [];
-  props.task.todos.push({
+  task.value.todos.push({
     id: 0,
     text: ujTodoSzoveg.value.trim(),
     amount: ujTodoOsszeg.value || 0,
@@ -272,20 +306,23 @@ const ujTodoHozzaadasa = () => {
   mentes();
 };
 
-const todoElvallalas = (todo: any) => {
+// Aktuális user magához rendel egy TODO-t.
+const todoElvallalas = (todo: Todo) => {
   todo.workerId = props.currentUserId;
   mentes();
 };
 
-const todoLemondas = (todo: any) => {
+// Aktuális user visszaadja a TODO felelősségét.
+const todoLemondas = (todo: Todo) => {
   todo.workerId = null;
   mentes();
 };
 
+// TODO törlése lokálisan, majd változás jelzése a szülőnek.
 const todoTorlese = (todoId: number) => {
-  const idx = props.task.todos.findIndex((t: any) => t.id === todoId);
+  const idx = task.value.todos.findIndex((t) => t.id === todoId);
   if (idx !== -1) {
-    props.task.todos.splice(idx, 1);
+    task.value.todos.splice(idx, 1);
     mentes();
   }
 };

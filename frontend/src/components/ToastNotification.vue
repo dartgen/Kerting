@@ -39,6 +39,7 @@ const props = defineProps<{
   type: ToastType;
 }>()
 
+// A toast tipusa alapjan egységesen adjuk vissza a kontener/icon/progress osztalyokat.
 const dynamicStyles = computed(() => {
   const styles = {
     success: {

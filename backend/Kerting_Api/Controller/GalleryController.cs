@@ -12,9 +12,12 @@ using System.Threading.Tasks;
 
 namespace Kerting_Api.Controller
 {
-    [Authorize] // Minden végponthoz kell Token
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
+    /// <summary>
+    /// Galéria végpontok: feedek, profilkép kezelés, item CRUD, publikáció, reakciók és kommentek.
+    /// </summary>
     public class GalleryController : ControllerBase
     {
         private readonly IGalleryService _galleryService;
@@ -26,7 +29,7 @@ namespace Kerting_Api.Controller
             _env = env;
         }
 
-        // Segédmetódus a UserId kinyeréséhez a Tokenből
+        // User ID kiolvasása a token claim-ből.
         private int GetCurrentUserId() => int.Parse(User.FindFirst("Id")?.Value ?? "0");
 
         private int? TryGetCurrentUserId()
@@ -35,18 +38,27 @@ namespace Kerting_Api.Controller
             return int.TryParse(rawId, out var userId) ? userId : null;
         }
 
+        /// <summary>
+        /// Publikus galéria feed lapozott lekérése.
+        /// </summary>
         [HttpGet("feed")]
         public async Task<IActionResult> GetFeed([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] bool includeDeleted = false)
         {
             return Ok(await _galleryService.GetGalleryFeedAsync(page, pageSize, TryGetCurrentUserId(), includeDeleted));
         }
 
+        /// <summary>
+        /// Egy konkrét user publikus galéria feedje.
+        /// </summary>
         [HttpGet("user/{userId}")]
         public async Task<IActionResult> GetUserFeed(int userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] bool includeDeleted = false)
         {
             return Ok(await _galleryService.GetUserGalleryFeedAsync(userId, page, pageSize, TryGetCurrentUserId(), includeDeleted));
         }
 
+        /// <summary>
+        /// Bejelentkezett user saját galéria feedje.
+        /// </summary>
         [HttpGet("mine")]
         public async Task<IActionResult> GetMyFeed([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] bool includeDeleted = false)
         {
@@ -54,6 +66,9 @@ namespace Kerting_Api.Controller
             return Ok(await _galleryService.GetOwnGalleryFeedAsync(userId, page, pageSize, userId, includeDeleted));
         }
 
+        /// <summary>
+        /// Galéria item lekérése ID alapján.
+        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id, [FromQuery] bool includeDeleted = false)
         {
@@ -61,13 +76,14 @@ namespace Kerting_Api.Controller
             return item is null ? NotFound() : Ok(item);
         }
 
-        // --- PROFILKÉP FELTÖLTÉS(userId-t Form-ból kapja) ---
+        /// <summary>
+        /// Profilkép feltöltése a bejelentkezett userhez.
+        /// </summary>
         [HttpPost("profile-image")]
         public async Task<IActionResult> UploadProfileImage(IFormFile file)
         {
             try
             {
-                // A userId-t most már közvetlenül a paraméterből kapjuk meg
                 var url = await _galleryService.UploadProfileImageAsync(GetCurrentUserId(), file, _env.ContentRootPath ?? _env.WebRootPath ?? ".");
                 return Ok(new { url });
             }
@@ -77,7 +93,9 @@ namespace Kerting_Api.Controller
             }
         }
 
-        // --- PROFILKÉP TÖRLÉS (userId-t az URL-ből vagy Query-ből kapja) ---
+        /// <summary>
+        /// Profilkép törlése.
+        /// </summary>
         [HttpDelete("profile-image")]
         public async Task<IActionResult> DeleteProfileImage()
         {
@@ -94,8 +112,9 @@ namespace Kerting_Api.Controller
             }
         }
 
-        // --- GALÉRIA KEZELÉS ---
-
+        /// <summary>
+        /// Új galéria item feltöltése (kép + metadata).
+        /// </summary>
         [HttpPost("upload")]
         public async Task<IActionResult> Upload([FromForm] string title, [FromForm] string description, IFormFile file)
         {
@@ -107,6 +126,9 @@ namespace Kerting_Api.Controller
             catch (Exception ex) { return BadRequest(ex.Message); }
         }
 
+        /// <summary>
+        /// Galéria item törlése.
+        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
@@ -114,6 +136,9 @@ namespace Kerting_Api.Controller
             return success ? Ok() : NotFound();
         }
 
+        /// <summary>
+        /// Törölt galéria item visszaállítása.
+        /// </summary>
         [HttpPatch("{id}/restore")]
         public async Task<IActionResult> Restore(int id)
         {
@@ -121,6 +146,9 @@ namespace Kerting_Api.Controller
             return success ? Ok() : NotFound();
         }
 
+        /// <summary>
+        /// Galéria item metadata frissítési kérésadat.
+        /// </summary>
         public sealed class UpdateGalleryItemRequest
         {
             [MaxLength(150)]
@@ -130,6 +158,9 @@ namespace Kerting_Api.Controller
             public string? Description { get; set; }
         }
 
+        /// <summary>
+        /// Galéria item title/leírás frissítése.
+        /// </summary>
         [HttpPatch("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateGalleryItemRequest request)
         {
@@ -137,6 +168,9 @@ namespace Kerting_Api.Controller
             return success ? Ok() : NotFound();
         }
 
+        /// <summary>
+        /// Publikációs állapot váltás.
+        /// </summary>
         [HttpPatch("{id}/publish")]
         public async Task<IActionResult> SetPublishState(int id, [FromQuery] bool isPublished)
         {
@@ -144,6 +178,9 @@ namespace Kerting_Api.Controller
             return success ? Ok() : NotFound();
         }
 
+        /// <summary>
+        /// Like/dislike reakció váltás item szinten.
+        /// </summary>
         [HttpPost("{id}/react")]
         public async Task<IActionResult> ToggleReaction(int id, [FromQuery] bool isLike)
         {
@@ -151,6 +188,9 @@ namespace Kerting_Api.Controller
             return success ? Ok() : NotFound();
         }
 
+        /// <summary>
+        /// Új komment felvétele egy itemhez.
+        /// </summary>
         [HttpPost("{id}/comment")]
         public async Task<IActionResult> AddComment(int id, [FromBody] CommentRequest request)
         {
@@ -178,6 +218,9 @@ namespace Kerting_Api.Controller
             }
         }
 
+        /// <summary>
+        /// Komment törlése.
+        /// </summary>
         [HttpDelete("comment/{commentId}")]
         public async Task<IActionResult> DeleteComment(int commentId)
         {
@@ -185,6 +228,9 @@ namespace Kerting_Api.Controller
             return success ? Ok() : NotFound();
         }
 
+        /// <summary>
+        /// Törölt komment visszaállítása.
+        /// </summary>
         [HttpPatch("comment/{commentId}/restore")]
         public async Task<IActionResult> RestoreComment(int commentId)
         {

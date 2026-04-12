@@ -131,6 +131,8 @@ import ProfileTab from '@/components/profile/ProfileTab.vue';
 import GalleryComponent from '@/components/gallery/GalleryLayout.vue';
 import CommentsTab from '@/components/profile/UserReviewsList.vue';
 
+// A komponensben tarolt publikus profil-nezet allapotszerkezete.
+// A mezonevek frontend-konzisztensek, de a backend DTO-bol tortenik feltoltes.
 interface PublicProfileViewState {
   vezetekNev: string;
   keresztNev: string;
@@ -148,31 +150,44 @@ interface PublicProfileViewState {
   username?: string;
 }
 
+// Router segédek: az URL paraméterek olvasása és programozott navigáció.
 const route = useRoute();
 const router = useRouter();
 const toastStore = useToastStore();
 
+// Betöltési állapot a teljes oldalhoz.
 const isLoading = ref(true);
+
+// Role törzsadatok (ID -> név feloldás a profil roleId alapján).
 const roles = ref<RoleDto[]>([]);
+
+// Bal oldali menü aktív tab állapota.
 const activeTab = ref('profil');
+
+// Felhasználóhoz tartozó címkék listája (profil card + tabok támogatásához).
 const cimkek = ref<string[]>([]);
 
+// Reaktív profil állapot, amelyet API válasz alapján töltünk fel.
 const profilAdatok = reactive<PublicProfileViewState>({
   vezetekNev: '', keresztNev: '', email: '', telefon: '', telepules: '', roleId: 0, rolam: '',
   IMGString: '', ertekeles: 0, ertekelesSzam: 0, facebook: '', instagram: '', tiktok: '',
   username: ''
 });
 
+// Megjelenített teljes név:
+// ha nincs kitöltve vezetéknév + keresztnév, visszalépés a username-re.
 const teljesNev = computed(() => {
   const nev = `${profilAdatok.vezetekNev} ${profilAdatok.keresztNev}`.trim();
   return nev ? nev : profilAdatok.username;
 });
 
+// Role ID-ból olvasható role nevet készít a fejléc megjelenítéshez.
 const roleNev = computed(() => {
   const role = roles.value.find(r => r.id === profilAdatok.roleId);
   return role ? role.name : '';
 });
 
+// Az oldalsó menü gombjainak stílusválasztása az aktív tab alapján.
 const getTabClass = (tabName: string) => {
   const baseClass = 'text-left px-4 py-3 rounded-xl transition-all font-medium flex items-center gap-3';
   return activeTab.value === tabName
@@ -180,6 +195,7 @@ const getTabClass = (tabName: string) => {
     : `${baseClass} text-earth-100 hover:bg-earth-50/5 hover:text-earth-50 border border-transparent`;
 };
 
+// Üzenet küldése: a chat oldalra navigálunk, átadva a cél user ID-t query-ben.
 const uzenetKuldeseNyitas = () => {
   const targetUserId = route.params.id;
   router.push({
@@ -188,11 +204,17 @@ const uzenetKuldeseNyitas = () => {
   });
 };
 
+// Vissza navigáció:
+// ha van böngésző előző oldal, arra megyünk vissza;
+// különben biztos visszalépő útvonal a főoldal.
 const vissza = () => {
   if (window.history.length > 1) { router.back(); }
   else { router.push('/'); }
 };
 
+// Profilkép URL összerakás:
+// a backend /resources static path-ját használjuk ugyanazon origin alatt,
+// mint ahol az API endpoint fut.
 const getImageUrl = (fileName: string) => {
   if (!fileName || fileName.trim() === '') return null;
   const axiosBaseUrl = api.defaults.baseURL;
@@ -200,18 +222,28 @@ const getImageUrl = (fileName: string) => {
   return `${new URL(axiosBaseUrl).origin}/resources/Profiles/${fileName}`;
 };
 
+// A nézet adatainak teljes betöltése.
+// Letöltés sorrend:
+// 1) role törzsadatok,
+// 2) publikus profil,
+// 3) lokális state feltöltése + címkék normalizálása.
 const adatokBetoltese = async () => {
   const userId = route.params.id as string;
   if (!userId) return;
 
   try {
     isLoading.value = true;
+
+    // A role nevet ID alapján oldjuk fel, ehhez kell a role lista.
     const rolesRes = await authService.getRoles();
     roles.value = rolesRes.data;
 
+    // Publikus profil végpont (másik felhasználó adatai).
     const profileRes = await authService.getPublicProfile(userId);
     const d: PublicProfileResponse = profileRes.data;
 
+    // A bejövő DTO-t egy helyen mappoljuk a reaktív állapotba,
+    // hogy a template konzisztens mezőnevekkel dolgozzon.
     Object.assign(profilAdatok, {
       IMGString: d.imgString || '', vezetekNev: d.vezetekNev || '', keresztNev: d.keresztNev || '',
       email: d.email || '', telefon: d.telefon || '', telepules: d.telepules || '',
@@ -221,10 +253,12 @@ const adatokBetoltese = async () => {
       username: d.username || ''
     });
 
+    // Címkék esetén a trim segít kiszűrni a backendről jövő esetleges whitespace-t.
     if (d.cimkek && Array.isArray(d.cimkek)) {
       cimkek.value = d.cimkek.map((c: string) => c.trim());
     }
   } catch (error) {
+    // Hibánál felhasználói toast + biztonságos visszalépő navigáció.
     console.error("Betöltési hiba:", error);
     toastStore.addToast('Nem sikerült betölteni a profilt!', 4000, 'error');
     await router.push('/');
@@ -233,6 +267,7 @@ const adatokBetoltese = async () => {
   }
 };
 
+// Első renderkor automatikusan betöltjük az oldalt.
 onMounted(() => { adatokBetoltese(); });
 </script>
 

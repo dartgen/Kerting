@@ -3,6 +3,8 @@ import ForumCommentItem from '@/components/forum/ForumCommentItem.vue'
 import type { ForumComment, ForumDetail } from '@/types/forum'
 import { useRouter } from 'vue-router'
 
+// A reszletpanel teljesen a szulo (ForumLayout) allapotat hasznalja.
+// Ez a komponens inkabb megjelenito + event forwarder szerepet tolt be.
 const props = defineProps<{
   detail: ForumDetail | null
   detailLoading: boolean
@@ -39,6 +41,7 @@ const emit = defineEmits<{
 
 const router = useRouter()
 
+// Szerzo avatar/nev kattintasakor publikus profilra navigal.
 const openPublicProfile = (userId: number) => {
   if (!userId) return
   router.push({
@@ -49,8 +52,10 @@ const openPublicProfile = (userId: number) => {
 </script>
 
 <template>
+  <!-- Visszalepes listanezetbe -->
   <button type="button" class="mb-4 text-earth-200 hover:text-earth-50" @click="emit('go-back')">← Vissza a fórumhoz</button>
 
+  <!-- Kezdeti reszletbetoltes -->
   <div v-if="props.detailLoading" class="rounded-xl border border-earth-100/10 bg-earth-900/40 p-6 text-earth-200">Betöltés...</div>
 
   <template v-else-if="props.detail">

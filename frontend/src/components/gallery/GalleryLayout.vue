@@ -741,7 +741,7 @@ watch(expandedCard, () => {
                     aria-label="Nagy nézet bezárása"
                     @click="closeExpandedCard"
                   >
-                    ✕
+                    X
                   </button>
                 </div>
               </div>
@@ -863,7 +863,7 @@ watch(expandedCard, () => {
                   </p>
                 </div>
 
-                <!-- Comments List -->
+                <!-- Kommentlista -->
                 <div class="mt-3 min-h-0 flex-1 overflow-y-auto pr-1 space-y-3">
                   <div
                     v-for="comment in expandedCard.comments"

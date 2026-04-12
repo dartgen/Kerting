@@ -122,7 +122,7 @@
           <p class="text-earth-200 leading-relaxed bg-earth-950/30 p-4 rounded-xl border border-earth-100/5">{{ selectedEntry.description || 'Nincs leírás megadva.' }}</p>
 
           <div class="pt-6 flex justify-end">
-            <button @click="deleteEntry(selectedEntry.id)" class="text-red-400 hover:text-red-300 text-sm font-bold flex items-center gap-2 transition-colors">
+            <button @click="deleteSelectedEntry" class="text-red-400 hover:text-red-300 text-sm font-bold flex items-center gap-2 transition-colors">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
               Bejegyzés törlése
             </button>
@@ -136,30 +136,58 @@
 
 <script setup lang="ts">
 import { ref, computed, reactive, onMounted } from 'vue';
-import { useRouter } from 'vue-router'; // ÚJ: Router importálása
+import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
-import { useToastStore } from '@/stores/toast'; // ÚJ: Toast importálása
+import { useToastStore } from '@/stores/toast';
 import { calendarService, type CalendarEntry } from '@/services/calendarService';
 import { projectService } from '@/services/projectService';
+import type { UserProfileResponse } from '@/types/auth';
 
 const authStore = useAuthStore();
-const router = useRouter(); // ÚJ: Router példányosítása
-const toastStore = useToastStore(); // ÚJ: Toast példányosítása
+const router = useRouter();
+const toastStore = useToastStore();
 
-const currentUserId = computed(() => String((authStore.profilAdatok as any)?.id || ''));
+// Bejelentkezett user azonositoja (string forma a backend kompatibilitas miatt).
+const currentUserId = computed(() => {
+  const profile = authStore.profilAdatok as (UserProfileResponse & { id?: string | number }) | null;
+  return String(profile?.id ?? '');
+});
+
+interface ProjectCalendarTask {
+  id: number;
+  title: string;
+  deadline?: string;
+  status?: string;
+}
+
+interface ProjectCalendarSummary {
+  title: string;
+  tasks: ProjectCalendarTask[];
+}
+
+type CalendarItem = CalendarEntry & { isEntry?: boolean; projectName?: string; status?: string };
+
+interface ProjectTaskCalendarItem {
+  id: string;
+  title: string;
+  date: string;
+  isEntry: false;
+  projectName: string;
+  status?: string;
+}
+
+type CalendarTimelineItem = CalendarItem | ProjectTaskCalendarItem;
 
 const viewDate = ref(new Date());
 const weekDays = ['Hét', 'Ked', 'Sze', 'Csüt', 'Pén', 'Szo', 'Vas'];
 
-// --- ÁLLAPOTOK ---
+// Fokepernyo allapotok.
 const isLoading = ref(true);
 const showNewEntryModal = ref(false);
-const selectedEntry = ref<any>(null);
+const selectedEntry = ref<CalendarItem | null>(null);
 const newEntryForm = reactive({ title: '', description: '', date: '' });
-
-type CalendarItem = CalendarEntry & { isEntry?: boolean; projectName?: string; status?: string };
 const personalEntries = ref<CalendarItem[]>([]);
-const projectsList = ref<any[]>([]);
+const projectsList = ref<ProjectCalendarSummary[]>([]);
 
 onMounted(() => {
   if (currentUserId.value) {
@@ -167,19 +195,22 @@ onMounted(() => {
   }
 });
 
-const allCalendarItems = computed(() => {
-  const tasks = projectsList.value.flatMap(p =>
+const allCalendarItems = computed<CalendarTimelineItem[]>(() => {
+  // Projekt taskok -> naptár elemek normalizálása.
+  const tasks: ProjectTaskCalendarItem[] = projectsList.value.flatMap((p) =>
     p.tasks
-      .filter((t: any) => t.deadline)
-      .map((t: any) => ({
+      .filter((t) => t.deadline)
+      .map((t) => ({
         id: `task_${t.id}`,
         title: t.title,
-        date: t.deadline,
+        date: t.deadline as string,
         status: t.status,
         projectName: p.title,
         isEntry: false
       }))
   );
+
+  // A projekt feladatok es szemelyes bejegyzesek egy kozos idovonalra kerulnek.
   return [...tasks, ...personalEntries.value];
 });
 
@@ -190,11 +221,12 @@ const monthName = computed(() => new Intl.DateTimeFormat('hu-HU', { month: 'long
 const changeMonth = (offset: number) => { viewDate.value = new Date(currentYear.value, currentMonth.value + offset, 1); };
 const setToday = () => { viewDate.value = new Date(); };
 
+// 6x7-es naptarracsot generalunk elozo/aktualis/kovetkezo havi napokkal.
 const calendarDays = computed(() => {
   const days = [];
   const firstDay = new Date(currentYear.value, currentMonth.value, 1);
   const lastDay = new Date(currentYear.value, currentMonth.value + 1, 0);
-  let startDay = firstDay.getDay() === 0 ? 7 : firstDay.getDay();
+  const startDay = firstDay.getDay() === 0 ? 7 : firstDay.getDay();
   const prevMonthLast = new Date(currentYear.value, currentMonth.value, 0).getDate();
 
   for (let i = startDay - 1; i > 0; i--) days.push({ date: new Date(currentYear.value, currentMonth.value - 1, prevMonthLast - i + 1), dayNumber: prevMonthLast - i + 1, isCurrentMonth: false });
@@ -214,11 +246,12 @@ const formatDateStr = (date: Date) => {
   return d.toISOString().split('T')[0];
 };
 
-const getItemsForDate = (date: Date) => {
+const getItemsForDate = (date: Date): CalendarTimelineItem[] => {
   const ds = formatDateStr(date);
   return allCalendarItems.value.filter(item => item.date === ds);
 };
 
+// Uj bejegyzes modal nyitasa opcionális elore kitoltott datummal.
 const openNewEntryModal = (dateStr?: string) => {
   newEntryForm.title = '';
   newEntryForm.description = '';
@@ -229,6 +262,8 @@ const openNewEntryModal = (dateStr?: string) => {
 const loadData = async () => {
   try {
     isLoading.value = true;
+
+    // Parhuzamosan toltjuk a szemelyes bejegyzeseket es a projektlistat.
     const [entries, projects] = await Promise.all([
       calendarService.getMyEntries(),
       projectService.getMyProjects()
@@ -243,15 +278,16 @@ const loadData = async () => {
     projectsList.value = projects;
   } catch (error) {
     console.error("Hiba a naptár adatainak betöltésekor", error);
-    toastStore.addToast('Hiba a naptár betöltésekor!', 3000, 'error'); // ÚJ Toast
+    toastStore.addToast('Hiba a naptár betöltésekor!', 3000, 'error');
   } finally {
     isLoading.value = false;
   }
 };
 
+// Személyes naptárbejegyzés mentése, majd lokális lista frissítése.
 const saveNewEntry = async () => {
   if (!newEntryForm.title.trim()) {
-    toastStore.addToast('A cím megadása kötelező!', 3000, 'warning'); // ÚJ Toast
+    toastStore.addToast('A cím megadása kötelező!', 3000, 'warning');
     return;
   }
   try {
@@ -270,20 +306,19 @@ const saveNewEntry = async () => {
     } as CalendarItem);
 
     showNewEntryModal.value = false;
-    toastStore.addToast('Bejegyzés sikeresen mentve!', 3000, 'success'); // ÚJ Toast
+    toastStore.addToast('Bejegyzés sikeresen mentve!', 3000, 'success');
   } catch (error) {
     console.error("Hiba a bejegyzés mentésekor", error);
-    toastStore.addToast('Hiba történt a mentés során.', 3000, 'error'); // ÚJ Toast
+    toastStore.addToast('Hiba történt a mentés során.', 3000, 'error');
   }
 };
 
-// JAVÍTÁS: Átirányítás a Projektek oldalra alert() helyett
-const megnyitElem = (item: any) => {
+// Elemkattintas: szemelyes bejegyzes modalban nyilik, projektfeladat pedig projektek oldalra visz.
+const megnyitElem = (item: CalendarTimelineItem) => {
   if (item.isEntry) {
     selectedEntry.value = item;
   } else {
-    // Toast értesítés + Navigáció
-    toastStore.addToast(`Átirányítás a(z) "${item.projectName}" projekthez...`, 3000, 'info');
+    toastStore.addToast(`Átirányítás a(z) "${item.projectName}" projekthez...`, 3000, 'warning');
     router.push('/projects');
   }
 };
@@ -294,12 +329,20 @@ const deleteEntry = async (id: number) => {
       await calendarService.deleteEntry(id);
       personalEntries.value = personalEntries.value.filter(e => e.id !== id);
       selectedEntry.value = null;
-      toastStore.addToast('Bejegyzés törölve.', 3000, 'success'); // ÚJ Toast
+      toastStore.addToast('Bejegyzés törölve.', 3000, 'success');
     } catch(error) {
       console.error("Hiba a bejegyzés törlésekor", error);
-      toastStore.addToast('Hiba történt a törlés során.', 3000, 'error'); // ÚJ Toast
+      toastStore.addToast('Hiba történt a törlés során.', 3000, 'error');
     }
   }
+};
+
+const deleteSelectedEntry = () => {
+  if (selectedEntry.value?.id == null) {
+    return;
+  }
+
+  void deleteEntry(selectedEntry.value.id);
 };
 </script>
 

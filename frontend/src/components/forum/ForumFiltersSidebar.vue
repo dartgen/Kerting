@@ -2,6 +2,8 @@
 import type { ForumSort } from '@/services/forumService'
 import type { RoleDto } from '@/types/auth'
 
+// A szűrő sidebar kontrolljai egy helyen vannak összefogva;
+// a komponens csak továbbítja a felhasználói beállításokat a szülőnek.
 const props = defineProps<{
   sortValue: ForumSort
   searchValue: string
@@ -15,6 +17,7 @@ const props = defineProps<{
   showDeleted: boolean
 }>()
 
+// Minden változtatást célzott eventként küldünk vissza, hogy a szülő egységesen kezelhesse a szűrési állapotot.
 const emit = defineEmits<{
   (e: 'update:sortValue', value: ForumSort): void
   (e: 'update:searchValue', value: string): void

@@ -1,6 +1,7 @@
 /**
- * Form Validation Utilities
- * Email, username, password, URL validation és egyebek
+ * Központi form validációs segédek.
+ * A cél, hogy ugyanazok a szabályok legyenek használhatók regisztrációban,
+ * profil szerkesztésben és bármely egyedi űrlapban is.
  */
 
 export interface ValidationRule {
@@ -67,7 +68,7 @@ export function validateRequired(value: string): boolean {
 }
 
 /**
- * Egyedi validáció wrapper — több rule-t lehet kombinálni
+ * Egyedi validációs összefogó - több szabály kombinálható
  */
 export function validateField(value: string, rules: ValidationRule[]): ValidationResult {
   const errors: string[] = []
@@ -85,7 +86,7 @@ export function validateField(value: string, rules: ValidationRule[]): Validatio
 }
 
 /**
- * Form-wide validáció
+ * Teljes űrlap validáció
  */
 export interface FormValidationRules {
   [fieldName: string]: ValidationRule[]

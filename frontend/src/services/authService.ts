@@ -12,8 +12,13 @@ import type {
   UserProfileResponse
 } from '@/types/auth';
 
+// Az authService egy vekony API kliens reteg az azonositas/profil endpointokhoz.
+// A store-ok ebben az allomanyban kozpontositan keresztulrik a backend auth vegpontjait,
+// igy a route-oldali komponensek nem endpoint stringeket hasznalnak kozvetlenul.
 export const authService = {
-  // Bejelentkezés és Regisztráció
+  // -----------------------------
+  // BEJELENTKEZES / REGISZTRACIO
+  // -----------------------------
   bejelentkezes(felhasznaloNev: string, jelszo: string) {
     return apiClient.post<LoginResponse>('/Login', {
       username: felhasznaloNev,
@@ -27,7 +32,11 @@ export const authService = {
     });
   },
 
-  // Token kezelés
+  // -----------------------------
+  // TOKEN KEZELES (KLIENS OLDAL)
+  // -----------------------------
+  // A token a localStorage-ben tarolodik egyszeru session-megorzes celjabol.
+  // Fontos: ez nem helyettesiti a backend szerver oldali ervenyesitest.
   kijelentkezes() {
     localStorage.removeItem('userToken');
   },
@@ -38,7 +47,9 @@ export const authService = {
     return !!localStorage.getItem('userToken');
   },
 
-  // Szerepkörök és Címkék (Tagek) lekérése
+  // ------------------------------------
+  // TORZSADATOK: SZEREPKOROK ES CIMKEK
+  // ------------------------------------
   getRoles() {
     return apiClient.get<RoleDto[]>('/GetRoles');
   },
@@ -46,7 +57,9 @@ export const authService = {
     return apiClient.get<string[]>('/ActivityTag');
   },
 
-  // Felhasználói validációk
+  // ------------------------------------
+  // REGISZTRÁCIÓ ELŐTTI VALIDÁCIÓK
+  // ------------------------------------
   checkUsername(username: string) {
     return apiClient.get<CheckUsernameResponse>(`/CheckUsername?username=${username}`);
   },
@@ -54,7 +67,10 @@ export const authService = {
     return apiClient.post<FirstLoginResponse>(`/${id}/first-login`);
   },
 
-  // PROFIL KEZELÉS
+  // ------------------------------------
+  // PROFIL MŰVELETEK
+  // ------------------------------------
+  // A kérésadat mezőnevei a backend DTO elvárt neveivel egyeznek.
   updateProfile(profilAdatok: UpdateProfilePayload) {
     return apiClient.put('/UpdateMyProfile', {
       vezetekNev: profilAdatok.vezetekNev,
@@ -74,27 +90,27 @@ export const authService = {
     });
   },
 
-  // Saját profil lekérése (Tokenből azonosít a backend)
+  // Saját profil: azonosítás a JWT token alapján, nem URL paraméterből.
   getProfile() {
     return apiClient.get<UserProfileResponse>('/GetMyProfile');
   },
 
-  // Publikus profil lekérése ID alapján
+  // Publikus profil: URL-ben kapott user ID alapján.
   getPublicProfile(id: string | number) {
     return apiClient.get<PublicProfileResponse>(`/GetPublicProfile/${id}`);
   },
 
-  // Kiemelt felhasználók a főoldali carouselhez
+  // Kiemelt felhasználók a főoldali carouselhez.
   getFeaturedCarouselProfiles() {
     return apiClient.get<FeaturedCarouselProfile[]>('/featured-users');
   },
 
-  // Admin képernyőhöz: slot kiosztások + választható felhasználók
+  // Admin felület: jelenlegi slot kiosztás + választható felhasználók.
   getFeaturedAdminData() {
     return apiClient.get<FeaturedAdminDataResponse>('/featured-users/admin/data');
   },
 
-  // Admin mentés: pontosan 5 rendezett slot
+  // Admin mentés: pontosan 5 slotot vár a backend (1..5 sorrend).
   updateFeaturedSlots(assignments: FeaturedSlotAssignment[]) {
     return apiClient.put('/featured-users/admin/slots', assignments);
   }

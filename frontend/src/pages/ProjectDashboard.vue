@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="flex items-center justify-center w-full min-h-[calc(100dvh-5rem)] p-4 sm:p-6 bg-earth-950 relative">
 
     <div class="relative w-full max-w-[1400px] h-[85vh] flex bg-earth-900/60 backdrop-blur-md border border-earth-100/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden animate-fade-in">
@@ -440,6 +440,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { projectService } from '@/services/projectService';
 import apiClient from '@/services/axios';
 import type { Project, Task, ProjectMember } from '@/types/project';
+import type { UserProfileResponse } from '@/types/auth';
 
 import ProjectEditModal from '@/components/project/ProjectEditModal.vue';
 import TaskCreateModal from '@/components/project/TaskCreateModal.vue';
@@ -447,7 +448,7 @@ import MemberDetailsModal from '@/components/project/MemberDetailsModal.vue';
 import TaskDetailModal from '@/components/project/TaskDetailModal.vue';
 import UserSelectorModal from '@/components/project/UserSelectorModal.vue';
 
-// --- Biztonságos kép eltüntetés hibás betöltés esetén ---
+// Ha hibás a kép URL, az img elemet elrejtjük, hogy ne törje meg a layoutot.
 const hideImage = (event: Event) => {
   const target = event.target as HTMLElement;
   if (target) {
@@ -455,13 +456,35 @@ const hideImage = (event: Event) => {
   }
 };
 
-// --- AUTHENTIKÁCIÓ ÉS AZONOSÍTÁS ---
+// Auth azonosítás (ID + usernév visszalépő érték), hogy végig stabil maradjon a "saját user" ellenőrzés.
 const authStore = useAuthStore();
 const router = useRouter();
 
-// Megjegyzés: A (authStore.profilAdatok as any) azért kell, hogy a TS ne sírjon a hiányzó tulajdonságok miatt a build során
-const currentUserId = computed(() => String((authStore.profilAdatok as any)?.id || '').toLowerCase().trim());
-const currentUserName = computed(() => String((authStore.profilAdatok as any)?.felhasznalonev || (authStore.profilAdatok as any)?.username || '').toLowerCase().trim());
+type DashboardProfile = UserProfileResponse & {
+  id?: string | number;
+  felhasznalonev?: string;
+  username?: string;
+  nev?: string;
+};
+
+interface UserSelectorOption {
+  id: string | number;
+  nev: string;
+  avatar?: string;
+}
+
+type ProjectModalPayload = Partial<Project> & { id?: number; memberNamesRaw?: string };
+type TaskModalPayload = Partial<Task> & { id?: number };
+
+const currentUserId = computed(() => {
+  const profile = authStore.profilAdatok as DashboardProfile | null;
+  return String(profile?.id ?? '').toLowerCase().trim();
+});
+
+const currentUserName = computed(() => {
+  const profile = authStore.profilAdatok as DashboardProfile | null;
+  return String(profile?.felhasznalonev ?? profile?.username ?? '').toLowerCase().trim();
+});
 
 const isMe = (userId: string) => {
   if (!userId) return false;
@@ -469,7 +492,7 @@ const isMe = (userId: string) => {
   return uId === currentUserId.value || uId === currentUserName.value;
 };
 
-// --- ÁLLAPOTOK ---
+// Dashboard állapotok.
 const activeFilter = ref<'ongoing' | 'archived' | 'invited'>('ongoing');
 const selectedProjectId = ref<number | null>(null);
 const isLoading = ref(true);
@@ -478,10 +501,10 @@ const showProjectModal = ref(false);
 const showTaskCreateModal = ref(false);
 const showUserSelector = ref(false);
 
-const kivalasztottProjektSzerkesztesre = ref<any>(null);
-const kivalasztottFeladatSzerkesztesre = ref<any>(null);
-const selectedMemberForDetails = ref<any>(null);
-const kivalasztottFeladatReszletek = ref<any>(null);
+const kivalasztottProjektSzerkesztesre = ref<ProjectModalPayload | null>(null);
+const kivalasztottFeladatSzerkesztesre = ref<TaskModalPayload | null>(null);
+const selectedMemberForDetails = ref<ProjectMember | null>(null);
+const kivalasztottFeladatReszletek = ref<Task | null>(null);
 
 const isDragging = ref(false);
 const draggedMember = ref<ProjectMember | null>(null);
@@ -489,8 +512,7 @@ const dragHoverTaskId = ref<number | null>(null);
 
 const projectsList = ref<Project[]>([]);
 
-// --- ÚJ URL GENERÁLÓ (Képekhez) ---
-// Típus javítva: string | undefined
+// Profilkép URL generálás a backend static resources mappájához.
 const getImageUrl = (fileName: string | null | undefined): string | undefined => {
   if (!fileName || fileName.trim() === '') return undefined;
   if (fileName.startsWith('http')) return fileName;
@@ -499,7 +521,7 @@ const getImageUrl = (fileName: string | null | undefined): string | undefined =>
   return `${new URL(axiosBaseUrl).origin}/resources/Profiles/${fileName}`;
 };
 
-// --- BETÖLTÉS ---
+// Projektlista betöltése, majd kezdeti aktív elem beállítása.
 const loadProjects = async () => {
   try {
     isLoading.value = true;
@@ -575,8 +597,9 @@ const getMemberDetails = (userId: string) => {
 const getMemberName = (userId: string) => {
   if (!userId) return 'Ismeretlen';
 
-  // Javítva as any kényszerítéssel a TS miatt
-  const userNameToDisplay = (authStore.profilAdatok as any)?.nev || (authStore.profilAdatok as any)?.felhasznalonev || (authStore.profilAdatok as any)?.username || 'Én';
+  // Saját usernévnél a lokális profiladatot preferáljuk.
+  const profile = authStore.profilAdatok as DashboardProfile | null;
+  const userNameToDisplay = profile?.nev || profile?.felhasznalonev || profile?.username || 'Én';
 
   if (isMe(userId)) return userNameToDisplay;
 
@@ -586,7 +609,7 @@ const getMemberName = (userId: string) => {
   return member ? member.name : 'Ismeretlen';
 };
 
-// --- DRAG AND DROP ---
+// Drag&drop: csapattag feladathoz rendelése.
 const startDrag = (event: DragEvent, member: ProjectMember) => {
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = 'copy';
@@ -620,6 +643,7 @@ const onDrop = async (event: DragEvent, task: Task) => {
   }
 };
 
+// Feladathoz rendelt tag eltávolítása.
 const feladatbolEltavolit = async (task: Task, userIdToRemove: string) => {
   if (!task.assignedTo) return;
   task.assignedTo = task.assignedTo.filter(id => String(id) !== String(userIdToRemove));
@@ -630,12 +654,14 @@ const mutasdFeladatReszleteit = (task: Task) => {
   kivalasztottFeladatReszletek.value = task;
 };
 
+// Meghívó workflow: elfogadás / visszautasítás.
 const elfogadMeghivo = async () => {
   if (!activeProject.value) return;
   try {
     await projectService.acceptInvite(activeProject.value.id);
     const index = projectsList.value.findIndex(p => p.id === activeProject.value!.id);
-    // Biztonsági null check indexhez
+
+    // Lokális státuszfrissítés a lista teljes újratöltése nélkül.
     if (index !== -1 && projectsList.value[index]) {
       projectsList.value[index].status = 'ongoing';
       activeFilter.value = 'ongoing';
@@ -670,7 +696,8 @@ const projektSzerkesztese = () => {
   showProjectModal.value = true;
 };
 
-const projektMentese = async (projectData: any) => {
+// Projekt létrehozás/frissítés egységes mentő folyamatban.
+const projektMentese = async (projectData: ProjectModalPayload) => {
   try {
     if (projectData.id) {
       const updatedProject = await projectService.updateProject(projectData.id, projectData);
@@ -687,13 +714,13 @@ const projektMentese = async (projectData: any) => {
   }
 };
 
+// Archivált/aktív státusz váltás megerősítéssel.
 const projektArchivalasa = async (isArchiving: boolean) => {
   if (!activeProject.value) return;
   const confirmMsg = isArchiving ? 'Biztosan archiválni szeretnéd ezt a projektet?' : 'Biztosan újra aktiválod ezt a projektet?';
 
   if (confirm(confirmMsg)) {
     try {
-      // Típusbiztos értékadás
       const newStatus: 'archived' | 'ongoing' = isArchiving ? 'archived' : 'ongoing';
       const updatedProject: Partial<Project> = { ...activeProject.value, status: newStatus };
 
@@ -710,6 +737,7 @@ const projektArchivalasa = async (isArchiving: boolean) => {
   }
 };
 
+// Végleges projekt törlés megerősített workflow-val.
 const projektTorlese = async () => {
   if (!activeProject.value) return;
   if (confirm('VIGYÁZAT! Biztosan véglegesen törölni szeretnéd ezt a projektet? Ezt nem lehet visszavonni!')) {
@@ -723,7 +751,8 @@ const projektTorlese = async () => {
   }
 };
 
-const felhasznaloHozzaadasa = async (user: any) => {
+// Új tag meghívása a projekthez.
+const felhasznaloHozzaadasa = async (user: UserSelectorOption) => {
   if (!activeProject.value) return;
   const marBenneVan = activeProject.value.members.some(m => String(m.userId) === String(user.id));
 
@@ -745,6 +774,7 @@ const felhasznaloHozzaadasa = async (user: any) => {
   }
 };
 
+// Tag eltavolitasa projektbol es feladatokbol, hiba eseten rollbackkel.
 const tagEltavolitasa = async (userId: string) => {
   if (!activeProject.value) return;
   const eredetiTagok = [...activeProject.value.members];
@@ -754,7 +784,6 @@ const tagEltavolitasa = async (userId: string) => {
   });
 
   try {
-    // Használjuk a Partial<Project> formát
     const projectToSave: Partial<Project> = { ...activeProject.value };
     await projectService.updateProject(activeProject.value.id, projectToSave);
   } catch (error) {
@@ -781,7 +810,8 @@ const feladatSzerkesztese = (task: Task) => {
   showTaskCreateModal.value = true;
 };
 
-const feladatMentese = async (taskData: any) => {
+// Feladat mentese (uj vagy meglavo) projekt kontextusban.
+const feladatMentese = async (taskData: TaskModalPayload) => {
   if (!activeProject.value) return;
 
   try {
@@ -800,6 +830,7 @@ const feladatMentese = async (taskData: any) => {
   }
 };
 
+// Feladat törlése aktív projektből.
 const feladatTorlese = async (taskId: number) => {
   if (!activeProject.value) return;
 
@@ -811,7 +842,7 @@ const feladatTorlese = async (taskId: number) => {
   }
 };
 
-// --- ÚJ LOGIKA A GOMBHOZ ---
+// Navigacio projektes chat conversationbe.
 const ugrasACsevegeshez = (chatId: number) => {
   router.push({ path: '/chat', query: { id: chatId } });
 };

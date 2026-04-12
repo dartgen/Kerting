@@ -1,38 +1,44 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Libary;
+using Kerting_Api.Interface;
 
 namespace Kerting_Api.Controller
 {
     [Authorize]
     [ApiController]
     [Route("api/[controller]")]
+    /// <summary>
+    /// Activity tag végpontok.
+    /// </summary>
     public class ActivityTagController : ControllerBase
     {
-        private readonly KertingDbContext _context;
+        private readonly IActivityTagService _activityTagService;
 
-        public ActivityTagController(KertingDbContext context)
+        public ActivityTagController(IActivityTagService activityTagService)
         {
-            _context = context;
+            _activityTagService = activityTagService;
         }
 
-        // 1. GET ALL végpont (Bárki elérheti, aki be van jelentkezve)
-        // GET: api/ActivityTag
+        /// <summary>
+        /// Összes elérhető activity címke listázása.
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            // Lekérjük az összes elemet az adatbázisból
-            var tags = await _context.ActivityTag.Select(x => x.Activity).ToListAsync();
+            var tags = await _activityTagService.GetAllAsync();
             return Ok(tags);
         }
 
+        /// <summary>
+        /// Címke törlése név alapján.
+        /// Csak admin felhasználó törölhet.
+        /// </summary>
         [Authorize]
         [HttpDelete("{name}")]
         public async Task<IActionResult> DeleteByName(string name)
         {
-            // 1. Kiszedjük a bejelentkezett felhasználó ID-ját a Tokenből
+            // User ID kiolvasása a token claim-ből.
             var userIdString = User.FindFirst("Id")?.Value;
 
             if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out int loggedInUserId))
@@ -40,37 +46,19 @@ namespace Kerting_Api.Controller
                 return Unauthorized("Érvénytelen token vagy hiányzó azonosító.");
             }
 
-            // 2. Kikeresjük a felhasználót az adatbázisból
-            var userProfile = await _context.User.FindAsync(loggedInUserId);
-
-            // Biztonsági ellenőrzés: Mi van, ha a token jó, de a usert közben törölték az adatbázisból?
-            if (userProfile == null)
+            try
             {
-                return Unauthorized("A felhasználó nem található az adatbázisban.");
+                await _activityTagService.DeleteByNameAsync(name, loggedInUserId);
+                return Ok(new { Message = $"A '{name}' nevű tevékenység sikeresen törölve lett." });
             }
-
-            // 3. Valós idejű jogosultság ellenőrzése (RoleId == 1 az Admin)
-            if (userProfile.RoleId != 1)
+            catch (UnauthorizedAccessException)
             {
-                // 403 Forbidden: Be van jelentkezve, de ehhez a konkrét művelethez nincs joga.
                 return Forbid();
             }
-
-            // 5. Megkeressük az adatbázisban a taget a neve alapján
-            var tagToDelete = await _context.ActivityTag
-                                            .FirstOrDefaultAsync(t => t.Activity == name);
-
-            // 6. Ha nincs ilyen, 404 Not Found hibát dobunk
-            if (tagToDelete == null)
+            catch (KeyNotFoundException ex)
             {
-                return NotFound($"Nem található ilyen nevű tevékenység: {name}");
+                return NotFound(ex.Message);
             }
-
-            // 7. Törlés és mentés
-            _context.ActivityTag.Remove(tagToDelete);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { Message = $"A '{name}' nevű tevékenység sikeresen törölve lett." });
         }
     }
 }

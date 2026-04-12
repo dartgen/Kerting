@@ -81,11 +81,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useToastStore } from '@/stores/toast'; // <-- TOAST IMPORT
+import { useToastStore } from '@/stores/toast';
 import apiClient from '@/services/axios';
 
 const router = useRouter();
-const toastStore = useToastStore(); // <-- TOAST PÉLDÁNY
+const toastStore = useToastStore();
 
 interface Ticket {
   id: number;
@@ -101,6 +101,7 @@ interface Ticket {
 const tickets = ref<Ticket[]>([]);
 const isLoading = ref(true);
 
+// Nyitott/lezart ticket lista betoltese admin endpointrol.
 const fetchTickets = async () => {
   isLoading.value = true;
   try {
@@ -108,15 +109,14 @@ const fetchTickets = async () => {
     tickets.value = response.data;
   } catch (error) {
     console.error("Hiba a hibajegyek betöltésekor:", error);
-    // HIBÁT JELZŐ TOAST
     toastStore.addToast('Hiba történt a hibajegyek betöltésekor!', 3000, 'error');
   } finally {
     isLoading.value = false;
   }
 };
 
+// Ticket lezarasa optimista lokalis allapotfrissitessel.
 const resolveTicket = async (id: number) => {
-  // A confirm() marad, mert ez egy "Biztos vagy benne?" kérdés, nem csak értesítés!
   if(!confirm("Biztosan lezárod ezt a hibajegyet? A művelet nem vonható vissza.")) return;
 
   try {
@@ -126,16 +126,15 @@ const resolveTicket = async (id: number) => {
       ticketToUpdate.isResolved = true;
     }
 
-    // SIKERES TOAST az alert() helyett
     toastStore.addToast('Hibajegy sikeresen lezárva!', 3000, 'success');
 
   } catch (error) {
     console.error("Hiba a hibajegy lezárásakor:", error);
-    // HIBÁT JELZŐ TOAST az alert() helyett
     toastStore.addToast('Nem sikerült lezárni a hibajegyet.', 3000, 'error');
   }
 };
 
+// Profilkép URL generálás a static erőforrás mappához.
 const getImageUrl = (fileName?: string | null): string | undefined => {
   if (!fileName || fileName.trim() === '') return undefined;
   if (fileName.startsWith('http')) return fileName;
@@ -144,6 +143,7 @@ const getImageUrl = (fileName?: string | null): string | undefined => {
   return `${new URL(axiosBaseUrl).origin}/resources/Profiles/${fileName}`;
 };
 
+// Gyanús/placeholder avatarnevek kiszűrése.
 const isValidAvatar = (avatarName: string | null | undefined) => {
   if (!avatarName || avatarName.trim() === '') return false;
   const lowerName = avatarName.toLowerCase();
@@ -154,17 +154,24 @@ const isValidAvatar = (avatarName: string | null | undefined) => {
   return true;
 };
 
+// Profilkép hiányában kezdőbetűk generálása.
 const getUserInitials = (fullName?: string) => {
   if (!fullName) return '??';
-  const names = fullName.trim().split(' ');
+  const names = fullName.trim().split(' ').filter(Boolean);
   if (names.length === 0) return '??';
-  let initials = names[0].charAt(0).toUpperCase();
+
+  const firstName = names[0] ?? '';
+  let initials = firstName.charAt(0).toUpperCase();
+
   if (names.length > 1) {
-    initials += names[names.length - 1].charAt(0).toUpperCase();
+    const lastName = names[names.length - 1] ?? '';
+    initials += lastName.charAt(0).toUpperCase();
   }
+
   return initials;
 };
 
+// Admin listanézet dátumformátuma.
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
   return new Intl.DateTimeFormat('hu-HU', {

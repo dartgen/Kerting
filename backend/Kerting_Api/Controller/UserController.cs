@@ -1,294 +1,118 @@
-﻿using Libary;
-using Libary.Model.Tag;
-using Libary.Model.Auth; // ÚJ: Hozzáadva a Login modell miatt!
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using Kerting_Api.DTO;
+using Kerting_Api.Interface;
 
 namespace Kerting_Api.Controller
 {
     [Route("api")]
     [ApiController]
+    /// <summary>
+    /// Felhasználói profil végpontok: saját profil kezelés, szerepkörlista, keresés, publikus profil.
+    /// </summary>
     public class UserController : ControllerBase
     {
-        private readonly KertingDbContext _context;
+        private readonly IUserProfileService _userProfileService;
 
-        public UserController(KertingDbContext context)
+        public UserController(IUserProfileService userProfileService)
         {
-            _context = context;
+            _userProfileService = userProfileService;
         }
 
+        // Segédfüggvény a tokenben tárolt felhasználó azonosító biztonságos olvasására.
+        private int? GetCurrentUserId()
+        {
+            var userIdString = User.FindFirst("Id")?.Value;
+            return int.TryParse(userIdString, out var userId) ? userId : null;
+        }
+
+        /// <summary>
+        /// A bejelentkezett user saját profiladatainak frissítése.
+        /// </summary>
         [Authorize] // Kötelező a bejelentkezés
         [HttpPut("UpdateMyProfile")]
-        public async Task<IActionResult> UpdateMyProfile([FromBody] Libary.Model.User.User updatedUser)
+        public async Task<IActionResult> UpdateMyProfile([FromBody] UserProfileDto updatedUser)
         {
-            // 1. Kiszedjük a bejelentkezett felhasználó ID-ját a Tokenből (Claims)
-            var userIdString = User.FindFirst("Id")?.Value;
-
-            if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out int loggedInUserId))
+            var userId = GetCurrentUserId();
+            if (!userId.HasValue)
             {
                 return Unauthorized("Érvénytelen token vagy hiányzó azonosító.");
             }
 
-            // 2. KIKERESÉS A TOKENBŐL KAPOTT ID ALAPJÁN (Ezt már nem tudja meghamisítani)
-            var existingUser = await _context.User.FindAsync(loggedInUserId);
-
-            if (existingUser == null)
+            try
             {
-                return NotFound("Felhasználó nem található.");
+                await _userProfileService.UpdateMyProfileAsync(userId.Value, updatedUser);
+                return Ok("A profil adatai sikeresen frissítve lettek!");
             }
-
-            // 3. Adatok felülírása
-            existingUser.VezetekNev = updatedUser.VezetekNev;
-            existingUser.KeresztNev = updatedUser.KeresztNev;
-            existingUser.Telefon = updatedUser.Telefon;
-            existingUser.Email = updatedUser.Email;
-            existingUser.Telepules = updatedUser.Telepules;
-            existingUser.Rolam = updatedUser.Rolam;
-            existingUser.RoleId = updatedUser.RoleId;
-            existingUser.Facebook = updatedUser.Facebook;
-            existingUser.Instagram = updatedUser.Instagram;
-            existingUser.Tiktok = updatedUser.Tiktok;
-            existingUser.EmailPublikus = updatedUser.EmailPublikus;
-            existingUser.TelefonPublikus = updatedUser.TelefonPublikus;
-
-            if (updatedUser.Cimkek != null)
+            catch (KeyNotFoundException ex)
             {
-                var existingConnections = await _context.UserActivityTag
-                                                      .Where(uat => uat.USerId == loggedInUserId)
-                                                      .ToListAsync();
-                _context.UserActivityTag.RemoveRange(existingConnections);
-
-                // B) Végigmegyünk a Vue-tól kapott string listán
-                foreach (var cimkeNev in updatedUser.Cimkek)
-                {
-                    // Tisztítjuk a szöveget (biztos ami biztos)
-                    var cleanCimkeNev = cimkeNev.Trim();
-
-                    // Megnézzük, létezik-e már az ActivityTag táblában
-                    var tag = await _context.ActivityTag.FirstOrDefaultAsync(t => t.Activity == cleanCimkeNev);
-
-                    // C) Ha még nem létezik, azonnal létrehozzuk!
-                    if (tag == null)
-                    {
-                        tag = new Libary.Model.Tag.ActivityTag { Activity = cleanCimkeNev };
-                        _context.ActivityTag.Add(tag);
-                        await _context.SaveChangesAsync(); // Itt egyből el is mentjük, hogy kapjon egy új Id-t az adatbázistól
-                    }
-
-                    // D) Létrehozzuk a kapcsolatot az aktuális User és a Tag között
-                    var newConnection = new UserActivityTag
-                    {
-                        USerId = loggedInUserId,
-                        TagId = tag.Id
-                    };
-                    _context.UserActivityTag.Add(newConnection);
-                }
+                return NotFound(ex.Message);
             }
-
-
-            await _context.SaveChangesAsync();
-
-            return Ok("A profil adatai sikeresen frissítve lettek!");
         }
 
+        /// <summary>
+        /// A bejelentkezett user saját profiljának lekérése.
+        /// </summary>
         [Authorize] // Ide is kötelező a bejelentkezés
         [HttpGet("GetMyProfile")] // Ez egy GET kérés lesz
         public async Task<IActionResult> GetMyProfile()
         {
-            // 1. Kiszedjük a bejelentkezett felhasználó ID-ját a Tokenből
-            var userIdString = User.FindFirst("Id")?.Value;
-
-            if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out int loggedInUserId))
+            var userId = GetCurrentUserId();
+            if (!userId.HasValue)
             {
                 return Unauthorized("Érvénytelen token vagy hiányzó azonosító.");
             }
 
-            // 2. Kikeresjük a felhasználót az adatbázisból
-            var userProfile = await _context.User.FindAsync(loggedInUserId);
-
-            if (userProfile == null)
+            try
             {
-                return NotFound("Felhasználó nem található.");
+                var profile = await _userProfileService.GetMyProfileAsync(userId.Value);
+                return Ok(profile);
             }
-
-            // 3. LEKÉRDEZZÜK A FELHASZNÁLÓ CÍMKÉIT (ÚJ RÉSZ)
-            // Összekapcsoljuk a UserActivityTag (kapcsoló) és az ActivityTag táblákat
-            var userCimkek = await _context.UserActivityTag
-                .Where(uat => uat.USerId == loggedInUserId) // Csak a bejelentkezett user sorai
-                .Join(
-                    _context.ActivityTag, // Melyik táblával kapcsoljuk össze?
-                    uat => uat.TagId,     // Kapcsolótábla kulcsa
-                    tag => tag.Id,        // ActivityTag tábla kulcsa
-                    (uat, tag) => tag.Activity // Mit kérünk ki belőle? (Csak a szöveget!)
-                )
-                .ToListAsync();
-
-            // ÚJ: Lekérdezzük a Login táblából a felhasználónevet (hogy a saját profilon is meglegyen)
-            var username = await _context.Set<Login>()
-                .Where(l => l.Id == loggedInUserId)
-                .Select(l => l.Username)
-                .FirstOrDefaultAsync();
-
-            var roleName = await _context.Role
-                .Where(r => r.Id == userProfile.RoleId)
-                .Select(r => r.Name)
-                .FirstOrDefaultAsync();
-
-            // Létrehozunk egy anonim objektumot a válaszhoz, amiben a Username is benne van
-            var myProfileResponse = new
+            catch (KeyNotFoundException ex)
             {
-                userProfile.Id,
-                userProfile.VezetekNev,
-                userProfile.KeresztNev,
-                userProfile.Telefon,
-                userProfile.Email,
-                userProfile.Telepules,
-                userProfile.RoleId,
-                userProfile.IMGString,
-                userProfile.Rolam,
-                userProfile.Facebook,
-                userProfile.Instagram,
-                userProfile.Tiktok,
-                userProfile.EmailPublikus,
-                userProfile.TelefonPublikus,
-                RoleName = roleName,
-                Cimkek = userCimkek,
-                Username = username // <-- Ezt adjuk át a Vue-nak
-            };
-
-            return Ok(myProfileResponse);
+                return NotFound(ex.Message);
+            }
         }
 
+        /// <summary>
+        /// Rendszerben elérhető szerepkörök listája.
+        /// </summary>
         [Authorize]
         [HttpGet("GetRoles")]
         public async Task<IActionResult> GetRoles()
         {
-            // Lekérdezzük az összes szerepkört az adatbázisból
-            var roles = await _context.Role.ToListAsync();
+            var roles = await _userProfileService.GetRolesAsync();
             return Ok(roles);
         }
+
+        /// <summary>
+        /// Felhasználók keresése névrészlet alapján.
+        /// </summary>
         [Authorize]
         [HttpGet("search")]
         public async Task<IActionResult> SearchUsers([FromQuery] string q)
         {
-            // Ha túl rövid a keresőszó, üres listát adunk vissza
-            if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
-                return Ok(new List<object>());
-
-            // Összekapcsoljuk a User és a Login táblát az Id alapján
-            var users = await (from u in _context.User
-                               join l in _context.Login on u.Id equals l.Id
-                               where u.VezetekNev.Contains(q) ||
-                                     u.KeresztNev.Contains(q) ||
-                                     l.Username.Contains(q) // Keresünk a login névben is!
-                               select new
-                               {
-                                   id = u.Id.ToString(), // A Vue stringként várja
-                                   nev = u.VezetekNev + " " + u.KeresztNev, // Összerakjuk a teljes nevet
-                                   szakma = "Felhasználó",
-                                   avatar = u.IMGString // Az általad mutatott modellből
-                               })
-                               .Take(10) // Ne küldjük le a fél adatbázist
-                               .ToListAsync();
-
+            var users = await _userProfileService.SearchUsersAsync(q);
             return Ok(users);
         }
 
-        [Authorize]
+        /// <summary>
+        /// Publikus profil lekérése anonimen is elérhető módon.
+        /// </summary>
+        [AllowAnonymous]
         [HttpGet("GetPublicProfile/{id}")]
-        // Ez a végpont publikus, NEM kell rá [Authorize]!
         public async Task<IActionResult> GetPublicProfile(int id)
         {
-            // 1. Kikeresjük a felhasználót az Id alapján
-            var user = await _context.User.FindAsync(id);
-            if (user == null) return NotFound("Felhasználó nem található.");
-
-            // 2. LEKÉRDEZZÜK A CÍMKÉKET
-            var userCimkek = await _context.UserActivityTag
-                .Where(uat => uat.USerId == id)
-                .Join(
-                    _context.ActivityTag,
-                    uat => uat.TagId,
-                    tag => tag.Id,
-                    (uat, tag) => tag.Activity
-                )
-                .ToListAsync();
-
-            // 3. ÉRTÉKELÉSEK KISZÁMOLÁSA
-            var reviewsQuery = _context.UserReview
-                .Where(r => r.TargetUserId == id && r.ParentReviewId == null && !r.IsDeleted && r.Rating != null);
-
-            var ertekelesSzam = await reviewsQuery.CountAsync();
-            double ertekeles = 0;
-
-            if (ertekelesSzam > 0)
+            try
             {
-                ertekeles = await reviewsQuery.AverageAsync(r => (double)r.Rating!.Value);
-                ertekeles = Math.Round(ertekeles, 1);
+                var profile = await _userProfileService.GetPublicProfileAsync(id);
+                return Ok(profile);
             }
-
-            // --- MASZKOLÁSI LOGIKA KEZDETE ---
-            string displayTelefon = user.Telefon;
-            if (user.TelefonPublikus != true && !string.IsNullOrEmpty(user.Telefon))
+            catch (KeyNotFoundException ex)
             {
-                displayTelefon = new string('*', user.Telefon.Length - 4) + user.Telefon.Substring(user.Telefon.Length - 4);
+                return NotFound(ex.Message);
             }
-
-            string displayEmail = user.Email;
-            if (user.EmailPublikus != true && !string.IsNullOrEmpty(user.Email))
-            {
-                int atIndex = user.Email.IndexOf('@');
-                string localPart = user.Email.Substring(0, atIndex);
-                string domainPart = user.Email.Substring(atIndex);
-
-                if (localPart.Length > 2)
-                {
-                    displayEmail = localPart.Substring(0, 2) + "***" + domainPart;
-                }
-                else
-                {
-                    displayEmail = localPart.Substring(0, 1) + "***" + domainPart;
-                }
-            }
-            // --- MASZKOLÁSI LOGIKA VÉGE ---
-
-            // ÚJ: Lekérdezzük a Login táblából a felhasználónevet
-            var username = await _context.Set<Login>()
-                .Where(l => l.Id == id)
-                .Select(l => l.Username)
-                .FirstOrDefaultAsync();
-
-            var roleName = await _context.Role
-                .Where(r => r.Id == user.RoleId)
-                .Select(r => r.Name)
-                .FirstOrDefaultAsync();
-
-            // 4. ADATVÉDELEM ÉS VISSZATÉRÉS
-            var publicProfile = new
-            {
-                user.VezetekNev,
-                user.KeresztNev,
-                Email = displayEmail,
-                Telefon = displayTelefon,
-                user.Telepules,
-                user.RoleId,
-                user.IMGString,
-                user.Rolam,
-                RoleName = roleName,
-                user.Facebook,
-                user.Instagram,
-                user.Tiktok,
-                user.EmailPublikus,
-                user.TelefonPublikus,
-                Cimkek = userCimkek,
-                Ertekeles = ertekeles,
-                ErtekelesSzam = ertekelesSzam,
-                Username = username // <-- ÚJ: Hozzáadjuk a visszatérési objektumhoz
-            };
-
-            return Ok(publicProfile);
         }
     }
 }

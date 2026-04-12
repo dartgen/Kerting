@@ -5,6 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Kerting_Api.Service
 {
+    /// <summary>
+    /// Személyes naptárbejegyzések üzleti logikája.
+    /// </summary>
     public class CalendarService : ICalendarService
     {
         private readonly KertingDbContext _context;
@@ -14,7 +17,9 @@ namespace Kerting_Api.Service
             _context = context;
         }
 
-        // 1. Metódus: Név pontosan egyezik az Interface-szel!
+        /// <summary>
+        /// Userhez tartozó bejegyzések dátum szerinti listázása.
+        /// </summary>
         public async Task<IEnumerable<CalendarEntry>> GetEntriesByUserIdAsync(string userId)
         {
             return await _context.CalendarEntries
@@ -23,22 +28,26 @@ namespace Kerting_Api.Service
                 .ToListAsync();
         }
 
-        // 2. Metódus: Név pontosan egyezik az Interface-szel!
+        /// <summary>
+        /// Új bejegyzés létrehozása, vagy létező bejegyzés frissítése.
+        /// </summary>
         public async Task<CalendarEntry> CreateEntryAsync(CalendarEntry entry)
         {
             if (entry.Id > 0)
             {
-                _context.CalendarEntries.Update(entry); // Frissítés, ha már létezik
+                _context.CalendarEntries.Update(entry);
             }
             else
             {
-                _context.CalendarEntries.Add(entry); // Új létrehozása
+                _context.CalendarEntries.Add(entry);
             }
             await _context.SaveChangesAsync();
             return entry;
         }
 
-        // 3. Metódus: Név pontosan egyezik az Interface-szel!
+        /// <summary>
+        /// Bejegyzés törlése, de csak ha a megadott userhez tartozik.
+        /// </summary>
         public async Task DeleteEntryAsync(int entryId, string userId)
         {
             var entry = await _context.CalendarEntries

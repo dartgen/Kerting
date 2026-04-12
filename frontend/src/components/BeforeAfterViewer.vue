@@ -10,16 +10,19 @@ defineProps<{
   imagePairs: ImagePair[];
 }>();
 
+// Egyetlen slider pozícióval egyszerre az összes pár összehasonlítható.
 const sliderPosition = ref(50);
 
 const handleSliderChange = (e: Event) => {
   sliderPosition.value = Number((e.target as HTMLInputElement).value);
 };
 
+// Normalizáljuk az URL-eket, hogy abszolút és relatív útvonal esetben is működjön.
 const getImageUrl = (url: string) => {
   if (!url) return '';
 
   if (/^https?:\/\//i.test(url)) {
+    // Már teljes URL, további átalakítást nem igényel.
     return url;
   }
 
@@ -29,6 +32,7 @@ const getImageUrl = (url: string) => {
     return `https://localhost:7067${normalized}`;
   }
 
+  // Fájlnév esetén a Work resource mappa alapútvonalat kapja.
   return `https://localhost:7067/resources/Work/${normalized}`;
 };
 </script>
@@ -44,14 +48,14 @@ const getImageUrl = (url: string) => {
         :key="idx"
         class="relative w-full rounded-lg overflow-hidden border border-earth-700 bg-black"
       >
-        <!-- After Image (Background) -->
+        <!-- Háttérkép: az "utána" állapot -->
         <img
           v-lazy="getImageUrl(pair.after)"
           :alt="'After ' + idx"
           class="w-full h-32 sm:h-48 md:h-64 object-cover"
         />
 
-        <!-- Before Image (Foreground with clip) -->
+        <!-- Előtérkép: az "előtte" állapot clip-el fedve -->
         <div
           class="absolute inset-0 h-32 sm:h-48 md:h-64 overflow-hidden"
           :style="{ width: sliderPosition + '%' }"
@@ -64,7 +68,7 @@ const getImageUrl = (url: string) => {
           />
         </div>
 
-        <!-- Slider Handle -->
+        <!-- Teljes felületű csúszka input -->
         <input
           type="range"
           min="0"
@@ -74,7 +78,7 @@ const getImageUrl = (url: string) => {
           class="absolute inset-0 w-full h-32 sm:h-48 md:h-64 opacity-0 cursor-col-resize z-40"
         />
 
-        <!-- Visual Line -->
+        <!-- Vizuális elválasztó vonal és állapot címke -->
         <div
           class="absolute top-0 bottom-0 w-1 bg-yellow-500 z-30 pointer-events-none"
           :style="{ left: sliderPosition + '%' }"
@@ -84,7 +88,7 @@ const getImageUrl = (url: string) => {
           </div>
         </div>
 
-        <!-- Labels -->
+        <!-- Sarkokban fix állapotcímkék -->
         <div class="absolute bottom-2 left-2 text-xs text-white font-semibold bg-black/70 px-2 py-1 rounded">
           Előtte
         </div>

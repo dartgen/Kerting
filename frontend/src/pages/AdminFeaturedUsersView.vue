@@ -138,7 +138,7 @@
                   type="button"
                   class="bg-red-600/90 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-500 transition-colors disabled:opacity-60"
                   :disabled="isWorksSaving || !featured.id"
-                  @click="removeFeaturedWorkItem(featured.id)"
+                  @click="onRemoveFeaturedWork(featured.id)"
                 >
                   Eltávolítás
                 </button>
@@ -179,6 +179,8 @@ interface SlotSelection {
 type AdminTab = 'users' | 'works';
 
 const toastStore = useToastStore();
+
+// Tabokhoz tartozó állapotok.
 const activeTab = ref<AdminTab>('users');
 const isLoading = ref(true);
 const isSaving = ref(false);
@@ -196,6 +198,7 @@ const slotSelections = ref<SlotSelection[]>([
   { slotNo: 5, userId: 0 },
 ]);
 
+// Backend kompatibilitas: kezeli a tombot es a $values wrapperes formatumot is.
 const normalizeListResponse = <T>(value: unknown): T[] => {
   if (Array.isArray(value)) {
     return value as T[];
@@ -211,6 +214,7 @@ const normalizeListResponse = <T>(value: unknown): T[] => {
   return [];
 };
 
+// Csak olyan publikus munka valaszthato, ami meg nincs kiemelve.
 const selectablePublicWorks = computed(() => {
   const featuredIds = new Set(featuredWorks.value.map((item) => item.workId));
   return publicWorks.value.filter((workItem) => {
@@ -219,6 +223,7 @@ const selectablePublicWorks = computed(() => {
   });
 });
 
+// Kiemelt user admin adatok betoltese (slotok + valaszthato userek).
 const loadData = async () => {
   isLoading.value = true;
   try {
@@ -241,12 +246,14 @@ const loadData = async () => {
   }
 };
 
+// Egyszerre csak egy slotban szerepelhet ugyanaz a user.
 const isUserTakenByOtherSlot = (userId: number, currentSlotNo: number) => {
   return slotSelections.value.some(
     (slot) => slot.slotNo !== currentSlotNo && slot.userId === userId
   );
 };
 
+// Slot mentes validacioval (minden hely kitoltve, nincs duplikacio).
 const saveAssignments = async () => {
   const selectedUserIds = slotSelections.value.map((slot) => slot.userId);
 
@@ -281,6 +288,7 @@ const saveAssignments = async () => {
   }
 };
 
+// Kiemelt munkak + publikus munkak listajanak parhuzamos betoltese.
 const loadFeaturedWorksData = async () => {
   isWorksLoading.value = true;
   try {
@@ -299,6 +307,7 @@ const loadFeaturedWorksData = async () => {
   }
 };
 
+// Uj kiemelt munka hozzadasa a kivalasztott work id alapjan.
 const addFeaturedWork = async () => {
   if (!selectedWorkId.value) {
     toastStore.addToast('Válassz ki egy munkát a listából.', 3000, 'warning');
@@ -319,6 +328,7 @@ const addFeaturedWork = async () => {
   }
 };
 
+// Kiemelt munka eltavolitasa featured id alapjan.
 const removeFeaturedWorkItem = async (featuredId: number) => {
   isWorksSaving.value = true;
   try {
@@ -331,6 +341,14 @@ const removeFeaturedWorkItem = async (featuredId: number) => {
   } finally {
     isWorksSaving.value = false;
   }
+};
+
+const onRemoveFeaturedWork = async (featuredId?: number) => {
+  if (!featuredId) {
+    return;
+  }
+
+  await removeFeaturedWorkItem(featuredId);
 };
 
 onMounted(() => {

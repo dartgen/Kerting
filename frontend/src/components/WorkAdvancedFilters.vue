@@ -19,23 +19,27 @@ const emit = defineEmits<{
   reset: [];
 }>();
 
+// Kétirányú adatkötés parent komponens felé (v-model jellegű update mintával).
 const localFilters = computed({
   get: () => props.filters,
   set: (val) => emit('update', val)
 });
 
+// Választható értékek a célközönség checkbox csoporthoz.
 const audienceOptions = [
   { value: 'Everyone', label: 'Bárki' },
   { value: 'Gardener', label: 'Kertész' },
   { value: 'Hobby', label: 'Hobbikertész' }
 ];
 
+// Státusz checkbox opciók.
 const statusOptions = [
   { value: 'Open', label: 'Nyitott' },
   { value: 'InProgress', label: 'Folyamatban' },
   { value: 'Public', label: 'Publikus' }
 ];
 
+// Checkbox lista frissítése immutable mintával, hogy reaktív maradjon.
 const toggleCheckbox = (value: string, list: string[], key: 'targetAudience' | 'status') => {
   const newList = list.includes(value)
     ? list.filter(item => item !== value)
@@ -46,18 +50,21 @@ const toggleCheckbox = (value: string, list: string[], key: 'targetAudience' | '
   emit('update', updated);
 };
 
+// Számmezők konvertálása number/undefined alakra.
 const updatePrice = (field: 'priceMin' | 'priceMax', value: string | number | null | undefined) => {
   const updated = { ...localFilters.value };
   updated[field] = value ? Number(value) : undefined;
   emit('update', updated);
 };
 
+// Dátummezők ürítéskor undefined-ra állnak, hogy ne szűrjenek.
 const updateDate = (field: 'createdFrom' | 'createdTo', value: string) => {
   const updated = { ...localFilters.value };
   updated[field] = value || undefined;
   emit('update', updated);
 };
 
+// A reset gomb csak akkor jelenjen meg, ha legalább egy szűrő aktív.
 const hasActiveFilters = computed(() => {
   return (
     localFilters.value.priceMin !== undefined ||
