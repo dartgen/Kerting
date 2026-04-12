@@ -4,6 +4,9 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Libary.Model.Gallery
 {
+    /// <summary>
+    /// Galéria kép/feltöltés fő entitás komment és reakció kapcsolatokkal.
+    /// </summary>
     public class GalleryItem
     {
         public int Id { get; set; }

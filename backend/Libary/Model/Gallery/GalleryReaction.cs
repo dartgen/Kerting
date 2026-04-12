@@ -3,6 +3,9 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Libary.Model.Gallery
 {
+    /// <summary>
+    /// Galéria elem like/dislike reakció entitás.
+    /// </summary>
     public class GalleryReaction
     {
         public int Id { get; set; }

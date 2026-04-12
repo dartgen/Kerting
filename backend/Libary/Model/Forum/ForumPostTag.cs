@@ -1,5 +1,8 @@
 namespace Libary.Model.Forum
 {
+    /// <summary>
+    /// Fórum bejegyzés és aktivitási címke közötti kapcsolótábla entitás.
+    /// </summary>
     public class ForumPostTag
     {
         public int ForumPostId { get; set; }

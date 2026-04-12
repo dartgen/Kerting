@@ -5,6 +5,9 @@ using System.ComponentModel.DataAnnotations;
 namespace Libary.Model.Work
 {
     [Table("Work")]
+    /// <summary>
+    /// Work fő entitás: hirdetett munka, hozzá tartozó jelentkezők, teendők, képek és címkék.
+    /// </summary>
     public class Work
     {
         [Key]
@@ -40,6 +43,7 @@ namespace Libary.Model.Work
         public ICollection<WorkImage>? Images { get; set; } = new List<WorkImage>();
         public ICollection<WorkTag>? Tags { get; set; } = new List<WorkTag>();
 
+        // API kompatibilitás miatt használt segédmező: címkék egyszerű string listában.
         [NotMapped]
         public List<string>? Cimkek { get; set; }
     }

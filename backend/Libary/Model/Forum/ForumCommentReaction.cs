@@ -3,6 +3,9 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Libary.Model.Forum
 {
+    /// <summary>
+    /// Kommentre adott like/dislike reakció entitás.
+    /// </summary>
     public class ForumCommentReaction
     {
         public int Id { get; set; }

@@ -8,6 +8,9 @@ using System.Threading.Tasks;
 
 namespace Libary.Model.User
 {
+    /// <summary>
+    /// Felhasználói értékelésre adott reakció (like/dislike) entitás.
+    /// </summary>
     public class UserReviewReaction
     {
         [Key]

@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace Libary.Model.Tag
 {
+    /// <summary>
+    /// Központi aktivitási címke törzs (pl. szakmák, tevékenységek).
+    /// </summary>
     public class ActivityTag
     {
         public int Id { get; set; }

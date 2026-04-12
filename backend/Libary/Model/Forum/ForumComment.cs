@@ -4,6 +4,9 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Libary.Model.Forum
 {
+    /// <summary>
+    /// Fórum bejegyzéshez tartozó komment entitás, reply lánccal és soft delete mezőkkel.
+    /// </summary>
     public class ForumComment
     {
         public int Id { get; set; }

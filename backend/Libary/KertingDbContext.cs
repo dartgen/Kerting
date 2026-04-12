@@ -16,11 +16,21 @@ using System.Threading.Tasks;
 
 namespace Libary
 {
+    /// <summary>
+    /// A projekt központi EF Core adatbázis-kontextusa.
+    /// Feladata:
+    /// - táblák (DbSet-ek) publikálása a lekérdezésekhez,
+    /// - kapcsolatok, kulcsok és törlési szabályok konfigurálása,
+    /// - modulok közti perzisztencia viselkedés egységes kezelése.
+    /// </summary>
     public class KertingDbContext : DbContext
     {
+        // Auth és felhasználókezelés.
         public DbSet<Login> Login { get; set; }
         public DbSet<Role> Role { get; set; }
         public DbSet<User> User { get; set; }
+
+        // Ticket és projekt modul.
         public DbSet<Ticket> Tickets { get; set; }
         public DbSet<Project> Projects { get; set; }
         public DbSet<ProjectMember> ProjectMembers { get; set; }
@@ -28,22 +38,34 @@ namespace Libary
         public DbSet<TaskAssignment> TaskAssignments { get; set; }
         public DbSet<TodoItem> TodoItems { get; set; }
         public DbSet<CalendarEntry> CalendarEntries { get; set; }
+
+        // Kiemelt felhasználók és értékelések.
         public DbSet<FeaturedUserSlot> FeaturedUserSlot { get; set; }
         public DbSet<UserReview> UserReview { get; set; }
         public DbSet<UserReviewReaction> UserReviewReaction { get; set; }
+
+        // Címkék és felhasználó-címke kapcsolatok.
         public DbSet<UserActivityTag> UserActivityTag { get; set; }
         public DbSet<ActivityTag> ActivityTag { get; set; }
+
+        // Galéria modul.
         public DbSet<GalleryItem> GalleryItem { get; set; }
         public DbSet<GalleryComment> GalleryComment { get; set; }
         public DbSet<GalleryReaction> GalleryReaction { get; set; }
+
+        // Fórum modul.
         public DbSet<ForumPost> ForumPost { get; set; }
         public DbSet<ForumComment> ForumComment { get; set; }
         public DbSet<ForumPostReaction> ForumPostReaction { get; set; }
         public DbSet<ForumCommentReaction> ForumCommentReaction { get; set; }
         public DbSet<ForumPostTag> ForumPostTag { get; set; }
+
+        // Chat modul.
         public DbSet<Conversation> Conversations { get; set; }
         public DbSet<ConversationParticipant> ConversationParticipants { get; set; }
         public DbSet<Message> Messages { get; set; }
+
+        // Work modul.
         public DbSet<Work> Work { get; set; }
         public DbSet<WorkApplicant> WorkApplicant { get; set; }
         public DbSet<WorkTodo> WorkTodo { get; set; }
@@ -63,6 +85,9 @@ namespace Libary
         {
             base.OnModelCreating(modelBuilder);
 
+            // -----------------------------------------------------------------
+            // Projekt modul kapcsolatok (kaszkád törlések a konzisztens takarításhoz)
+            // -----------------------------------------------------------------
             // Projekt -> Tagok (Ha törlik a projektet, a tag-kapcsolatok is törlődnek)
             modelBuilder.Entity<ProjectMember>()
                 .HasOne(pm => pm.Project)
@@ -91,6 +116,9 @@ namespace Libary
                 .HasForeignKey(t => t.ProjectTaskId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // -----------------------------------------------------------------
+            // Galéria konfiguráció (mezőhosszak, indexek, FK szabályok, CHECK)
+            // -----------------------------------------------------------------
             modelBuilder.Entity<GalleryItem>(entity =>
             {
                 entity.ToTable("GalleryItem", "dbo", t =>
@@ -121,7 +149,7 @@ namespace Libary
                     .HasDatabaseName("IX_GalleryItem_Published_Deleted_CreatedAtUtc");
             });
 
-
+                    // Galéria kommentek: ugyanazon képre rendezett, gyorsan lekérdezhető hozzászólások.
             modelBuilder.Entity<GalleryComment>(entity =>
             {
                 entity.ToTable("GalleryComment", "dbo");
@@ -149,12 +177,15 @@ namespace Libary
                     .HasDatabaseName("IX_GalleryComment_GalleryItemId_IsDeleted_CreatedAtUtc");
             });
 
+                    // Kapcsolótáblák összetett kulcsai (duplikált kapcsolatok tiltása).
             modelBuilder.Entity<UserActivityTag>()
             .HasKey(uat => new { uat.USerId, uat.TagId });
 
             modelBuilder.Entity<WorkTag>()
             .HasKey(wt => new { wt.WorkId, wt.TagId });
 
+                    // Kiemelt felhasználó slotok:
+                    // SlotNo az elsődleges kulcs, UserId pedig egyedi (egy user egy slotban szerepelhet).
             modelBuilder.Entity<FeaturedUserSlot>(entity =>
             {
                 entity.ToTable("FeaturedUserSlot", "dbo");
@@ -175,6 +206,7 @@ namespace Libary
                     .HasDatabaseName("UX_FeaturedUserSlot_UserId");
             });
 
+                    // Galéria reakciók: userenként egy reakció / kép.
             modelBuilder.Entity<GalleryReaction>(entity =>
             {
                 entity.ToTable("GalleryReaction", "dbo");
@@ -198,6 +230,9 @@ namespace Libary
                     .HasDatabaseName("UX_GalleryReaction_GalleryItemId_UserId");
             });
 
+                    // -----------------------------------------------------------------
+                    // Fórum konfiguráció
+                    // -----------------------------------------------------------------
             modelBuilder.Entity<ForumPost>(entity =>
             {
                 entity.ToTable("ForumPost", "dbo");
@@ -232,6 +267,8 @@ namespace Libary
                     .HasDatabaseName("IX_ForumPost_Deleted_LastActivityAtUtc");
             });
 
+                    // Fórum kommenteknél a ParentComment kapcsolat NoAction,
+                    // hogy az önhivatkozó törlési lánc ne okozzon SQL tiltást.
             modelBuilder.Entity<ForumComment>(entity =>
             {
                 entity.ToTable("ForumComment", "dbo");
@@ -264,6 +301,7 @@ namespace Libary
                     .HasDatabaseName("IX_ForumComment_Post_Deleted_CreatedAtUtc");
             });
 
+                    // Fórum poszt reakciók: userenként egy reakció / poszt.
             modelBuilder.Entity<ForumPostReaction>(entity =>
             {
                 entity.ToTable("ForumPostReaction", "dbo");
@@ -287,6 +325,7 @@ namespace Libary
                     .HasDatabaseName("UX_ForumPostReaction_ForumPostId_UserId");
             });
 
+                    // Fórum komment reakciók: userenként egy reakció / komment.
             modelBuilder.Entity<ForumCommentReaction>(entity =>
             {
                 entity.ToTable("ForumCommentReaction", "dbo");
@@ -310,6 +349,7 @@ namespace Libary
                     .HasDatabaseName("UX_ForumCommentReaction_ForumCommentId_UserId");
             });
 
+                    // Fórum címkézés kapcsolótábla.
             modelBuilder.Entity<ForumPostTag>(entity =>
             {
                 entity.ToTable("ForumPostTag", "dbo");
@@ -329,11 +369,15 @@ namespace Libary
                     .HasDatabaseName("IX_ForumPostTag_TagId");
             });
 
-            // Beállítjuk a ConversationParticipant összetett kulcsát
+            // -----------------------------------------------------------------
+            // Chat konfiguráció
+            // -----------------------------------------------------------------
+            // A beszélgetés résztvevő kapcsolótábla összetett kulcsa.
             modelBuilder.Entity<ConversationParticipant>()
                 .HasKey(cp => new { cp.ConversationId, cp.UserId });
 
-            // 2. A kaszkádolt törlés megakadályozása (Hogy ne kapj SQL Server hibát)
+            // A Message.Sender törlés Restrict:
+            // SQL Serverben több kaszkád útvonal (multiple cascade paths) hibát kerülünk el.
             modelBuilder.Entity<Message>()
                 .HasOne(m => m.Sender)
                 .WithMany() 

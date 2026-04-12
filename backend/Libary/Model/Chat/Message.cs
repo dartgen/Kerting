@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace Libary.Model.Chat
 {
+    /// <summary>
+    /// Chat üzenet entitás szöveges és opcionális képes üzenetekhez.
+    /// </summary>
     public class Message
     {
         public long Id { get; set; }

@@ -4,6 +4,9 @@ using Libary.Model.Tag;
 namespace Libary.Model.Work
 {
     [Table("WorkTag")]
+    /// <summary>
+    /// Work és aktivitási címke közötti kapcsolótábla entitás.
+    /// </summary>
     public class WorkTag
     {
         public int WorkId { get; set; }

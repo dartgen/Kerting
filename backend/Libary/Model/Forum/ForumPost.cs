@@ -4,6 +4,9 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Libary.Model.Forum
 {
+    /// <summary>
+    /// Fórum bejegyzés fő entitás címkékkel, kommentekkel, reakciókkal és moderációs állapotokkal.
+    /// </summary>
     public class ForumPost
     {
         public int Id { get; set; }

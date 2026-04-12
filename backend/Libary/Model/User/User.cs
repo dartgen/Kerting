@@ -9,6 +9,9 @@ using System.Threading.Tasks;
 
 namespace Libary.Model.User
 {
+    /// <summary>
+    /// Részletes felhasználói profil entitás a domain modellben.
+    /// </summary>
     public class User
     {
         public int Id { get; set; }
@@ -26,6 +29,7 @@ namespace Libary.Model.User
         public bool EmailPublikus { get; set; }
         public bool TelefonPublikus { get; set; }
 
+        // Nem perzisztált, számolt/összeállított címkelista a kliensoldali kényelemhez.
         [NotMapped]
         public List<string>? Cimkek { get; set; }
     }

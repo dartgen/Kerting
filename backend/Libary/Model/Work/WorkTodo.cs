@@ -5,6 +5,9 @@ using System.ComponentModel.DataAnnotations;
 namespace Libary.Model.Work
 {
     [Table("WorkTodo")]
+    /// <summary>
+    /// Work részfeladat (TODO) entitás állapottal és lezárási metaadatokkal.
+    /// </summary>
     public class WorkTodo
     {
         [Key]

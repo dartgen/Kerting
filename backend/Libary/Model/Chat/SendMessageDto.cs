@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace Libary.Model.Chat
 {
+    /// <summary>
+    /// Új chat üzenet küldési DTO a kliens felől.
+    /// </summary>
     public class SendMessageDto
     {
         public int ConversationId { get; set; }

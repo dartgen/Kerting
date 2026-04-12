@@ -3,6 +3,9 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Libary.Model.Gallery
 {
+    /// <summary>
+    /// Galéria elemhez tartozó komment entitás soft delete támogatással.
+    /// </summary>
     public class GalleryComment
     {
         public int Id { get; set; }

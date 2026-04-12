@@ -1,5 +1,8 @@
 namespace Libary.Model.User
 {
+    /// <summary>
+    /// Kiemelt felhasználó slot rekord a kezdőoldali kiemeléshez.
+    /// </summary>
     public class FeaturedUserSlot
     {
         public byte SlotNo { get; set; }

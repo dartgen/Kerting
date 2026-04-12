@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace Libary.Model.Tag
 {
+    /// <summary>
+    /// Felhasználó és aktivitási címke közötti kapcsolatot tároló entitás.
+    /// </summary>
     public class UserActivityTag
     {
         [Key]

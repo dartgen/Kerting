@@ -4,6 +4,9 @@ using System.ComponentModel.DataAnnotations;
 namespace Libary.Model.Work
 {
     [Table("WorkImage")]
+    /// <summary>
+    /// Work-hoz feltöltött képek entitása, kiemelt és before/after párosítás támogatással.
+    /// </summary>
     public class WorkImage
     {
         [Key]

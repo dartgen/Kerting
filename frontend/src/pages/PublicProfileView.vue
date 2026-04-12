@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="flex-1 w-full h-full overflow-y-auto">
     <div class="flex items-center justify-center min-h-full px-4 sm:px-6 py-6 sm:py-10">
       <div class="flex flex-col md:flex-row items-start w-full max-w-6xl gap-6">
@@ -12,9 +12,6 @@
               </button>
               <button @click="activeTab = 'galeria'" :class="getTabClass('galeria')">
                 <i class="fa-solid fa-images"></i> Galéria
-              </button>
-              <button @click="activeTab = 'munka'" :class="getTabClass('munka')">
-                <i class="fa-solid fa-briefcase"></i> Munka nézet
               </button>
               <button @click="activeTab = 'hozzaszolasok'" :class="getTabClass('hozzaszolasok')">
                 <i class="fa-solid fa-comments"></i> Értékelések
@@ -106,11 +103,6 @@
           <div v-else class="px-5 sm:px-8 py-6">
             <ProfileTab v-if="activeTab === 'profil'" :profilAdatok="profilAdatok" :cimkek="cimkek" />
             <GalleryComponent v-else-if="activeTab === 'galeria'" :userId="String(route.params.id)" title="A felhasználó munkái" subtitle="Nézd meg a feltöltött képeket és referenciákat." />
-            <div v-else-if="activeTab === 'munka'" class="text-center text-earth-100 py-10 animate-fade-in">
-              <i class="fa-solid fa-briefcase text-4xl mb-4 text-earth-200/50"></i>
-              <h3 class="text-xl font-semibold">Munka nézet</h3>
-              <p class="mt-2 text-earth-200/70">Ide jöhetnek az eddigi munkák...</p>
-            </div>
             <CommentsTab v-else-if="activeTab === 'hozzaszolasok'" :userId="String(route.params.id)" @review-changed="adatokBetoltese" />
           </div>
         </div>

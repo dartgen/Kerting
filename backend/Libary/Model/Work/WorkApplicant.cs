@@ -5,6 +5,9 @@ using System.ComponentModel.DataAnnotations;
 namespace Libary.Model.Work
 {
     [Table("WorkApplicant")]
+    /// <summary>
+    /// Jelentkezési entitás egy adott work és user kapcsolatára.
+    /// </summary>
     public class WorkApplicant
     {
         [Key]

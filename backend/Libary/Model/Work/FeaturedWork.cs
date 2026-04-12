@@ -4,6 +4,9 @@ using System.ComponentModel.DataAnnotations;
 namespace Libary.Model.Work
 {
     [Table("FeaturedWork")]
+    /// <summary>
+    /// Kiemelt munkák listájának kapcsoló entitása időbélyeggel.
+    /// </summary>
     public class FeaturedWork
     {
         [Key]
